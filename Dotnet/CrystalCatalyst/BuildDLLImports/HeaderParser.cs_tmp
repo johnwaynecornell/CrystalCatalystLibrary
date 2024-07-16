@@ -1,0 +1,371 @@
+using System.Diagnostics;
+using System.Text;
+using Lightning;
+
+namespace BuildDLLImports
+{
+    public class HeaderParser
+    {
+        public class Entry
+        {
+            public string Type { get; set; }
+            public QuickList<object> Contents { get; set; } = new QuickList<object>();
+
+            public Entry(string type, params object[] contents)
+            {
+                Type = type;
+                foreach (var content in contents)
+                {
+                    Contents.Add(content);
+                }
+            }
+
+            public class Cursor
+            {
+                public Entry Entry { get; }
+                public int Position { get; set; }
+
+                public bool IsEnd => Position >= Entry.Contents.Count;
+                public object Current => Entry.Contents[Position];
+                public object Take() => Entry.Contents[Position++];
+
+                public int Remaining => Entry.Contents.Count - Position;
+
+                public Cursor(Entry entry, int position = 0)
+                {
+                    Entry = entry;
+                    Position = position;
+                }
+            }
+
+            public Cursor NewCursor(int position = 0) => new Cursor(this, position);
+
+            public override string ToString()
+            {
+                var builder = new StringBuilder();
+                foreach (var content in Contents)
+                {
+                    builder.Append(content);
+                }
+                return builder.ToString();
+            }
+        }
+
+        public void Whitespace(string source, ref int position)
+        {
+            while (position < source.Length && char.IsWhiteSpace(source[position]))
+            {
+                position++;
+            }
+        }
+
+        public Entry? ParseIdentifier(string source, ref int position)
+        {
+            Whitespace(source, ref position);
+            if (position == source.Length || !(source[position] == '_' || char.IsLetter(source[position])))
+            {
+                return null;
+            }
+
+            var builder = new StringBuilder();
+            while (position < source.Length && (source[position] == '_' || char.IsLetterOrDigit(source[position])))
+            {
+                builder.Append(source[position++]);
+            }
+
+            return new Entry("Identifier", builder.ToString());
+        }
+
+        public Entry? ParseQuote(string source, ref int position)
+        {
+            Whitespace(source, ref position);
+            if (position == source.Length || (source[position] != '\'' && source[position] != '\"'))
+            {
+                return null;
+            }
+
+            var builder = new StringBuilder();
+            char quoteChar = source[position];
+            builder.Append(quoteChar);
+            position++;
+
+            bool inEscape = false;
+
+            while (position < source.Length)
+            {
+                char currentChar = source[position];
+                builder.Append(currentChar);
+                position++;
+
+                if (!inEscape)
+                {
+                    if (currentChar == quoteChar)
+                    {
+                        return new Entry("Quote", builder.ToString());
+                    }
+
+                    if (currentChar == '\\')
+                    {
+                        inEscape = true;
+                    }
+                }
+                else
+                {
+                    inEscape = false;
+                }
+            }
+
+            return null;
+        }
+        public Entry? ConsumeParen(Entry.Cursor cursor)
+        {
+            if (cursor.IsEnd)
+            {
+                return null;
+            }
+
+            if (cursor.Current is char currentChar && currentChar == '(')
+            {
+                var entry = new Entry("Paren", cursor.Take());
+                while (!cursor.IsEnd)
+                {
+                    if (IsChar(cursor.Current, ')'))
+                    {
+                        entry.Contents.Add(cursor.Take());
+                        return entry;
+                    }
+                    else
+                    {
+                        var parenEntry = ConsumeParen(cursor);
+                        if (parenEntry != null)
+                        {
+                            entry.Contents.Add(parenEntry);
+                        }
+                        else
+                        {
+                            entry.Contents.Add(cursor.Take());
+                        }
+                    }
+                }
+
+                Console.Error.WriteLine($"ERROR: open parenthesis in \"{entry}\"");
+            }
+
+            return null;
+        }
+
+        public Entry Parenthesize(Entry entry)
+        {
+            var result = new Entry(entry.Type);
+            var cursor = entry.NewCursor();
+
+            while (!cursor.IsEnd)
+            {
+                var parenEntry = ConsumeParen(cursor);
+                if (parenEntry != null)
+                {
+                    result.Contents.Add(parenEntry);
+                }
+                else
+                {
+                    result.Contents.Add(cursor.Take());
+                }
+            }
+
+            return result;
+        }
+
+        public Entry? ParseLine(string source, ref int position)
+        {
+            Whitespace(source, ref position);
+            if (position == source.Length)
+            {
+                return null;
+            }
+
+            var entry = new Entry("Line");
+            while (position < source.Length)
+            {
+                var parsed = ParseIdentifier(source, ref position) ?? ParseQuote(source, ref position) /*?? ParseParen(source, ref position)*/;
+                
+                if (parsed != null)
+                {
+                    entry.Contents.Add(parsed);
+                }
+                else
+                {
+                    entry.Contents.Add(source[position++]);
+                }
+            }
+
+            return Parenthesize(entry);
+        }
+
+        private readonly string[] _directions = { "P_ELEMENTS", "P_INSTANCE", "P_OUT", "P_IN_OUT" };
+
+        public bool IsChar(object obj, char c) => obj is char ch && ch == c;
+
+        public TypeInfo GetTypeInfo(Entry.Cursor cursor)
+        {
+            var typeInfo = new TypeInfo();
+            string value = cursor.Take().ToString();
+
+            while (_directions.Contains(value))
+            {
+                typeInfo.Directions.Add(value);
+                var nextEntry = (Entry)cursor.Take();
+                cursor = nextEntry.NewCursor(1);
+                value = cursor.Take().ToString();
+            }
+
+            typeInfo.Type = value;
+
+            if (value == "const")
+            {
+                typeInfo.Type += " " + cursor.Take().ToString();
+            }
+
+            while (cursor.Remaining >= 2 && IsChar(cursor.Current, ':') && IsChar(cursor.Entry.Contents[cursor.Position + 1], ':'))
+            {
+                cursor.Position += 2;
+                typeInfo.Type += "::" + cursor.Take();
+            }
+
+            if (!cursor.IsEnd && cursor.Current.ToString() == "const")
+            {
+                value = "const " + value;
+                cursor.Position++;
+            }
+
+            return typeInfo;
+        }
+
+        public ParsedFunction LineToFunction(Entry.Cursor cursor)
+        {
+            var function = new ParsedFunction
+            {
+                ReturnType = GetTypeInfo(cursor),
+                Name = cursor.Take().ToString()
+            };
+
+            Entry parameters = cursor.Current as Entry;
+            
+            if (parameters == null)
+            {
+                Console.Error.WriteLine($"ERROR: {cursor.Entry} has invalid parameters");
+                Debugger.Break();
+            }
+
+            function.Parameters.AddRange(ParseParameters(parameters));
+            return function;
+        }
+
+        public List<ParsedFunction> ParseHeaderFile(string filePath)
+        {
+            var functions = new List<ParsedFunction>();
+
+            foreach (var line in File.ReadLines(filePath))
+            {
+                var trimmedLine = line.Trim();
+                if (trimmedLine.Length == 0) continue;
+
+                int position = trimmedLine.LastIndexOf(';');
+                if (position == -1)
+                {
+                    Console.Error.WriteLine("ERROR: expected line ending in ';'");
+                    continue;
+                }
+
+                trimmedLine = trimmedLine.Substring(0, position).Trim();
+
+                if (trimmedLine.StartsWith("_EXPORT_"))
+                {
+                    position = "_EXPORT_".Length;
+                    var parsedLine = ParseLine(trimmedLine, ref position);
+                    var cursor = parsedLine.NewCursor();
+                    functions.Add(LineToFunction(cursor));
+                }
+                else
+                {
+                    position = 0;
+                    var parsedLine = ParseLine(trimmedLine, ref position);
+                    var cursor = parsedLine.NewCursor();
+                    functions.Add(LineToFunction(cursor));
+                }
+            }
+
+            return functions;
+        }
+
+        public string GetEntryType(object obj) => obj is Entry entry ? entry.Type : "";
+
+        public IEnumerable<Entry> ParenSplit(Entry entry)
+        {
+            if (entry.Type != "Paren")
+            {
+                Console.Error.WriteLine("ERROR: expecting Paren entry");
+                yield break;
+            }
+
+            var parameterEntry = new Entry("Parameter");
+            for (int i = 1; i < entry.Contents.Count - 1; i++)
+            {
+                if (entry.Contents[i] is char ch && ch == ',')
+                {
+                    yield return parameterEntry;
+                    parameterEntry = new Entry("Parameter");
+                }
+                else
+                {
+                    parameterEntry.Contents.Add(entry.Contents[i]);
+                }
+            }
+
+            yield return parameterEntry;
+        }
+
+        public IEnumerable<FunctionParameter> ParseParameters(Entry parameters)
+        {
+            var parsedParameters = new List<FunctionParameter>();
+            string parameterString = parameters.ToString();
+
+            if (parameterString == "(void)" || parameterString == "()")
+            {
+                return parsedParameters;
+            }
+
+            Console.WriteLine($"Debug: Parsing parameters: '{parameters}'");
+
+            foreach (var parameter in ParenSplit(parameters))
+            {
+                if (parameter.Contents.Count > 3 && GetEntryType(parameter.Contents[1]) == "Paren" &&
+                    ((Entry)parameter.Contents[1]).Contents[1].ToString() == "*")
+                {
+                    var functionParameter = new FunctionParameter();
+                    var cursor = parameter.NewCursor();
+
+                    var nestedFunction = LineToFunction(cursor);
+                    int length = nestedFunction.Name.Length;
+
+                    functionParameter.Name = nestedFunction.Name.Substring(2, length - 3);
+                    nestedFunction.Name = "(*)";
+                    functionParameter.Type = new TypeInfo { Declaration = nestedFunction };
+
+                    parsedParameters.Add(functionParameter);
+                }
+                else
+                {
+                    var functionParameter = new FunctionParameter();
+                    var cursor = parameter.NewCursor();
+
+                    functionParameter.Type = GetTypeInfo(cursor);
+                    functionParameter.Name = cursor.Take().ToString();
+
+                    parsedParameters.Add(functionParameter);
+                }
+            }
+
+            return parsedParameters;
+        }
+    }
+}

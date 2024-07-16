@@ -34,6 +34,6 @@ set(PLATFORM_SOURCES
 )
 
 add_definitions(-D_EXPORT_=)
-target_link_libraries(CrystalCatalyst PUBLIC  pthread X11 GL)
+target_link_libraries(CrystalCatalystLibrary PUBLIC  pthread X11 GL)
 
 #include_directories(${CMAKE_CURRENT_LIST_DIR})

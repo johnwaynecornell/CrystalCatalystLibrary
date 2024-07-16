@@ -1,5 +1,6 @@
 /.idea/
-/bin/
+bin
+obj
 /cmake-build-*
 /Under/cmake_install.cmake
 /Under/Makefile

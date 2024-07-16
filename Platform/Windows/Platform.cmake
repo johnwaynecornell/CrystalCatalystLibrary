@@ -31,4 +31,4 @@ set(PLATFORM_SOURCES
 )
 
 add_definitions(-D_EXPORT_=__declspec\(dllexport\))
-target_link_libraries(CrystalCatalyst PUBLIC user32 opengl32)
+target_link_libraries(CrystalCatalystLibrary PUBLIC user32 opengl32)
