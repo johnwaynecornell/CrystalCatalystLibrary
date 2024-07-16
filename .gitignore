@@ -1,0 +1,12 @@
+/.idea/
+/bin/
+/cmake-build-*
+/Under/cmake_install.cmake
+/Under/Makefile
+/Under/test/cmake_install.cmake
+/Under/test/Makefile
+/Under/FromSMHasher/CMakeFiles/
+/Under/FromSMHasher/cmake_install.cmake
+/Under/FromSMHasher/Makefile
+/Under/FromSMHasher/CMakeFiles/
+/Under/test/CMakeFiles/
