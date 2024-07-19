@@ -26,9 +26,14 @@ initPlatformConfig()
      Windowing/CrystalWindow.h
      Windowing/Pixels.cpp
      Windowing/Pixels.h
+     Windowing/DataInterchange.cpp
+     Windowing/DataInterchange.h
+     Windowing/CLipboard.cpp
+     Windowing/Clipboard.h
      Windowing/DragDrop.cpp
      Windowing/DragDrop.h
-     Fonts/Fonts.cpp
+
+         Fonts/Fonts.cpp
      Fonts/Fonts.h
 
      Application.cpp
