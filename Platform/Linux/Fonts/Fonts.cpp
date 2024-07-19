@@ -1,3 +1,6 @@
+// MIT License
+// Copyright (c) 2024 John W. Cornell
+// See LICENSE file in the project root for full license information.
 #include "Fonts.h"
 
 #include <iostream>
@@ -14,8 +17,8 @@ struct StringKeyval {
 StringKeyval distro_instructions[] = {
     { "ubuntu", "sudo apt update\nsudo apt install ttf-mscorefonts-installer\n"},
     {"debian", "sudo apt update\nsudo apt install ttf-mscorefonts-installer\n"},
-    {"fedora", "sudo dnf install https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm\n"
-             "sudo dnf install https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm\n"
+    {"fedora", "sudo dnf install https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-(rpm -E %fedora).noarch.rpm\n"
+             "sudo dnf install https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-(rpm -E %fedora).noarch.rpm\n"
              "sudo dnf install msttcore-fonts-installer\n"},
 
 {"arch", "Edit /etc/pacman.conf and uncomment the following lines:\n"

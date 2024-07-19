@@ -1,3 +1,6 @@
+// MIT License
+// Copyright (c) 2024 John W. Cornell
+// See LICENSE file in the project root for full license information.
 #ifndef FARMHASH_BUFFER_RETURN_H
 #define FARMHASH_BUFFER_RETURN_H
 

@@ -1,3 +1,6 @@
+// MIT License
+// Copyright (c) 2024 John W. Cornell
+// See LICENSE file in the project root for full license information.
 // Copyright (c) 2014 Google, Inc.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy

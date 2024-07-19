@@ -1,3 +1,6 @@
+// MIT License
+// Copyright (c) 2024 John W. Cornell
+// See LICENSE file in the project root for full license information.
 #ifndef TLS_Windows_H
 #define TLS_Windows_H
 

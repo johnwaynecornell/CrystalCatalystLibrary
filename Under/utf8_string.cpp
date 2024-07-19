@@ -1,3 +1,6 @@
+// MIT License
+// Copyright (c) 2024 John W. Cornell
+// See LICENSE file in the project root for full license information.
 #include "Under.h"
 
 bool utf8_string_copy(utf8_string_const src, size_t src_buffer_length_in_charachters,  utf8_string dest, size_t dest_buffer_length_in_charachters, P_OUT(utf8_string) dest_accum, P_OUT(size_t) dest_buffer_remain)

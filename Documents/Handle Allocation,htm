@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Handle Generation Using FarmHash64</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border: 1px solid #ddd;
+            overflow: auto;
+        }
+        code {
+            font-family: "Courier New", Courier, monospace;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        h1 {
+            font-size: 24px;
+        }
+        h2 {
+            font-size: 20px;
+        }
+        p {
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Handle Generation Using FarmHash64</h1>
+    <p>Using FarmHash64 for handle generation can be an efficient approach in high-performance applications. Here's a comprehensive guide on how to implement it in a C native library and call it from C# managed code.</p>
+    
+    <h2>C Code (Native Library)</h2>
+    <pre><code>
+#include <stdint.h>
+#include <stdio.h>
+#include "farmhash.h"  // Include the FarmHash library
+
+typedef struct {
+    uint64_t hash;
+} Handle;
+
+static uint64_t running_count = 0;
+
+Handle CreateHandle() {
+    Handle handle;
+    handle.hash = FarmHash64((char*)&running_count, sizeof(running_count));
+    running_count++;
+    return handle;
+}
+
+int CompareHandles(Handle* h1, Handle* h2) {
+    return h1->hash == h2->hash;
+}
+
+void PrintHandle(Handle* handle) {
+    printf("%016llx\n", handle->hash);
+}
+
+int main() {
+    Handle h1 = CreateHandle();
+    Handle h2 = CreateHandle();
+
+    PrintHandle(&h1);
+    PrintHandle(&h2);
+
+    printf("Comparison: %d\n", CompareHandles(&h1, &h2));
+
+    return 0;
+}
+    </code></pre>
+
+    <h2>C# Code (Managed Code)</h2>
+    <pre><code>
+using System;
+using System.Runtime.InteropServices;
+
+public static class NativeMethods
+{
+    [StructLayout(LayoutKind.Sequential)]
+    public struct Handle
+    {
+        public ulong hash;
+    }
+
+    [DllImport("YourNativeLibrary.dll", CallingConvention = CallingConvention.Cdecl)]
+    public static extern Handle CreateHandle();
+
+    [DllImport("YourNativeLibrary.dll", CallingConvention = CallingConvention.Cdecl)]
+    public static extern int CompareHandles(ref Handle h1, ref Handle h2);
+}
+
+public class Program
+{
+    public static void Main()
+    {
+        var h1 = NativeMethods.CreateHandle();
+        var h2 = NativeMethods.CreateHandle();
+
+        Console.WriteLine(h1.hash.ToString("X"));
+        Console.WriteLine(h2.hash.ToString("X"));
+
+        int comparison = NativeMethods.CompareHandles(ref h1, ref h2);
+        Console.WriteLine($"Comparison: {comparison}");
+    }
+}
+    </code></pre>
+
+    <h2>Considerations</h2>
+    <ul>
+        <li><strong>Speed:</strong> FarmHash64 is known for its speed, making it suitable for high-performance applications where quick handle generation is required.</li>
+        <li><strong>Simplicity:</strong> The simplicity of FarmHash64 makes it easy to implement and integrate into existing systems.</li>
+        <li><strong>Uniform Distribution:</strong> FarmHash64 provides a good uniform distribution of hash values, reducing the likelihood of collisions in a well-sized handle pool.</li>
+        <li><strong>Security:</strong> While FarmHash64 is not a cryptographic hash function, it provides good performance for general-purpose hashing. If security is a major concern, especially against collision attacks, consider using a more secure hash function like SHA-256, although it would be slower.</li>
+        <li><strong>Collision Handling:</strong> Ensure that your implementation includes robust collision handling mechanisms. Even with a good hash function, the possibility of collisions exists, and your system should handle them gracefully.</li>
+    </ul>
+</body>
+</html>
