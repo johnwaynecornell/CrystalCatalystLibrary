@@ -2,7 +2,7 @@
 // Copyright (c) 2024 John W. Cornell
 // See LICENSE file in the project root for full license information.
 #include <cstring>
-#include "../../CrystalCatalystLibrary.h"
+#include "../CrystalCatalystLibrary.h"
 #include "CrystalWindow.h"
 
 #include <assert.h>
@@ -112,6 +112,8 @@ bool lookup_message_handler(P_INSTANCE(WindowHandle) window_handle, utf8_string_
         handler_ptr = (P_OUT(P_INSTANCE(void)) )&callbacks->on_drag_provide_status;
     else if (strcmp(handler_name, "on_drag_provide_finished") == 0)
         handler_ptr = (P_OUT(P_INSTANCE(void)) )&callbacks->on_drag_provide_finished;
+    else if (strcmp(handler_name, "on_clipboard_provide_chosen") == 0)
+        handler_ptr = (P_OUT(P_INSTANCE(void)) )&callbacks->on_clipboard_provide_chosen;
     else if (strcmp(handler_name, "on_idle") == 0)
         handler_ptr = (P_OUT(P_INSTANCE(void)) )&callbacks->on_idle;
     else

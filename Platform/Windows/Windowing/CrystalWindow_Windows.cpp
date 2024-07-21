@@ -211,56 +211,13 @@ void CrystalWindow_Windows::PresentImage(utf8_string_const pixformat, P_ELEMENTS
 {
     if (!pixdata || !pixformat) return;
 
+    ReturnBuffer proxy= Pixels_ConvertPixels(pixformat, "bgra:int8", pixdata, pixdata_length, width, height);
+    /* TODO */ //Check error condition
+
+    P_ELEMENTS(void) m = proxy ? proxy.memory : pixdata;
+
     HDC hdc = GetDC(hwnd);
 
-    std::string pf = pixformat;
-
-    int32_t colon = pf.find(':');
-    if (colon == -1 || pf.substr(colon + 1) != "int8") {
-        std::cerr << mod_header() << "PresentImage: pixel format '" << pf << "' not recognized. Recognized string is a combination of the characters R,G,B,A in any order followed by a colon and 'int8', such as BGRA:int8.";
-        return;
-    }
-
-    int32_t channels[4] = {-1, -1, -1, -1};
-
-    for (int32_t i = 0; i < colon; i++) {
-        switch (pf[i]) {
-            case 'R': case 'r': channels[0] = i; break;
-            case 'G': case 'g': channels[1] = i; break;
-            case 'B': case 'b': channels[2] = i; break;
-            case 'A': case 'a': channels[3] = i; break;
-            default:
-                std::cerr << mod_header() << "CrystalWindow_PresentImage: unrecognized channel '" << pf[i] << "'. Recognized channels are R, G, B, A.";
-                return;
-        }
-    }
-
-    for (int32_t i = 0; i < 4; i++) {
-        if (channels[i] == -1) {
-            std::cerr << mod_header() << "CrystalWindow_PresentImage: missing channel. Recognized string is a combination of the characters R,G,B,A in any order followed by a colon and 'byte', such as BGRA:byte.";
-            return;
-        }
-    }
-
-    bool needs_conversion = !(channels[0] == 2 && channels[1] == 1 && channels[2] == 0 && channels[3] == 3);
-    P_ELEMENTS(uint8_t)  bitmap_data;
-
-    if (!needs_conversion) {
-        bitmap_data = pixdata;
-    } else {
-        bitmap_data = new uint8_t[width * height * 4];
-        for (int32_t y = 0; y < height; y++) {
-            for (int32_t x = 0; x < width; x++) {
-                int32_t src_index = (y * width + x) * 4;
-                int32_t dst_index = src_index;
-
-                bitmap_data[dst_index + 0] = pixdata[src_index + channels[2]]; // B
-                bitmap_data[dst_index + 1] = pixdata[src_index + channels[1]]; // G
-                bitmap_data[dst_index + 2] = pixdata[src_index + channels[0]]; // R
-                bitmap_data[dst_index + 3] = pixdata[src_index + channels[3]]; // A
-            }
-        }
-    }
 
     BITMAPINFO bmi;
     memset(&bmi, 0, sizeof(bmi));
@@ -271,11 +228,9 @@ void CrystalWindow_Windows::PresentImage(utf8_string_const pixformat, P_ELEMENTS
     bmi.bmiHeader.biBitCount = 32; // 32 bits per pixel
     bmi.bmiHeader.biCompression = BI_RGB;
 
-    StretchDIBits(hdc, 0, 0, width, height, 0, 0, width, height, bitmap_data, &bmi, DIB_RGB_COLORS, SRCCOPY);
+    StretchDIBits(hdc, 0, 0, width, height, 0, 0, width, height, m, &bmi, DIB_RGB_COLORS, SRCCOPY);
 
-    if (needs_conversion) {
-        delete[] bitmap_data;
-    }
+    if (proxy) ReturnBuffer_Deallocate(proxy);
 
     ReleaseDC(hwnd, hdc);
 }

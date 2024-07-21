@@ -1,0 +1,40 @@
+#include "Clipboard_Windows.h"
+#include <iostream>
+
+void Clipboard_Windows::copyToClipboard() {
+    CDataObject* pDataObject = new CDataObject(selected_data);
+
+    if (FAILED(OleSetClipboard(pDataObject))) {
+        std::cerr << "Failed to set clipboard data." << std::endl;
+    }
+
+    pDataObject->Release();
+}
+
+void Clipboard_Windows::pasteFromClipboard() {
+    IDataObject* pDataObject = nullptr;
+    if (FAILED(OleGetClipboard(&pDataObject))) {
+        std::cerr << "Failed to get clipboard data." << std::endl;
+        return;
+    }
+
+    FORMATETC format = {CF_TEXT, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
+    STGMEDIUM medium;
+
+    if (SUCCEEDED(pDataObject->GetData(&format, &medium))) {
+        char* data = static_cast<char*>(GlobalLock(medium.hGlobal));
+        if (data) {
+            selected_data.assign(data, data + GlobalSize(medium.hGlobal));
+            GlobalUnlock(medium.hGlobal);
+        }
+        ReleaseStgMedium(&medium);
+    } else {
+        std::cerr << "Failed to retrieve data from clipboard format." << std::endl;
+    }
+
+    pDataObject->Release();
+}
+
+bool Clipboard_Windows::isClipboardDataAvailable() const {
+    return IsClipboardFormatAvailable(CF_TEXT);
+}

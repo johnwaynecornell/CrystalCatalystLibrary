@@ -1,7 +1,7 @@
 // MIT License
 // Copyright (c) 2024 John W. Cornell
 // See LICENSE file in the project root for full license information.
-#include "../../CrystalCatalystLibrary.h"
+#include "../CrystalCatalystLibrary.h"
 #include "DragDrop.h"
 
 #include <ios>
@@ -50,4 +50,16 @@ void DragActions_String(DragActions actions, utf8_string buffer, size_t length)
 
     if (!utf8_string_copy(str.c_str(), S, buffer, length))
         throw std::runtime_error("MEMORY DAMAGED");
+}
+
+P_INSTANCE(DragDropData)  DragDropData_Create()
+{
+    return new DragDropData();
+}
+
+void DataInterchange::provide_for_drag(P_INSTANCE(DataInterchange) data, utf8_string_const format)
+{
+    DragDropData *dta = (DragDropData*)data;
+    dta->m_handle->crystal_window->callbacks.on_drag_provide_chosen(dta->m_handle, dta, format);
+
 }

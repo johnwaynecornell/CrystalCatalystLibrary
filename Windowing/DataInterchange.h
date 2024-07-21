@@ -5,8 +5,13 @@
 #ifndef CRYSTALCATALYST_DATAINTERCHANGE_H
 #define CRYSTALCATALYST_DATAINTERCHANGE_H
 
+class WindowHandle;
+
 class DataInterchange {
 public:
+    void *context=nullptr;
+    void *arg= nullptr;
+
     class Node {
     public:
         utf8_string_const type;
@@ -18,6 +23,12 @@ public:
     size_t selected_size;
 
     Node data_head;
+
+    WindowHandle *m_handle = nullptr;
+
+    void (*provide_chosen)(P_INSTANCE(DataInterchange) data, utf8_string_const format) = nullptr;
+    static void provide_for_drag(P_INSTANCE(DataInterchange) data, utf8_string_const format);
+    static void provide_for_clipboard(P_INSTANCE(DataInterchange) data, utf8_string_const format);
 };
 
 #ifdef __cplusplus
@@ -35,6 +46,7 @@ _EXPORT_ void DataInterchange_FormatEnum_Text(P_INSTANCE(DataInterchange::Node) 
 
 _EXPORT_ P_INSTANCE(DataInterchange::Node) DataInterchange_Items_FormatRemove(P_INSTANCE(DataInterchange) drop, P_INSTANCE(DataInterchange::Node) node);
 
+_EXPORT_ void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_const format);
 _EXPORT_ void DataInterchange_Selection_Reveal(P_INSTANCE(DataInterchange) drag, P_OUT(utf8_string_const) format, P_OUT(P_INSTANCE(void)) data, P_OUT(size_t) size);
 _EXPORT_ void DataInterchange_Selection_Set(P_INSTANCE(DataInterchange) drag, utf8_string_const format, P_INSTANCE(void) data, size_t size);
 

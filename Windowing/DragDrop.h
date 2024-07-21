@@ -21,7 +21,7 @@ struct DragStatus {
     DragActions action;
 };
 
-class DragDropData : DataInterchange{
+class DragDropData : public DataInterchange{
 public:
     bool has_status = false;
     DragStatus status;
@@ -35,6 +35,8 @@ extern "C" {
     _EXPORT_ void CrystalWindow_DragStart(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DragDropData)  data, int32_t x, int32_t y); // Implemented in Platform
     _EXPORT_ void CrystalWindow_DragChoose(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DragDropData)  data, utf8_string_const fmt); // Implemented in Platform
     _EXPORT_ void DragActions_String(DragActions actions, utf8_string buffer, size_t length);
+    _EXPORT_ P_INSTANCE(DragDropData)  DragDropData_Create();
+
 #ifdef __cplusplus
 }
 #endif

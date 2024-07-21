@@ -19,6 +19,7 @@ public:
     HGLRC gl_context;
 
     P_INSTANCE(WindowHandle) myHandle;
+    P_INSTANCE(DragDropData) current_drag_data = nullptr;
 
     virtual void PresentImage(utf8_string_const pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height);
     virtual void QueueRedraw();

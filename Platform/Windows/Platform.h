@@ -7,6 +7,11 @@
 #include <windows.h>
 #include <GL/gl.h>
 
+#ifndef CFSTR_HTML
+#define CFSTR_HTML TEXT("HTML Format")
+#endif
+
+
 #include "../../Platform.h"
 #include "../../CrystalCatalystLibrary.h"
 

@@ -16,6 +16,9 @@ namespace fs = std::filesystem;
 
 #define mod_header() "test_client:"
 
+utf8_string_const format_prec[] = { "text/file-uri", "text/html", "text/plain", nullptr };
+//utf8_string_const format_prec[] = { "text/file-uri", "text/plain", nullptr };
+
 struct Pix {
     double R;
     double A;
@@ -121,6 +124,74 @@ void on_draw(P_INSTANCE(WindowHandle) window_handle) {
 
 void on_key_down(P_INSTANCE(WindowHandle) window_handle, int32_t keycode) {
     std::cerr << mod_header() << "Key down event: " << keycode << std::endl;
+
+    if (keycode == 'c' || keycode == 'C') {
+        std::cerr << mod_header() << "Clipboard copy" << std::endl;
+
+        P_INSTANCE(DataInterchange)data = DataInterchange_Create();
+        DataInterchange_FormatAdd(data, "text/file-uri");
+        Clipboard_Copy(window_handle, data);
+
+    } else if (keycode == 'p' || keycode == 'P') {
+        DataInterchange *data = Clipboard_Paste();
+
+        if (data == nullptr) {
+            std::cerr << mod_header() << "Clipboard error" << std::endl;
+            return;
+        }
+
+        std::cerr << mod_header() << "Clipboard paste" << std::endl;
+        // Process the pasted data
+        utf8_string_const type;
+        P_INSTANCE(void)data_ptr;
+        size_t size;
+
+        int32_t i = 0;
+        while (format_prec[i] != nullptr) i++;
+
+        utf8_string_const format = nullptr;
+
+        for (P_INSTANCE(DragDropData::Node)node = DataInterchange_FormatEnum(data);
+             i != 0 && node != nullptr; node = DataInterchange_FormatEnum_Next(node)) {
+            utf8_string_const drop_format;
+            DataInterchange_FormatEnum_Text(node, &drop_format);
+
+            for (int32_t i2 = 0; i2 < i; i2++) {
+                if (strcmp(format_prec[i2], drop_format) == 0) {
+                    i = i2;
+                    format = format_prec[i];
+                    break;
+                }
+            }
+        }
+
+        DataInterchange_Select(data, format);
+        DataInterchange_Selection_Reveal(data, &type, &data_ptr, &size);
+
+        std::cerr << mod_header() << "Pasted data of type: " << type << ", size: " << size << std::endl;
+
+        if (StartingWith("text/", type)) {
+            std::cerr << mod_header() << "Text data:" << std::endl;
+            std::cerr << mod_header() << (utf8_string_const) data_ptr << std::endl;
+
+            /*
+            // Print32_t the first 100 characters of the data for debugging
+            std::string text_data(static_cast<utf8_string >(data_ptr), size);
+            std::cerr << mod_header() << "Text data: " << text_data.substr(0, 100) << std::endl;
+
+            // Check the first few bytes of the data for debugging
+            std::cerr << mod_header() << "First few bytes of data: ";
+            for (size_t i = 0; i < std::min(size, size_t(10)); ++i) {
+                std::cerr << mod_header() << std::hex << static_cast<int>(static_cast<P_ELEMENTS(uint8_t) >(data_ptr)[i]) << " ";
+            }
+            std::cerr << mod_header() << std::dec << std::endl;
+            */
+        } else {
+            std::cerr << mod_header() << "Non-text data of size " << size << std::endl;
+
+            // Optionally, handle binary data
+        }
+    }
 }
 
 void on_key_up(P_INSTANCE(WindowHandle) window_handle, int32_t keycode) {
@@ -136,7 +207,7 @@ void on_mouse_down(P_INSTANCE(WindowHandle) window_handle, int32_t button, int32
 
     if (button == 1) {
         P_INSTANCE(DragDropData) data = DragDropData_Create();
-        DragDropData_FormatAdd(data,"text/file-uri");
+        DataInterchange_FormatAdd(data,"text/file-uri");
 
         data->action_selections = (DragActions) (DRAG_OPERATION_COPY | DRAG_OPERATION_MOVE | DRAG_OPERATION_LINK);
         //data->action_selections = (DragActions) (DRAG_OPERATION_LINK);
@@ -195,7 +266,7 @@ void on_drag_receive_motion(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(D
     //
     // std::cerr << mod_header() << DragString << std::endl;
 
-    data->status.action = (DragActions) (data->action_selections & DRAG_OPERATION_LINK);
+    data->status.action = (DragActions) (data->action_selections & DRAG_OPERATION_COPY);
 }
 
 void on_drag_receive_leave(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DragDropData)  data) {
@@ -204,18 +275,15 @@ void on_drag_receive_leave(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(Dr
     // Example: Clean up any temporary states related to the drag action
 }
 
-utf8_string format_prec[] = { "text/file-uri", "text/html", "text/plain", nullptr };
-//utf8_string_const format_prec[] = { "text/file-uri", "text/plain", nullptr };
-
 void on_drag_receive_select(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DragDropData)  data, P_OUT(utf8_string_const) format) {
     int32_t i = 0;
     while (format_prec[i] != nullptr) i++;
 
     *format = nullptr;
 
-    for (P_INSTANCE(DragDropData::Node) node = DragDropData_FormatEnum(data); i != 0 && node != nullptr; node = DragDropData_FormatEnum_Next(node)) {
+    for (P_INSTANCE(DragDropData::Node) node = DataInterchange_FormatEnum(data); i != 0 && node != nullptr; node = DataInterchange_FormatEnum_Next(node)) {
         utf8_string_const drop_format;
-        DragDropData_FormatEnum_Text(node, &drop_format);
+        DataInterchange_FormatEnum_Text(node, &drop_format);
 
         for (int32_t i2 = 0; i2 < i; i2++) {
             if (strcmp(format_prec[i2], drop_format) == 0) {
@@ -253,7 +321,7 @@ void on_drag_provide_chosen(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(D
         pth = fs::absolute("test2.txt").string();
         paths += pth; paths += "\n";
 
-        DragDropData_Selection_Set(data, format, (utf8_string ) paths.c_str(), paths.length());
+        DataInterchange_Selection_Set(data, format, (utf8_string ) paths.c_str(), paths.length());
     }
 }
 
@@ -263,8 +331,40 @@ void on_drag_provide_status(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(D
 
 void on_drag_provide_finished(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DragDropData) data, bool success)
 {
-    DragDropData_Free(data);
+    DataInterchange_Free(data);
 }
+
+void on_clipboard_provide_chosen(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DataInterchange)  data, utf8_string_const format)
+{
+    if (strcmp(format, "text/file-uri") == 0) {
+        std::string paths = "";
+        //fs::path pth;
+        std::string pth;
+
+        {
+            std::ofstream file("test.txt");
+            file << "This is some sample text\n";
+            file.close();
+        }
+
+
+        pth = fs::absolute("test.txt").string();
+        paths = paths + (std::string) pth + "\n";
+
+        {
+            std::ofstream file("test2.txt");
+            file << "This is some more sample text\n";
+            file.close();
+        }
+
+        pth = fs::absolute("test2.txt").string();
+        paths += pth; paths += "\n";
+
+        DataInterchange_Selection_Set(data, format, (utf8_string ) paths.c_str(), paths.length());
+    }
+
+}
+
 
 void on_drag_receive_drop(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DragDropData)  data) {
     if (data == nullptr) {
@@ -278,7 +378,7 @@ void on_drag_receive_drop(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(Dra
     P_INSTANCE(void) data_ptr;
     size_t size;
 
-    DragDropData_Selection_Reveal(data, &type, &data_ptr, &size);
+    DataInterchange_Selection_Reveal(data, &type, &data_ptr, &size);
 
     std::cerr << mod_header() << "Dropped data of type: " << type << ", size: " << size << std::endl;
 
@@ -300,6 +400,7 @@ void on_drag_receive_drop(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(Dra
         */
     } else {
         std::cerr << mod_header() << "Non-text data of size " << size << std::endl;
+
         // Optionally, handle binary data
     }
 
@@ -350,6 +451,7 @@ int32_t main(int32_t argc, P_ELEMENTS(utf8_string)  argv) {
     CrystalWindow_SetMessaqgeHandler(window_handle, "on_drag_provide_chosen", (P_INSTANCE(void))on_drag_provide_chosen);
     CrystalWindow_SetMessaqgeHandler(window_handle, "on_drag_provide_status", (P_INSTANCE(void))on_drag_provide_status);
     CrystalWindow_SetMessaqgeHandler(window_handle, "on_drag_provide_finished", (P_INSTANCE(void))on_drag_provide_finished);
+    CrystalWindow_SetMessaqgeHandler(window_handle, "on_clipboard_provide_chosen", (P_INSTANCE(void))on_clipboard_provide_chosen);
     CrystalWindow_SetMessaqgeHandler(window_handle, "on_idle", (P_INSTANCE(void))on_idle);
 
     std::cerr << mod_header() << "Starting application..." << std::endl;

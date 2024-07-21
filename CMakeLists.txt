@@ -13,6 +13,8 @@ include(PlatformConfig.cmake)
 initPlatformConfig()
 
  add_library(CrystalCatalystLibrary SHARED
+         Platform/Windows/Windowing/Clipboard_Windows.cpp
+         Platform/Windows/Windowing/Clipboard_Windows.h
  )
 
  include(Platform/${CRYSTAL_PLATFORM}/Platform.cmake)

@@ -5,6 +5,7 @@
 #define CRYSTALCATALYST_CRYSTALWINDOW_H
 
 #include "DragDrop.h"
+#include "Clipboard.h"
 
 //##### DUMP REGION ##### callbacks
 typedef struct {
@@ -35,6 +36,8 @@ typedef struct {
     void (*on_drag_provide_status)(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DragDropData)  data);
     void (*on_drag_provide_chosen)(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DragDropData)  data, utf8_string_const format);
     void (*on_drag_provide_finished)(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DragDropData) data, bool success);
+
+    void (*on_clipboard_provide_chosen)(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DataInterchange)  data, utf8_string_const format);
 
     void (*on_idle)(P_INSTANCE(WindowHandle) window_handle);
 } WindowCallbacks;

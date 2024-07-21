@@ -191,6 +191,8 @@ bool CrystalWindow_X11::handle_xevent(P_INSTANCE(XEvent)  event) {
 
 void CrystalWindow_X11::PresentImage(utf8_string_const pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height)
 {
+    if (!pixdata || !pixformat) return;
+
     ReturnBuffer proxy= Pixels_ConvertPixels(pixformat, "bgra:int8", pixdata, pixdata_length, width, height);
     /* TODO */ //Check error condition
 

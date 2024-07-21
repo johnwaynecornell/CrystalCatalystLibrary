@@ -6,5 +6,4 @@
 
 #include "CrystalWindow_Windows.h"
 
-
 #endif //CRYSTALCATALYST_DRAGDROP_H
