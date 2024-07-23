@@ -41,6 +41,8 @@ utf8_string_const utf8_string_dup(utf8_string_const string) {
 }
 
 void utf8_string_replace_dup(utf8_string_const text, P_IN_OUT(utf8_string_const) target) {
+    if ((void *) text == *target) return;
+
     if (*target != nullptr) {
         free((utf8_string ) *target);
         *target = nullptr;

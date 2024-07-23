@@ -55,6 +55,7 @@ HRESULT __stdcall CrystalWindow_Windows::DragEnter(IDataObject* pDataObject, DWO
 
     current_drag_data = DragDropData_Create();
     current_drag_data->context = pDataObject;
+	current_drag_data->selection_type = DataInterchange::E_DND;
 
 
     DataInterchange_ReadFormats(current_drag_data, pDataObject);
@@ -115,12 +116,12 @@ HRESULT __stdcall CrystalWindow_Windows::Drop(IDataObject* pDataObject, DWORD gr
     if (format != nullptr) {
         DataInterchange_Select(current_drag_data, format);
 
-        if (callbacks.on_drag_receive_drop) {
-            callbacks.on_drag_receive_drop(myHandle, current_drag_data);
+        //if (callbacks.on_drag_receive_drop) {
+        //    callbacks.on_drag_receive_drop(myHandle, current_drag_data);
 
             *pdwEffect = drag_actions_to_dropeffect(current_drag_data->status.action);
             return drag_status_to_hresult(current_drag_data->status);
-        }
+        //}
     }
 
     return S_OK;

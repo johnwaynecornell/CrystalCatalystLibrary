@@ -41,11 +41,13 @@ public:
     virtual bool handle_xdnd_drop(P_INSTANCE(XEvent)  event);
 
     virtual bool handle_selection_notify(P_INSTANCE(XEvent)  event);
+    virtual bool handle_selection_request(P_INSTANCE(XEvent) event);
 
     bool CoordsToRoot(int32_t &x, int32_t &y);
     bool CoordsFromRoot(int32_t &x, int32_t &y);
 };
 
-
+void DataImterchange_FormatsFromAtomArray(P_INSTANCE(DataInterchange) dataInterchange, P_ELEMENTS(Atom) types, int num_types);
+void DataImterchange_AtomArrayFromFormats(P_INSTANCE(DataInterchange) dataInterchange, P_INSTANCE(P_ELEMENTS(Atom)) types, P_INSTANCE(int) num_types);
 
 #endif //CRYSTALCATALYST_CRYSTALWINDOW_H

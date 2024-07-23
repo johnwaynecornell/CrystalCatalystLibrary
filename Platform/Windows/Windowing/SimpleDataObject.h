@@ -1,7 +1,3 @@
-//
-// Created by jwc on 7/19/24.
-//
-
 #ifndef SIMPLEDATAOBJECT_H
 #define SIMPLEDATAOBJECT_H
 

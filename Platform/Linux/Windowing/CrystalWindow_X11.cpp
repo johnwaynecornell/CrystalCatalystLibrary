@@ -123,6 +123,7 @@ void handle_xevent(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(XEvent)  e
 bool CrystalWindow_X11::handle_xevent(P_INSTANCE(XEvent)  event) {
     if (drag_provide && drag_provide->dragging && drag_provide->handle_message(event)) return true;
     if (handle_drop_xevents(event)) return true;
+    if (handle_selection_request(event)) return true;
 
     int32_t unicodeChar;
     switch (event->type) {

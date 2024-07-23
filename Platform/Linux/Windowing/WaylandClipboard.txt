@@ -1,0 +1,50 @@
+#include "Clipboard_Wayland.h"
+#include <iostream>
+#include <sstream>
+#include <cstdio>
+#include <stdexcept>
+
+void Clipboard_Wayland::copyToClipboard() {
+    std::string data(selected_data.begin(), selected_data.end());
+    std::string command = "wl-copy";
+
+    FILE* pipe = popen(command.c_str(), "w");
+    if (!pipe) {
+        throw std::runtime_error("popen() failed!");
+    }
+    fwrite(data.c_str(), sizeof(char), data.size(), pipe);
+    pclose(pipe);
+}
+
+void Clipboard_Wayland::pasteFromClipboard() {
+    char buffer[128];
+    std::string result;
+    std::string command = "wl-paste";
+
+    FILE* pipe = popen(command.c_str(), "r");
+    if (!pipe) {
+        throw std::runtime_error("popen() failed!");
+    }
+    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+        result += buffer;
+    }
+    pclose(pipe);
+
+    selected_data.assign(result.begin(), result.end());
+}
+
+bool Clipboard_Wayland::isClipboardDataAvailable() const {
+    std::string command = "wl-paste --no-newline";
+    FILE* pipe = popen(command.c_str(), "r");
+    if (!pipe) {
+        return false;
+    }
+    char buffer[128];
+    bool hasData = (fgets(buffer, sizeof(buffer), pipe) != nullptr);
+    pclose(pipe);
+    return hasData;
+}
+
+void Clipboard_Wayland::Clipboard_Copy_Persist() {
+    copyToClipboard();
+}

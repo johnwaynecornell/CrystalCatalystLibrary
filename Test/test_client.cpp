@@ -73,55 +73,6 @@ void on_draw(P_INSTANCE(WindowHandle) window_handle) {
     delete []buffer;
 }
 
-
-// struct Pix {
-//     uint8_t B;
-//     uint8_t G;
-//     uint8_t R;
-//     uint8_t A;
-// };
-//
-// utf8_string_const Pix_format = "BGRA:int8";
-//
-// int32_t window_width =0;
-// int32_t window_height =0;
-//
-// void on_draw(P_INSTANCE(WindowHandle) window_handle) {
-//     std::cerr << mod_header() << "Paint event" << std::endl;
-//     if (window_width == 0 || window_height == 0) return;
-//
-//     size_t sqr = window_width*window_height;
-//     Pix *buffer = new Pix[sqr];
-//     Pix *pix = buffer;
-//
-//     for (int32_t y=0; y < window_height; y++) {
-//         for (int32_t x =0; x < window_width; x++) {
-//             if (y < 30 && x < 90) {
-//                 (*pix).R = 0;
-//                 (*pix).G = 0;
-//                 (*pix).B = 0;
-//                 (*pix).A = 0xFF;
-//
-//
-//                 if (x<30) (*pix).R = 0xFF;
-//                 else if (x<60) (*pix).G = 0xFF;
-//                 else (*pix).B = 0xFF;
-//
-//             } else {
-//                 (*pix).R = static_cast<uint8_t>(x + y);
-//                 (*pix).G = static_cast<uint8_t>(x * y);
-//                 (*pix).B = static_cast<uint8_t>(y);
-//                 (*pix).A = 0xFF;
-//             }
-//             pix++;
-//         }
-//     }
-//
-//     CrystalWindow_PresentImage(window_handle, Pix_format, buffer, sqr * sizeof(Pix), window_width, window_height);
-//
-//     delete []buffer;
-// }
-
 void on_key_down(P_INSTANCE(WindowHandle) window_handle, int32_t keycode) {
     std::cerr << mod_header() << "Key down event: " << keycode << std::endl;
 
@@ -133,7 +84,7 @@ void on_key_down(P_INSTANCE(WindowHandle) window_handle, int32_t keycode) {
         Clipboard_Copy(window_handle, data);
 
     } else if (keycode == 'p' || keycode == 'P') {
-        DataInterchange *data = Clipboard_Paste();
+        DataInterchange *data = Clipboard_Paste(window_handle);
 
         if (data == nullptr) {
             std::cerr << mod_header() << "Clipboard error" << std::endl;
@@ -153,7 +104,8 @@ void on_key_down(P_INSTANCE(WindowHandle) window_handle, int32_t keycode) {
 
         for (P_INSTANCE(DragDropData::Node)node = DataInterchange_FormatEnum(data);
              i != 0 && node != nullptr; node = DataInterchange_FormatEnum_Next(node)) {
-            utf8_string_const drop_format;
+            utf8_string_const drop_format = nullptr;
+
             DataInterchange_FormatEnum_Text(node, &drop_format);
 
             for (int32_t i2 = 0; i2 < i; i2++) {
@@ -166,31 +118,6 @@ void on_key_down(P_INSTANCE(WindowHandle) window_handle, int32_t keycode) {
         }
 
         DataInterchange_Select(data, format);
-        DataInterchange_Selection_Reveal(data, &type, &data_ptr, &size);
-
-        std::cerr << mod_header() << "Pasted data of type: " << type << ", size: " << size << std::endl;
-
-        if (StartingWith("text/", type)) {
-            std::cerr << mod_header() << "Text data:" << std::endl;
-            std::cerr << mod_header() << (utf8_string_const) data_ptr << std::endl;
-
-            /*
-            // Print32_t the first 100 characters of the data for debugging
-            std::string text_data(static_cast<utf8_string >(data_ptr), size);
-            std::cerr << mod_header() << "Text data: " << text_data.substr(0, 100) << std::endl;
-
-            // Check the first few bytes of the data for debugging
-            std::cerr << mod_header() << "First few bytes of data: ";
-            for (size_t i = 0; i < std::min(size, size_t(10)); ++i) {
-                std::cerr << mod_header() << std::hex << static_cast<int>(static_cast<P_ELEMENTS(uint8_t) >(data_ptr)[i]) << " ";
-            }
-            std::cerr << mod_header() << std::dec << std::endl;
-            */
-        } else {
-            std::cerr << mod_header() << "Non-text data of size " << size << std::endl;
-
-            // Optionally, handle binary data
-        }
     }
 }
 
@@ -362,17 +289,15 @@ void on_clipboard_provide_chosen(P_INSTANCE(WindowHandle) window_handle, P_INSTA
 
         DataInterchange_Selection_Set(data, format, (utf8_string ) paths.c_str(), paths.length());
     }
-
 }
 
-
-void on_drag_receive_drop(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DragDropData)  data) {
+void receive(std::string label, P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DataInterchange)  data) {
     if (data == nullptr) {
-        std::cerr << mod_header() << "Drag and drop error" << std::endl;
+        std::cerr << mod_header() << label << " error" << std::endl;
         return;
     }
 
-    std::cerr << mod_header() << "Drag drop event" << std::endl;
+    std::cerr << mod_header() << label << " event" << std::endl;
     // Process the dropped data
     utf8_string_const type;
     P_INSTANCE(void) data_ptr;
@@ -380,24 +305,12 @@ void on_drag_receive_drop(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(Dra
 
     DataInterchange_Selection_Reveal(data, &type, &data_ptr, &size);
 
-    std::cerr << mod_header() << "Dropped data of type: " << type << ", size: " << size << std::endl;
+    std::cerr << mod_header() << label << " data of type: " << type << ", size: " << size << std::endl;
 
     if (StartingWith("text/", type)) {
         std::cerr << mod_header() << "Text data:" << std::endl;
         std::cerr << mod_header() << (utf8_string_const ) data_ptr << std::endl;
 
-        /*
-        // Print32_t the first 100 characters of the data for debugging
-        std::string text_data(static_cast<utf8_string >(data_ptr), size);
-        std::cerr << mod_header() << "Text data: " << text_data.substr(0, 100) << std::endl;
-
-        // Check the first few bytes of the data for debugging
-        std::cerr << mod_header() << "First few bytes of data: ";
-        for (size_t i = 0; i < std::min(size, size_t(10)); ++i) {
-            std::cerr << mod_header() << std::hex << static_cast<int>(static_cast<P_ELEMENTS(uint8_t) >(data_ptr)[i]) << " ";
-        }
-        std::cerr << mod_header() << std::dec << std::endl;
-        */
     } else {
         std::cerr << mod_header() << "Non-text data of size " << size << std::endl;
 
@@ -405,6 +318,14 @@ void on_drag_receive_drop(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(Dra
     }
 
     // Optionally: Clean up after drop action
+}
+
+void on_clipboard_receive_data(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DataInterchange)  data) {
+    receive("Clipboard", window_handle, data);
+}
+
+void on_drag_receive_drop(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DragDropData)  data) {
+    receive("Drag and drop", window_handle, data);
 }
 
 
@@ -452,6 +373,7 @@ int32_t main(int32_t argc, P_ELEMENTS(utf8_string)  argv) {
     CrystalWindow_SetMessaqgeHandler(window_handle, "on_drag_provide_status", (P_INSTANCE(void))on_drag_provide_status);
     CrystalWindow_SetMessaqgeHandler(window_handle, "on_drag_provide_finished", (P_INSTANCE(void))on_drag_provide_finished);
     CrystalWindow_SetMessaqgeHandler(window_handle, "on_clipboard_provide_chosen", (P_INSTANCE(void))on_clipboard_provide_chosen);
+    CrystalWindow_SetMessaqgeHandler(window_handle, "on_clipboard_receive_data", (P_INSTANCE(void))on_clipboard_receive_data);
     CrystalWindow_SetMessaqgeHandler(window_handle, "on_idle", (P_INSTANCE(void))on_idle);
 
     std::cerr << mod_header() << "Starting application..." << std::endl;

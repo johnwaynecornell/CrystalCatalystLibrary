@@ -18,6 +18,13 @@ public:
         Node *next;
     };
 
+    enum ESELECTION {
+        E_CLIPBOARD = 1,
+        E_DND = 2
+    };
+
+    ESELECTION selection_type;
+
     utf8_string_const selected_format;
     P_INSTANCE(void) selected_data;
     size_t selected_size;

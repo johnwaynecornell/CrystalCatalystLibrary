@@ -114,6 +114,8 @@ bool lookup_message_handler(P_INSTANCE(WindowHandle) window_handle, utf8_string_
         handler_ptr = (P_OUT(P_INSTANCE(void)) )&callbacks->on_drag_provide_finished;
     else if (strcmp(handler_name, "on_clipboard_provide_chosen") == 0)
         handler_ptr = (P_OUT(P_INSTANCE(void)) )&callbacks->on_clipboard_provide_chosen;
+    else if (strcmp(handler_name, "on_clipboard_receive_data") == 0)
+        handler_ptr = (P_OUT(P_INSTANCE(void)) )&callbacks->on_clipboard_receive_data;
     else if (strcmp(handler_name, "on_idle") == 0)
         handler_ptr = (P_OUT(P_INSTANCE(void)) )&callbacks->on_idle;
     else

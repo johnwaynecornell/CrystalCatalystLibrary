@@ -13,8 +13,6 @@ include(PlatformConfig.cmake)
 initPlatformConfig()
 
  add_library(CrystalCatalystLibrary SHARED
-         Platform/Windows/Windowing/Clipboard_Windows.cpp
-         Platform/Windows/Windowing/Clipboard_Windows.h
  )
 
  include(Platform/${CRYSTAL_PLATFORM}/Platform.cmake)
@@ -30,12 +28,12 @@ initPlatformConfig()
      Windowing/Pixels.h
      Windowing/DataInterchange.cpp
      Windowing/DataInterchange.h
-     Windowing/CLipboard.cpp
+     Windowing/Clipboard.cpp
      Windowing/Clipboard.h
      Windowing/DragDrop.cpp
      Windowing/DragDrop.h
 
-         Fonts/Fonts.cpp
+     Fonts/Fonts.cpp
      Fonts/Fonts.h
 
      Application.cpp

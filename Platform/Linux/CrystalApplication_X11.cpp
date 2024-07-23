@@ -6,6 +6,8 @@
 #include <iostream>
 #include <unistd.h>
 
+
+
 int32_t handleXError(P_INSTANCE(Display) display, P_INSTANCE(XErrorEvent) error)
 {
     char errorText[256];
@@ -20,6 +22,8 @@ int32_t handleXIOError(P_INSTANCE(Display) display)
     return 1; // You may want to exit the program here as the connection to the X server is lost
 }
 
+CrystalApplication_X11 *AppX11 = nullptr;
+
 void CrystalApplication_X11::Init()
 {
     CrystalApplication::Init();
@@ -33,9 +37,13 @@ void CrystalApplication_X11::Init()
         exit(1);
     }
 
+    InitAtoms();
+
     // Set up error handlers
     XSetErrorHandler(handleXError);
     XSetIOErrorHandler(handleXIOError);
+
+    AppX11 = this;
 }
 
 P_INSTANCE(WindowHandle) CrystalApplication_X11::WindowCreate(int32_t width, int32_t height, utf8_string_const title) {
@@ -87,24 +95,27 @@ P_INSTANCE(WindowHandle) CrystalApplication_X11::WindowCreate(int32_t width, int
     return window_handle;
 }
 
+void CrystalApplication_X11::DispatchEvent(XEvent &event) {
+    P_INSTANCE(WindowHandle) window_handle;
+    XFindContext(event.xany.display, event.xany.window, windowContext, (P_INSTANCE(XPointer)) & window_handle);
+
+    P_INSTANCE(CrystalWindow_X11)win = (P_INSTANCE(CrystalWindow_X11)) window_handle->crystal_window;
+
+    if (window_handle) {
+        win->handle_xevent(&event);
+    } else {
+        std::cerr << "No window handle found for event" << std::endl;
+    }
+
+}
+
 void CrystalApplication_X11::DispatchCycle()
 {
     XEvent event;
 
     while (XPending(globalDisplay)) {
         XNextEvent(globalDisplay, &event);
-
-        P_INSTANCE(WindowHandle) window_handle;
-        XFindContext(event.xany.display, event.xany.window, windowContext, (P_INSTANCE(XPointer)) & window_handle);
-
-        P_INSTANCE(CrystalWindow_X11)win = (P_INSTANCE(CrystalWindow_X11)) window_handle->crystal_window;
-
-        if (window_handle) {
-            win->handle_xevent(&event);
-        } else {
-            std::cerr << "No window handle found for event" << std::endl;
-        }
-
+        DispatchEvent(event);
     }
 }
 

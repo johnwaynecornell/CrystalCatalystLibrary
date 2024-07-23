@@ -9,6 +9,7 @@
 #include <iomanip>
 
 #include "DragDrop_X11.h"
+#include "CrystalCatalystLibrary/Platform/Linux/CrystalApplication_X11.h"
 
 #ifdef mod_header
 #undef mod_header
@@ -29,9 +30,7 @@ DragProvide_X11::~DragProvide_X11() {
 void DragProvide_X11::StartDrag(P_INSTANCE(DragDropData)  data, int32_t x, int32_t y) {
     std::cerr << mod_header() << "CrystalWindow_DragStart" << std::endl;
 
-    Atom XA_TARGETS = XInternAtom(source_window->display, "TARGETS", False);
-    Atom XA_TEXT = XInternAtom(source_window->display, "TEXT", False);
-    Atom XA_XdndSelection = XInternAtom(source_window->display, "XdndSelection", False);
+    Atom XA_XdndSelection = AppX11->atoms.xdnd.selection;
 
     XSetSelectionOwner(source_window->display, XA_XdndSelection, source_window->window, CurrentTime);
 
@@ -49,7 +48,7 @@ void DragProvide_X11::StartDrag(P_INSTANCE(DragDropData)  data, int32_t x, int32
 
     source_window->MouseCapture();
 
-    Atom XdndAware = XInternAtom(source_window->display, "XdndAware", False);
+    Atom XdndAware = AppX11->atoms.xdnd.aware;
     int64_t version = 5; // Xdnd version
     XChangeProperty(source_window->display, source_window->window, XdndAware, XA_ATOM, 32, PropModeReplace, (P_ELEMENTS(uint8_t) )&version, 1);
 
@@ -95,6 +94,7 @@ void DragProvide_X11::UpdateMotion(int32_t x, int32_t y) {
 }
 
 bool DragProvide_X11::handle_message(P_INSTANCE(XEvent) event) {
+
     if (!dragging) return false;
 
     switch (event->type) {
@@ -107,79 +107,14 @@ bool DragProvide_X11::handle_message(P_INSTANCE(XEvent) event) {
     }
 
     if (handle_xdnd_status(event)) return true;
-    if (handle_selection_request(event)) return true;
     if (handle_xdnd_finished(event)) return true;
 
     return false;
 }
 
-bool DragProvide_X11::handle_selection_request(P_INSTANCE(XEvent) event) {
-    if (event->type != SelectionRequest) return false;
-
-    std::cerr << mod_header() << "SelectionRequest event received" << std::endl;
-    XSelectionRequestEvent *req = &event->xselectionrequest;
-    XSelectionEvent ev = {0};
-    ev.type = SelectionNotify;
-    ev.display = req->display;
-    ev.requestor = req->requestor;
-    ev.selection = req->selection;
-    ev.target = req->target;
-    ev.time = req->time;
-    ev.property = req->property;
-
-    std::cerr << mod_header() << "SelectionRequest for target: " << XGetAtomName(req->display, req->target) << std::endl;
-
-    if (req->target == XInternAtom(req->display, "TARGETS", False)) {
-        Atom types[2] = {XInternAtom(req->display, "STRING", False), XInternAtom(req->display, "UTF8_STRING", False)};
-        XChangeProperty(req->display, req->requestor, req->property, XA_ATOM, 32, PropModeReplace, (P_ELEMENTS(uint8_t) )types, 2);
-    } else if (drag_data != nullptr) {
-        utf8_string_const format = nullptr;
-
-        if (req->target == XInternAtom(req->display, "text/plain", False)) format = "text/plain";
-        else if (req->target == XInternAtom(req->display, "text/html", False)) format = "text/html";
-        else if (req->target == XInternAtom(req->display, "text/uri-list", False)) format = "text/file-uri";
-
-        std::cerr << mod_header() << "Chosen format: " << format << std::endl;
-
-        source_window->callbacks.on_drag_provide_chosen(source_window->myHandle, drag_data, format);
-        P_INSTANCE(void) d;
-        size_t sz;
-        DragDropData_Selection_Reveal(drag_data, nullptr, &d, &sz);
-
-        std::cerr << mod_header() << "Providing data for format: " << format << std::endl;
-        if (strcmp(format, "text/file-uri") == 0) {
-            std::string uri_list(reinterpret_cast<utf8_string >(d), sz);
-            std::istringstream stream(uri_list);
-            std::string line;
-            std::string cleaned_uri_list;
-
-            while (std::getline(stream, line)) {
-                std::cerr << mod_header() << "line = \"" << line << "\"" << std::endl;
-
-                if (!line.empty()) {
-                    if (line.find("://") == std::string::npos) {
-                        line = "file://" + line; // Add 'file://' prefix if not present
-                    }
-                    cleaned_uri_list += line + "\n";
-                }
-            }
-
-            std::cerr << mod_header() << "Cleaned URI list: " << cleaned_uri_list << std::endl;
-            XChangeProperty(req->display, req->requestor, req->property, req->target, 8, PropModeReplace, (P_ELEMENTS(uint8_t) )cleaned_uri_list.data(), cleaned_uri_list.size());
-        } else {
-            XChangeProperty(req->display, req->requestor, req->property, req->target, 8, PropModeReplace, (P_ELEMENTS(uint8_t) )d, sz);
-        }
-    } else {
-        std::cerr << mod_header() << "No current_drag_provide_data available" << std::endl;
-    }
-    XSendEvent(req->display, req->requestor, False, 0, (P_INSTANCE(XEvent) )&ev);
-
-    return true;
-}
-
 bool DragProvide_X11::handle_xdnd_status(P_INSTANCE(XEvent)  event) {
     if (event->type != ClientMessage) return false;
-    if (event->xclient.message_type != XInternAtom(source_window->display, "XdndStatus", False)) return false;
+    if (event->xclient.message_type != AppX11->atoms.xdnd.msg.status) return false;
 
     std::cerr << mod_header() << std::hex << std::setw(8) << std::setfill('0') << "status receive l[1] = " << event->xclient.data.l[1] << std::dec << std::endl;
 
@@ -222,7 +157,7 @@ void DragProvide_X11::drag_is_finished(bool success) {
 
 bool DragProvide_X11::handle_xdnd_finished(P_INSTANCE(XEvent)  event) {
     if (event->type != ClientMessage) return false;
-    if (event->xclient.message_type != XInternAtom(source_window->display, "XdndFinished", False)) return false;
+    if (event->xclient.message_type != AppX11->atoms.xdnd.msg.finished) return false;
 
     bool success = event->xclient.data.l[2] != 0;
 
@@ -297,36 +232,16 @@ void DragProvide_X11::send_xdnd_enter() {
     event.type = ClientMessage;
     event.xclient.display = source_window->display;
     event.xclient.window = target_window;
-    event.xclient.message_type = XInternAtom(source_window->display, "XdndEnter", False);
+    event.xclient.message_type = AppX11->atoms.xdnd.msg.enter;
     event.xclient.format = 32;
     event.xclient.data.l[0] = source_window->window;
 
     std::cerr << mod_header() << "sending XdndEnter message sent to " << target_window << " from " << source_window->window << std::endl;
 
     int32_t type_count = 0;
-    for (P_INSTANCE(DragDropData::Node) node = DragDropData_FormatEnum(drag_data); node != nullptr; node = DragDropData_FormatEnum_Next(node)) {
-        type_count++;
-    }
-
     Atom *drop_types = new Atom[type_count];
-    int32_t I = 0;
 
-    for (P_INSTANCE(DragDropData::Node) node = DragDropData_FormatEnum(drag_data); node != nullptr; node = DragDropData_FormatEnum_Next(node)) {
-        utf8_string_const ty;
-        DragDropData_FormatEnum_Text(node, &ty);
-
-        if (strcmp(ty, "text/plain") == 0) {
-            drop_types[I++] = XInternAtom(source_window->display, "text/plain", False);
-        } else if (strcmp(ty, "text/html") == 0) {
-            drop_types[I++] = XInternAtom(source_window->display, "text/html", False);
-        } else if (strcmp(ty, "text/file-uri") == 0) {
-            drop_types[I++] = XInternAtom(source_window->display, "text/uri-list", False);
-        } else {
-            std::cerr << mod_header() << "DragProvide_X11::send_xdnd_enter can't convert " << ty << " to an Atom" << std::endl;
-            delete[] drop_types; // Free allocated memory before throwing
-            throw std::runtime_error("Unsupported format type");
-        }
-    }
+    DataImterchange_AtomArrayFromFormats(drag_data, &drop_types, &type_count);
 
     // Set the version in the most significant byte and indicate if more than three types are used
     event.xclient.data.l[1] = (5 << 24); // Set version 5
@@ -335,7 +250,7 @@ void DragProvide_X11::send_xdnd_enter() {
     }
 
     if (type_count > 3) {
-        Atom XdndTypeList = XInternAtom(source_window->display, "XdndTypeList", False);
+        Atom XdndTypeList = AppX11->atoms.xdnd.type_list;
         XChangeProperty(
             source_window->display,
             source_window->window,
@@ -352,7 +267,7 @@ void DragProvide_X11::send_xdnd_enter() {
         }
     }
     // Use a separate property to store the supported actions
-    Atom XdndSupportedActions = XInternAtom(source_window->display, "XdndSupportedActions", False);
+    Atom XdndSupportedActions = AppX11->atoms.xdnd.supported_actions;
 
     int64_t actions = drag_actions_to_xint64_t(drag_data->action_selections, source_window->display);
 
@@ -377,95 +292,6 @@ void DragProvide_X11::send_xdnd_enter() {
     std::cerr << mod_header() << "XdndEnter message sent to " << target_window << " from " << source_window->window << std::endl;
 }
 
-/*
-void DragProvide_X11::send_xdnd_enter() {
-    XEvent event;
-    memset(&event, 0, sizeof(event));
-    event.type = ClientMessage;
-    event.xclient.display = source_window->display;
-    event.xclient.window = target_window;
-    event.xclient.message_type = XInternAtom(source_window->display, "XdndEnter", False);
-    event.xclient.format = 32;
-    event.xclient.data.l[0] = source_window->window;
-    event.xclient.data.l[1] = 0; // Initialize to 0
-
-    int32_t type_count = 0;
-    for (P_INSTANCE(DragDropData::Node) node = DragDropData_FormatEnum(drag_data); node != nullptr; node = DragDropData_FormatEnum_Next(node)) {
-        type_count++;
-    }
-
-    Atom *drop_types = new Atom[type_count];
-    int32_t I = 0;
-
-    for (P_INSTANCE(DragDropData::Node) node = DragDropData_FormatEnum(drag_data); node != nullptr; node = DragDropData_FormatEnum_Next(node)) {
-        utf8_string_const ty;
-        DragDropData_FormatEnum_Text(node, &ty);
-
-        if (strcmp(ty, "text/plain") == 0) {
-            drop_types[I++] = XInternAtom(source_window->display, "text/plain", False);
-        } else if (strcmp(ty, "text/html") == 0) {
-            drop_types[I++] = XInternAtom(source_window->display, "text/html", False);
-        } else if (strcmp(ty, "text/file-uri") == 0) {
-            drop_types[I++] = XInternAtom(source_window->display, "text/uri-list", False);
-        } else {
-            std::cerr << mod_header() << "DragProvide_X11::send_xdnd_enter can't convert " << ty << " to an Atom" << std::endl;
-            delete[] drop_types; // Free allocated memory before throwing
-            throw std::runtime_error("Unsupported format type");
-        }
-    }
-
-    if (type_count > 3) {
-        event.xclient.data.l[1] = 1; // More than 3 types
-
-        Atom XdndTypeList = XInternAtom(source_window->display, "XdndTypeList", False);
-        XChangeProperty(
-            source_window->display,
-            source_window->window,
-            XdndTypeList,
-            XA_ATOM,
-            32,
-            PropModeReplace,
-            reinterpret_cast<P_ELEMENTS(uint8_t)>(drop_types),
-            type_count
-        );
-    } else {
-        event.xclient.data.l[1] = 0; // 3 or fewer types
-        for (int32_t i = 0; i < type_count; ++i) {
-            event.xclient.data.l[2 + i] = drop_types[i];
-        }
-
-        // Use a separate property to store the supported actions
-        Atom XdndSupportedActions = XInternAtom(source_window->display, "XdndSupportedActions", False);
-        int64_t actions = 0;
-
-        if (drag_data->action_selections & DRAG_OPERATION_MOVE) {
-            actions |= XInternAtom(source_window->display, "XdndActionCopy", False);
-        }
-        if (drag_data->action_selections & DRAG_OPERATION_MOVE) {
-            actions |= XInternAtom(source_window->display, "XdndActionMove", False);
-        }
-        if (drag_data->action_selections & DRAG_OPERATION_LINK) {
-            actions |= XInternAtom(source_window->display, "XdndActionLink", False);
-        }
-        XChangeProperty(
-            source_window->display,
-            source_window->window,
-            XdndSupportedActions,
-            XA_ATOM,
-            32,
-            PropModeReplace,
-            reinterpret_cast<P_ELEMENTS(uint8_t)>(&actions),
-            1
-        );
-    }
-
-    delete[] drop_types;
-    XSendEvent(source_window->display, target_window, False, NoEventMask, &event);
-    XFlush(source_window->display);
-
-    std::cerr << mod_header() << "XdndEnter message sent to " << target_window << " from " << source_window->window << std::endl;
-}*/
-
 void DragProvide_X11::send_xdnd_position(int32_t x, int32_t y) {
     XEvent event;
     memset(&event, 0, sizeof(event));
@@ -473,9 +299,9 @@ void DragProvide_X11::send_xdnd_position(int32_t x, int32_t y) {
     event.xclient.display = source_window->display;
     event.xclient.window = target_window;
 
-    event.xclient.message_type = XInternAtom(source_window->display, "XdndPosition", False);
+    event.xclient.message_type = AppX11->atoms.xdnd.msg.position;
     event.xclient.format = 32;
-    event.xclient.data.l[0] = source_window->window;
+    event.xclient.data.l[0] = (long) source_window->window;
     event.xclient.data.l[1] = 0; // Use CurrentTime as suggested
     event.xclient.data.l[2] = (x << 16) | y; // Pack the coordinates into l[2]
     event.xclient.data.l[3] = CurrentTime;
@@ -500,9 +326,9 @@ void DragProvide_X11::send_xdnd_leave() {
     memset(&event, 0, sizeof(event));
     event.type = ClientMessage;
     event.xclient.window = target_window;
-    event.xclient.message_type = XInternAtom(source_window->display, "XdndLeave", False);
+    event.xclient.message_type = AppX11->atoms.xdnd.msg.leave;
     event.xclient.format = 32;
-    event.xclient.data.l[0] = source_window->window;
+    event.xclient.data.l[0] = (long) source_window->window;
 
     XSendEvent(source_window->display, target_window, False, NoEventMask, &event);
     XFlush(source_window->display);
@@ -516,9 +342,9 @@ void DragProvide_X11::send_xdnd_drop() {
     event.type = ClientMessage;
     event.xclient.display = source_window->display;
     event.xclient.window = target_window;
-    event.xclient.message_type = XInternAtom(source_window->display, "XdndDrop", False);
+    event.xclient.message_type = AppX11->atoms.xdnd.msg.drop;
     event.xclient.format = 32;
-    event.xclient.data.l[0] = source_window->window;
+    event.xclient.data.l[0] = (long) source_window->window;
     event.xclient.data.l[1] = CurrentTime;
 
     XSendEvent(source_window->display, target_window, False, NoEventMask, &event);
@@ -533,11 +359,11 @@ void DragProvide_X11::send_xdnd_finished(bool success) {
     event.type = ClientMessage;
     event.xclient.display = source_window->display;
     event.xclient.window = target_window;
-    event.xclient.message_type = XInternAtom(source_window->display, "XdndFinished", False);
+    event.xclient.message_type = AppX11->atoms.xdnd.msg.finished;
     event.xclient.format = 32;
-    event.xclient.data.l[0] = source_window->window;
+    event.xclient.data.l[0] = (long) source_window->window;
     event.xclient.data.l[1] = success ? 1 : 0; // Success flag
-    event.xclient.data.l[2] = XInternAtom(source_window->display, "XdndActionCopy", False);
+    event.xclient.data.l[2] = (long) AppX11->atoms.xdnd.action.copy;
 
     XSendEvent(source_window->display, target_window, False, NoEventMask, &event);
     XFlush(source_window->display);

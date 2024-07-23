@@ -2,7 +2,7 @@
 #include "Clipboard_Windows.h"
 #include "SimpleDataObject.h"
 
-P_INSTANCE(DataInterchange)  Clipboard_Paste()
+P_INSTANCE(DataInterchange)  Clipboard_Paste(P_INSTANCE(WindowHandle) handle)
 {
     IDataObject* pDataObject = nullptr;
     HRESULT hr = OleGetClipboard(&pDataObject);
@@ -11,6 +11,9 @@ P_INSTANCE(DataInterchange)  Clipboard_Paste()
     }
 
     P_INSTANCE(DataInterchange) data = DataInterchange_Create();
+	data->selection_type = DataInterchange::E_CLIPBOARD;
+	data->m_handle = handle;
+
     data->context = pDataObject;
     hr= DataInterchange_ReadFormats(data, pDataObject);
 
@@ -25,6 +28,7 @@ void Clipboard_Copy(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange)
 {
     DataInterchange_CreateContext(data);
     data->m_handle = handle;
+	data->selection_type = DataInterchange::E_CLIPBOARD;
 
     IDataObject* pDataObject = (IDataObject *)data->context;
 
@@ -41,6 +45,7 @@ void Clipboard_Copy(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange)
 void Clipboard_Copy_WithCallback(void (*provide)(P_INSTANCE(DataInterchange)  data, utf8_string_const format), P_INSTANCE(DataInterchange)  data)
 {
     DataInterchange_CreateContext(data);
+	data->selection_type = DataInterchange::E_CLIPBOARD;
 
     IDataObject* pDataObject = (IDataObject *)data->context;
 
@@ -59,6 +64,8 @@ void Clipboard_Copy_Persist(P_INSTANCE(DataInterchange) dataInterchange) {
         std::cerr << "Failed to open clipboard." << std::endl;
         return;
     }
+
+	dataInterchange->selection_type = DataInterchange::E_CLIPBOARD;
 
     EmptyClipboard();
 

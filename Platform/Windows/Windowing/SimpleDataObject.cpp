@@ -1,6 +1,3 @@
-//
-// Created by jwc on 7/19/24.
-//
 #include <vector>
 #include <ShlObj_core.h>
 #include <iostream>
@@ -381,6 +378,7 @@ HRESULT DataInterchange_ReadFormats(P_INSTANCE(DataInterchange) data, IDataObjec
 
 void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_const format)
 {
+
     FORMATETC fmt = { 0, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
 
     std::string f = format;
@@ -425,5 +423,11 @@ void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_const 
             }
         }
         ReleaseStgMedium(&stg);
+
+		if (data->selection_type == DataInterchange::E_DND) {
+    	    data->m_handle->crystal_window->callbacks.on_drag_receive_drop(data->m_handle, (P_INSTANCE(DragDropData)) data));
+    	} else if (data->selection_type == DataInterchange::E_CLIPBOARD)
+        	data->m_handle->crystal_window->callbacks.on_clipboard_receive_data(data->m_handle, data);
+
     }
 }

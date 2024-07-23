@@ -42,7 +42,6 @@ protected:
     void send_xdnd_drop();
     void send_xdnd_finished(bool success);
 
-    bool handle_selection_request(P_INSTANCE(XEvent) event);
     bool handle_xdnd_status(P_INSTANCE(XEvent)  event);
     bool handle_xdnd_finished(P_INSTANCE(XEvent)  event);
 
