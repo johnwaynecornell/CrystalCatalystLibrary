@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Lightning;
 using Newtonsoft.Json;
 
 namespace BuildDLLImports
@@ -12,7 +13,7 @@ namespace BuildDLLImports
     public static class Snapshot
     {
         public static string directoryPath = "../../../";
-        public static void SaveSnapshot(List<ParsedFunction> functions)
+        public static void SaveSnapshot(QuickList<ParsedFunction> functions)
         {
             //string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             //string filePath = Path.Combine(directoryPath, $"snapshot_{timestamp}.json");

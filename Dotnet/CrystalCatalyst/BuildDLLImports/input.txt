@@ -1,4 +1,4 @@
-   _EXPORT_ bool CrystalCatalyst_Fonts_Has_MSCoreFonts(void (*callback)(utf8_string_const OS, utf8_string_const Instructions) = nullptr);
+    _EXPORT_ bool CrystalCatalyst_Fonts_Has_MSCoreFonts(void (*callback)(utf8_string_const OS, utf8_string_const Instructions) = nullptr);
 _EXPORT_ void LogError(P_ELEMENTS(const ErrorKeyValue)  details, size_t detail_count, utf8_string_const message);
 _EXPORT_ void ClearErrors();
 _EXPORT_ ReturnBuffer Pixels_ConvertPixels(utf8_string_const pixformat, utf8_string_const pixformat_dest, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height);
@@ -13,20 +13,16 @@ _EXPORT_ void Application_WindowRemove(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ P_INSTANCE(TLS) TLS_Alloc(TLS_INITIALIZE_VALUE initialize_value, TLS_DESTRUCTOR destructor);
     _EXPORT_ void TLS_Free(P_INSTANCE(TLS) tls);
     _EXPORT_ P_INSTANCE(void) TLS_get(P_INSTANCE(TLS) tls);
+    _EXPORT_ P_INSTANCE(DataInterchange)  Clipboard_Paste(P_INSTANCE(WindowHandle) handle);
+    _EXPORT_ void Clipboard_Copy(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) data);
+    _EXPORT_ void Clipboard_Copy_WithCallback(void (*provide)(P_INSTANCE(DataInterchange)  data), P_INSTANCE(DataInterchange) data);
+    _EXPORT_ void Clipboard_Copy_Persist(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) data);
+    _EXPORT_ void Clipboard_Clear();
     _EXPORT_ void CrystalWindow_RegisterDragTarget(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ void CrystalWindow_DragStart(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DragDropData)  data, int32_t x, int32_t y); // Implemented in Platform
     _EXPORT_ void CrystalWindow_DragChoose(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DragDropData)  data, utf8_string_const fmt); // Implemented in Platform
-    _EXPORT_ P_INSTANCE(DragDropData)  DragDropData_Create();
-    _EXPORT_ void DragDropData_Free(P_INSTANCE(DragDropData) drag);
-    _EXPORT_ P_INSTANCE(DragDropData::Node)  DragDropData_FormatAdd(P_INSTANCE(DragDropData) drop, utf8_string_const format);
-    _EXPORT_ bool DragDropData_FormatExists(P_INSTANCE(DragDropData) data, utf8_string_const format);
-    _EXPORT_ P_INSTANCE(DragDropData::Node) DragDropData_FormatEnum(P_INSTANCE(DragDropData) drop);
-    _EXPORT_ P_INSTANCE(DragDropData::Node) DragDropData_FormatEnum_Next(P_INSTANCE(DragDropData::Node) node);
-    _EXPORT_ void DragDropData_FormatEnum_Text(P_INSTANCE(DragDropData::Node) node, P_OUT(utf8_string_const) text);
-    _EXPORT_ P_INSTANCE(DragDropData::Node) DragDropData_Items_FormatRemove(P_INSTANCE(DragDropData) drop, P_INSTANCE(DragDropData::Node) node);
-    _EXPORT_ void DragDropData_Selection_Reveal(P_INSTANCE(DragDropData) drag, P_OUT(utf8_string_const) format, P_OUT(P_INSTANCE(void)) data, P_OUT(size_t) size);
-    _EXPORT_ void DragDropData_Selection_Set(P_INSTANCE(DragDropData) drag, utf8_string_const format, P_INSTANCE(void) data, size_t size);
     _EXPORT_ void DragActions_String(DragActions actions, utf8_string buffer, size_t length);
+    _EXPORT_ P_INSTANCE(DragDropData)  DragDropData_Create();
 _EXPORT_ P_INSTANCE(WindowHandle) CrystalWindow_Create(int32_t width, int32_t height, utf8_string_const title);
 _EXPORT_ void CrystalWindow_ApplicationRetain(P_INSTANCE(WindowHandle) window_handle);
 _EXPORT_ void CrystalWindow_ApplicationRelease(P_INSTANCE(WindowHandle) window_handle);
@@ -38,6 +34,17 @@ _EXPORT_ void CrystalWindow_GL_Init(P_INSTANCE(WindowHandle) window_handle);
 _EXPORT_ void CrystalWindow_Show(P_INSTANCE(WindowHandle) window_handle, bool restore);
 _EXPORT_ bool CrystalWindow_SetMessaqgeHandler(P_INSTANCE(WindowHandle) window_handle, utf8_string_const handler_name, P_INSTANCE(void) handler);
 _EXPORT_ ReturnBuffer CrystalWindow_ConvertPixels(utf8_string_const pixformat, utf8_string_const pixformat_dest, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height);
+_EXPORT_ P_INSTANCE(DataInterchange)  DataInterchange_Create();
+_EXPORT_ void DataInterchange_Free(P_INSTANCE(DataInterchange) drag);
+_EXPORT_ P_INSTANCE(DataInterchange::Node)  DataInterchange_FormatAdd(P_INSTANCE(DataInterchange) drop, utf8_string_const format);
+_EXPORT_ bool DataInterchange_FormatExists(P_INSTANCE(DataInterchange) data, utf8_string_const format);
+_EXPORT_ P_INSTANCE(DataInterchange::Node) DataInterchange_FormatEnum(P_INSTANCE(DataInterchange) drop);
+_EXPORT_ P_INSTANCE(DataInterchange::Node) DataInterchange_FormatEnum_Next(P_INSTANCE(DataInterchange::Node) node);
+_EXPORT_ void DataInterchange_FormatEnum_Text(P_INSTANCE(DataInterchange::Node) node, P_OUT(utf8_string_const) text);
+_EXPORT_ P_INSTANCE(DataInterchange::Node) DataInterchange_Items_FormatRemove(P_INSTANCE(DataInterchange) drop, P_INSTANCE(DataInterchange::Node) node);
+_EXPORT_ void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_const format);
+_EXPORT_ void DataInterchange_Selection_Reveal(P_INSTANCE(DataInterchange) drag, P_OUT(utf8_string_const) format, P_OUT(P_INSTANCE(void)) data, P_OUT(size_t) size);
+_EXPORT_ void DataInterchange_Selection_Set(P_INSTANCE(DataInterchange) drag, utf8_string_const format, P_INSTANCE(void) data, size_t size);
 _EXPORT_ void ReturnBuffer_Deallocate(ReturnBuffer Buffer);
 _EXPORT_ void ReturnBuffer_NillDeallocate(ReturnBuffer B);
 _EXPORT_ void ReturnBuffer_NonDeallocate(ReturnBuffer B);
@@ -67,9 +74,8 @@ _EXPORT_ bool CrystalCatalyst_SubMutex_Lock(P_INSTANCE(void) spiderMutex);
 _EXPORT_ bool CrystalCatalyst_SubMutex_Unlock(P_INSTANCE(void) spiderMutex);
 _EXPORT_ bool CrystalCatalystLibrary_Initialize();
 _EXPORT_ bool CrystalCatalystLibrary_Close();
-_EXPORT_ bool StartingWith(utf8_string_const prefix, utf8_string_const str);
-
-    void (*on_draw)(P_INSTANCE(WindowHandle) window_handle);
+_EXPORT_ bool StartingWith(utf8_string_const prefix, utf8_string_const str); 
+ void (*on_draw)(P_INSTANCE(WindowHandle) window_handle);
 
     void (*on_key_down)(P_INSTANCE(WindowHandle) window_handle, int32_t keycode);
     void (*on_key_up)(P_INSTANCE(WindowHandle) window_handle, int32_t keycode);
@@ -96,5 +102,8 @@ _EXPORT_ bool StartingWith(utf8_string_const prefix, utf8_string_const str);
     void (*on_drag_provide_status)(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DragDropData)  data);
     void (*on_drag_provide_chosen)(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DragDropData)  data, utf8_string_const format);
     void (*on_drag_provide_finished)(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DragDropData) data, bool success);
+
+    void (*on_clipboard_provide_chosen)(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DataInterchange)  data, utf8_string_const format);
+    void (*on_clipboard_receive_data)(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DataInterchange)  data);
 
     void (*on_idle)(P_INSTANCE(WindowHandle) window_handle);

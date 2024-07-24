@@ -206,9 +206,9 @@ namespace BuildDLLImports
             return function;
         }
 
-        public List<ParsedFunction> ParseHeaderFile(string filePath)
+        public QuickList<ParsedFunction> ParseHeaderFile(string filePath)
         {
-            var functions = new List<ParsedFunction>();
+            var functions = new QuickList<ParsedFunction>();
 
             foreach (var line in File.ReadLines(filePath))
             {
