@@ -425,7 +425,7 @@ void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_const 
         ReleaseStgMedium(&stg);
 
 		if (data->selection_type == DataInterchange::E_DND) {
-    	    data->m_handle->crystal_window->callbacks.on_drag_receive_drop(data->m_handle, (P_INSTANCE(DragDropData)) data));
+    	    data->m_handle->crystal_window->callbacks.on_drag_receive_drop(data->m_handle, (P_INSTANCE(DragDropData)) data);
     	} else if (data->selection_type == DataInterchange::E_CLIPBOARD)
         	data->m_handle->crystal_window->callbacks.on_clipboard_receive_data(data->m_handle, data);
 

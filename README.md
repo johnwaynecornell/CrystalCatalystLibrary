@@ -1,6 +1,6 @@
 # CrystalCatalyst Library Design Philosophy and Benefits
 
-    The design philosophy of the CrystalCatalyst library revolves around leveraging the strengths of C++ for its object-oriented and low-level system programming features while providing a platform-agnostic interface that is easily accessible from higher-level languages. The architecture employs a symmetrical approach where platform-specific implementations are encapsulated within distinct directories (e.g., <code>Platform__Linux</code> and <code>Platform__Windows</code>), each containing tailored code and CMake configurations. This ensures that only the relevant platform-specific code is compiled, reducing complexity and potential conflicts.</p>
+The design philosophy of the CrystalCatalyst library revolves around leveraging the strengths of C++ for its object-oriented and low-level system programming features while providing a platform-agnostic interface that is easily accessible from higher-level languages. The architecture employs a symmetrical approach where platform-specific implementations are encapsulated within distinct directories (e.g., <code>Platform__Linux</code> and <code>Platform__Windows</code>), each containing tailored code and CMake configurations. This ensures that only the relevant platform-specific code is compiled, reducing complexity and potential conflicts.
 
 ## Benefits
 
