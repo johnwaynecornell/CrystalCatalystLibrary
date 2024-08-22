@@ -2,7 +2,7 @@
 // Copyright (c) 2024 John W. Cornell
 // See LICENSE file in the project root for full license information.
 #include <cstring>
-#include "../CrystalCatalystLibrary.h"
+#include "../include/CrystalCatalystLibrary/CrystalCatalystLibrary.h"
 #include "CrystalWindow.h"
 
 #include <assert.h>

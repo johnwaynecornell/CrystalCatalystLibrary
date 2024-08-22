@@ -2,7 +2,7 @@
 // Created by jwc on 7/19/24.
 //
 
-#include "../CrystalCatalystLibrary.h"
+#include "../include/CrystalCatalystLibrary/CrystalCatalystLibrary.h"
 
 
 void DataInterchange::provide_for_clipboard(P_INSTANCE(DataInterchange) data, utf8_string_const format)

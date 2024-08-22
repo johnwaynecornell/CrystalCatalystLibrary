@@ -4,7 +4,7 @@
 #ifndef FONTS_H
 #define FONTS_H
 
-#include "../CrystalCatalystLibrary.h"
+#include "CrystalCatalystLibrary.h"
 
 extern "C"
 {

@@ -19,42 +19,44 @@ initPlatformConfig()
 
  target_sources(CrystalCatalystLibrary PUBLIC
      CrystalCatalystLibrary.cpp
-     CrystalCatalystLibrary.h
+         include/CrystalCatalystLibrary/CrystalCatalystLibrary.h
      Synchronization/CrystalSync.cpp
-     Synchronization/CrystalSync.h
+         include/CrystalCatalystLibrary/Synchronization/CrystalSync.h
      Windowing/CrystalWindow.cpp
-     Windowing/CrystalWindow.h
+         include/CrystalCatalystLibrary/Windowing/CrystalWindow.h
      Windowing/Pixels.cpp
-     Windowing/Pixels.h
+         include/CrystalCatalystLibrary/Windowing/Pixels.h
      Windowing/DataInterchange.cpp
-     Windowing/DataInterchange.h
+         include/CrystalCatalystLibrary/Windowing/DataInterchange.h
      Windowing/Clipboard.cpp
-     Windowing/Clipboard.h
+         include/CrystalCatalystLibrary/Windowing/Clipboard.h
      Windowing/DragDrop.cpp
-     Windowing/DragDrop.h
+         include/CrystalCatalystLibrary/Windowing/DragDrop.h
 
      Fonts/Fonts.cpp
-     Fonts/Fonts.h
+         include/CrystalCatalystLibrary/Fonts.h
 
      Application.cpp
-     Application.h
+         include/CrystalCatalystLibrary/Application.h
 
      Platform.cpp
-     Platform.h
+         include/CrystalCatalystLibrary/Platform.h
 
      TLS.cpp
-     TLS.h
+         include/CrystalCatalystLibrary/TLS.h
 
      ErrorSystem.cpp
-     ErrorSystem.h
+         include/CrystalCatalystLibrary/ErrorSystem.h
 
      ${PLATFORM_SOURCES})
+
+ add_definitions(-DBUILD_CRYSTALCATALYSTLIBRARY)
 
 set_target_output(CrystalCatalystLibrary ${CRYSTAL_FUNDAMENTALS_VERSION_MAJOR} ${CRYSTAL_FUNDAMENTALS_VERSION_MINOR} ${CRYSTAL_FUNDAMENTALS_VERSION_BUILD})
 
 target_link_libraries(CrystalCatalystLibrary PUBLIC UnderCrystalCatalyst)
 
-add_subdirectory(Under)
+ include($ENV{NewAge}/include/JWCEssentials/JWCEssentials.cmake)
 
 add_subdirectory(Test)
 

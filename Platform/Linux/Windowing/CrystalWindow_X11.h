@@ -4,7 +4,7 @@
 #ifndef CRYSTALCATALYST_LINUX_CRYSTALWINDOW_H
 #define CRYSTALCATALYST_LINUX_CRYSTALWINDOW_H
 
-#include "../../../CrystalCatalystLibrary.h"
+#include "../../../include/CrystalCatalystLibrary/CrystalCatalystLibrary.h"
 #include "../Platform.h"
 #include "DragProvide_X11.h"
 

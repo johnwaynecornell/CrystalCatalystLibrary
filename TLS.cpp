@@ -1,7 +1,7 @@
 // MIT License
 // Copyright (c) 2024 John W. Cornell
 // See LICENSE file in the project root for full license information.
-#include "TLS.h"
+#include "include/CrystalCatalystLibrary/TLS.h"
 #include <stdlib.h>
 
 TLS::TLS(TLS_INITIALIZE_VALUE initialize_value, TLS_DESTRUCTOR destructor) {

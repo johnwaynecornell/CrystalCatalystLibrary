@@ -11,7 +11,7 @@
 
 #include <string>
 #include "../../Platform.h"
-#include "../../CrystalCatalystLibrary.h"
+#include "../../include/CrystalCatalystLibrary/CrystalCatalystLibrary.h"
 
 std::string get_distro_name();
 bool is_rpm_based();

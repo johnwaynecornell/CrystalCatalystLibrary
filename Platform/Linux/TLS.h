@@ -4,7 +4,7 @@
 #ifndef TLS_LINUX_H
 #define TLS_LINUX_H
 
-#include "../../CrystalCatalystLibrary.h"
+#include "../../include/CrystalCatalystLibrary/CrystalCatalystLibrary.h"
 
 class TLS_Posix : public TLS {
 public:

@@ -8,7 +8,7 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
-#include "../CrystalCatalystLibrary.h"
+#include "../include/CrystalCatalystLibrary/CrystalCatalystLibrary.h"
 
 #ifdef mod_header
 #undef mod_header

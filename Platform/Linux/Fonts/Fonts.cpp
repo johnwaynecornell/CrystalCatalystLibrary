@@ -9,55 +9,59 @@
 
 namespace fs = std::filesystem;
 
-struct StringKeyval {
-    utf8_string_const key;
-    utf8_string_const value;
-};
+using namespace JWCEssentials;
 
-StringKeyval distro_instructions[] = {
-    { "ubuntu", "sudo apt update\nsudo apt install ttf-mscorefonts-installer\n"},
-    {"debian", "sudo apt update\nsudo apt install ttf-mscorefonts-installer\n"},
-    {"fedora", "sudo dnf install https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-(rpm -E %fedora).noarch.rpm\n"
-             "sudo dnf install https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-(rpm -E %fedora).noarch.rpm\n"
-             "sudo dnf install msttcore-fonts-installer\n"},
+namespace NewAge {
+    struct StringKeyval {
+        utf8_string_const key;
+        utf8_string_const value;
+    };
 
-{"arch", "Edit /etc/pacman.conf and uncomment the following lines:\n"
-         "[multilib]\nInclude = /etc/pacman.d/mirrorlist\n"
-         "Then install the package using yay:\nyay -S ttf-ms-fonts\n"},
-{"opensuse", "sudo zypper ar -f https://download.opensuse.org/repositories/M17N:/fonts/openSUSE_Leap_15.3/ M17N-fonts\n"
-             "sudo zypper in fetchmsttfonts\n"
-             "sudo fetchmsttfonts\n"},
-    {nullptr, nullptr}
-};
+    StringKeyval distro_instructions[] = {
+        { "ubuntu", "sudo apt update\nsudo apt install ttf-mscorefonts-installer\n"},
+        {"debian", "sudo apt update\nsudo apt install ttf-mscorefonts-installer\n"},
+        {"fedora", "sudo dnf install https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-(rpm -E %fedora).noarch.rpm\n"
+                 "sudo dnf install https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-(rpm -E %fedora).noarch.rpm\n"
+                 "sudo dnf install msttcore-fonts-installer\n"},
 
-bool CrystalCatalyst_Fonts_Has_MSCoreFonts(void (*callback)(utf8_string_const OS, utf8_string_const Instructions)) {
-    // Check if the directory exists
-    if (fs::exists("/usr/share/fonts/truetype/msttcorefonts/")) return true;
+    {"arch", "Edit /etc/pacman.conf and uncomment the following lines:\n"
+             "[multilib]\nInclude = /etc/pacman.d/mirrorlist\n"
+             "Then install the package using yay:\nyay -S ttf-ms-fonts\n"},
+    {"opensuse", "sudo zypper ar -f https://download.opensuse.org/repositories/M17N:/fonts/openSUSE_Leap_15.3/ M17N-fonts\n"
+                 "sudo zypper in fetchmsttfonts\n"
+                 "sudo fetchmsttfonts\n"},
+        {nullptr, nullptr}
+    };
 
-    std::string distro = get_distro_name();
-    std::string message = "MS Core fonts not found at '/usr/share/fonts/truetype/msttcorefonts/'\n";
+    bool CrystalCatalyst_Fonts_Has_MSCoreFonts(void (*callback)(utf8_string_const OS, utf8_string_const Instructions)) {
+        // Check if the directory exists
+        if (fs::exists("/usr/share/fonts/truetype/msttcorefonts/")) return true;
 
-    int32_t i;
-    for (int32_t i; distro_instructions[i].key != nullptr; i++) {
-        std::string d = distro_instructions[i].key;
-        if (distro == d) {
-            message += "To perform the install, try:\n";
-            message += distro_instructions[i].value;
-            break;
-        }
-    }
+        std::string distro = get_distro_name();
+        std::string message = "MS Core fonts not found at '/usr/share/fonts/truetype/msttcorefonts/'\n";
 
-    if (distro_instructions[i].key == nullptr) {
-        message += "no instructions, try a web search for 'install Microsoft's TrueType core fonts' for your distro\n";
-
-        if (is_rpm_based()) {
-            message += "Or, seeing as it's RPM based. perhaps see https://corefonts.sourceforge.net/\n";
+        int32_t i;
+        for (int32_t i; distro_instructions[i].key != nullptr; i++) {
+            std::string d = distro_instructions[i].key;
+            if (distro == d) {
+                message += "To perform the install, try:\n";
+                message += distro_instructions[i].value;
+                break;
+            }
         }
 
+        if (distro_instructions[i].key == nullptr) {
+            message += "no instructions, try a web search for 'install Microsoft's TrueType core fonts' for your distro\n";
+
+            if (is_rpm_based()) {
+                message += "Or, seeing as it's RPM based. perhaps see https://corefonts.sourceforge.net/\n";
+            }
+
+        }
+
+        if (callback) callback(distro.c_str(), message.c_str());
+        else std::cerr << "your detected distro is " << distro << std::endl << message;
+
+        return false;
     }
-
-    if (callback) callback(distro.c_str(), message.c_str());
-    else std::cerr << "your detected distro is " << distro << std::endl << message;
-
-    return false;
 }
