@@ -6,6 +6,10 @@
 
 #define mod_header() "DragDrop_Windows:"
 
+using namespace JWCEssentials;
+
+namespace NewAge {
+
 //Write Format
 class FormatEtcEnumerator : public IEnumFORMATETC {
 public:
@@ -58,6 +62,6 @@ HRESULT CreateDataObject(P_INSTANCE(DataInterchange) dta, FORMATETC* fmt, int32_
 HRESULT DataInterchange_ReadFormats(P_INSTANCE(DataInterchange) data, IDataObject * pDataObject);
 
 void DataInterchange_CreateContext(P_INSTANCE(DataInterchange) data);
-HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange, utf8_string_const format, UINT * cfFormat);
-
+HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange, utf8_string_struct format, UINT * cfFormat);
+}
 #endif //SIMPLEDATAOBJECT_H

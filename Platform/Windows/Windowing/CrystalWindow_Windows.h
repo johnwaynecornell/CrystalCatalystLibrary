@@ -4,8 +4,11 @@
 #ifndef CRYSTALCATALYST_WINDOWS_CRYSTALWINDOW_H
 #define CRYSTALCATALYST_WINDOWS_CRYSTALWINDOW_H
 
-#include "../../../CrystalCatalystLibrary.h"
-#include "../Platform.h"
+#include "CrystalCXatalystLibrary/CrystalCatalystLibrary.h"
+
+using namespace JWCEssentials;
+
+namespace NewAge {
 
 class CrystalWindow_Windows : public CrystalWindow, public IDropTarget , public IDropSource
 {
@@ -21,7 +24,7 @@ public:
     P_INSTANCE(WindowHandle) myHandle;
     P_INSTANCE(DragDropData) current_drag_data = nullptr;
 
-    virtual void PresentImage(utf8_string_const pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height);
+    virtual void PresentImage(utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height);
     virtual void QueueRedraw();
 
     virtual void MouseCapture();
@@ -48,5 +51,5 @@ public:
     HRESULT __stdcall QueryContinueDrag(BOOL fEscapePressed, DWORD grfKeyState);
     HRESULT __stdcall GiveFeedback(DWORD dwEffect);
 };
-
+}
 #endif //CRYSTALCATALYST_WINDOWS_CRYSTALWINDOW_H

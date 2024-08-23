@@ -3,6 +3,9 @@
 // See LICENSE file in the project root for full license information.
 #include "TLS.h"
 
+using namespace JWCEssentials;
+
+namespace NewAge {
 
 void tls_cleanup(P_INSTANCE(void) data) {
     if (data) {
@@ -40,4 +43,5 @@ P_INSTANCE(void) TLS_Windows::get() {
         FlsSetValue(fls_index, data);
     }
     return data->value;
+}
 }

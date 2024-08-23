@@ -1,12 +1,6 @@
 #ifndef CRYSTALCATALYST_CLIPBOARD_WINDOWS_H
 #define CRYSTALCATALYST_CLIPBOARD_WINDOWS_H
 
-#include "../../../CrystalCatalystLibrary.h"
-#include "../Platform.h"
-
-
-
-
-
+#include "CrystalCatalystLibrary/CrystalCatalystLibrary.h"
 
 #endif //CRYSTALCATALYST_CLIPBOARD_WINDOWS_H

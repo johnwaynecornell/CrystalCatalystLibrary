@@ -4,51 +4,54 @@
 #ifndef PIXELS_H
 #define PIXELS_H
 
-enum ChannelType {
-    EChannelType_NONE, EChannelType_int8, EChannelType_float32, EChannelType_float64
-};
+using namespace JWCEssentials;
 
-int ChannelType_bytes(ChannelType value);
+namespace NewAge {
+    enum ChannelType {
+        EChannelType_NONE, EChannelType_int8, EChannelType_float32, EChannelType_float64
+    };
 
-class PixInfo {
-public:
+    int ChannelType_bytes(ChannelType value);
 
-    std::string pixformat;
-    ChannelType channel_type = EChannelType_NONE;
-    int num_channels = 0;
-    int channel_bytes = 0;
-    unsigned char *channel_list = nullptr;
-    SingleLink_Node<int> channels[256];
+    class PixInfo {
+    public:
 
-    size_t pix_stride = 0;
+        utf8_string_struct pixformat;
+        ChannelType channel_type = EChannelType_NONE;
+        int num_channels = 0;
+        int channel_bytes = 0;
+        unsigned char *channel_list = nullptr;
+        SingleLink_Node<int> channels[256];
 
-protected:
-    PixInfo( );
-    ~PixInfo();
-public:
+        size_t pix_stride = 0;
 
-    static P_INSTANCE(PixInfo)  get(std::string pixformat);
-    void Release();
-};
+    protected:
+        PixInfo( );
+        ~PixInfo();
+    public:
 
-class PixConversion;
-typedef void (*ChannelConvert)(P_INSTANCE(PixConversion) This, P_ELEMENTS(void) src, int src_channel, P_ELEMENTS(void) dst, int dest_channel);
+        static P_INSTANCE(PixInfo)  get(utf8_string_struct pixformat);
+        void Release();
+    };
 
-class PixConversion {
-public:
-    int *channel_map;
-    
-    P_INSTANCE(PixInfo) from;
-    P_INSTANCE(PixInfo) to;
+    class PixConversion;
+    typedef void (*ChannelConvert)(P_INSTANCE(PixConversion) This, P_ELEMENTS(void) src, int src_channel, P_ELEMENTS(void) dst, int dest_channel);
 
-    ChannelConvert channel_convert;
-protected:
-    PixConversion();
-public:
-    static P_INSTANCE(PixConversion)  get(P_INSTANCE(PixInfo) from, P_INSTANCE(PixInfo) to);
-    void Release();
+    class PixConversion {
+    public:
+        int *channel_map;
 
-    void convert(P_ELEMENTS(void) src, P_ELEMENTS(void) dst);
-};
+        P_INSTANCE(PixInfo) from;
+        P_INSTANCE(PixInfo) to;
 
+        ChannelConvert channel_convert;
+    protected:
+        PixConversion();
+    public:
+        static P_INSTANCE(PixConversion)  get(P_INSTANCE(PixInfo) from, P_INSTANCE(PixInfo) to);
+        void Release();
+
+        void convert(P_ELEMENTS(void) src, P_ELEMENTS(void) dst);
+    };
+}
 #endif //PIXELS_H

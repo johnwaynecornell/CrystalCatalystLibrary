@@ -12,41 +12,44 @@
 class CrystalWindow_X11;
 class DragDropData;
 
-class DragProvide_X11 {
-public:
+using namespace JWCEssentials;
 
-    DragProvide_X11(P_INSTANCE(CrystalWindow_X11)source_window);
-    ~DragProvide_X11();
+namespace NewAge {
+    class DragProvide_X11 {
+    public:
 
-    void StartDrag(P_INSTANCE(DragDropData)  data, int32_t x, int32_t y);
-    void UpdateMotion(int32_t x, int32_t y);
-    void EndDrag(bool success);
+        DragProvide_X11(P_INSTANCE(CrystalWindow_X11)source_window);
+        ~DragProvide_X11();
 
-    P_INSTANCE(CrystalWindow_X11)source_window;
-    Window target_window;
-    P_INSTANCE(DragDropData)  drag_data;
-    bool dragging;
-    bool entered;
+        void StartDrag(P_INSTANCE(DragDropData)  data, int32_t x, int32_t y);
+        void UpdateMotion(int32_t x, int32_t y);
+        void EndDrag(bool success);
 
-    bool handle_message(P_INSTANCE(XEvent) event);
-protected:
-    void drag_is_finished(bool success);
+        P_INSTANCE(CrystalWindow_X11)source_window;
+        Window target_window;
+        P_INSTANCE(DragDropData)  drag_data;
+        bool dragging;
+        bool entered;
 
-    bool wait_for_status = false;
+        bool handle_message(P_INSTANCE(XEvent) event);
+    protected:
+        void drag_is_finished(bool success);
 
-    void clear_target();
+        bool wait_for_status = false;
 
-    void send_xdnd_enter();
-    void send_xdnd_position(int32_t x, int32_t y);
-    void send_xdnd_leave();
-    void send_xdnd_drop();
-    void send_xdnd_finished(bool success);
+        void clear_target();
 
-    bool handle_xdnd_status(P_INSTANCE(XEvent)  event);
-    bool handle_xdnd_finished(P_INSTANCE(XEvent)  event);
+        void send_xdnd_enter();
+        void send_xdnd_position(int32_t x, int32_t y);
+        void send_xdnd_leave();
+        void send_xdnd_drop();
+        void send_xdnd_finished(bool success);
 
-    Window get_window_under_cursor(int32_t &x, int32_t &y);
+        bool handle_xdnd_status(P_INSTANCE(XEvent)  event);
+        bool handle_xdnd_finished(P_INSTANCE(XEvent)  event);
 
-};
+        Window get_window_under_cursor(int32_t &x, int32_t &y);
 
+    };
+}
 #endif //DRAGPROVIDE_X11_H

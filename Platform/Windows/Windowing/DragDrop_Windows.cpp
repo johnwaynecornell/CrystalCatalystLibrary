@@ -17,6 +17,10 @@
 
 #define mod_header() "DragDrop_Windows:"
 
+using namespace JWCEssentials;
+
+namespace NewAge {
+
 void CrystalWindow_Windows::RegisterDragTarget() {
     RegisterDragDrop(hwnd, static_cast<IDropTarget*>(this));
 }
@@ -110,7 +114,7 @@ HRESULT __stdcall CrystalWindow_Windows::DragLeave() {
 HRESULT __stdcall CrystalWindow_Windows::Drop(IDataObject* pDataObject, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect) {
     *pdwEffect = DROPEFFECT_COPY;
 
-    utf8_string_const format;
+    utf8_string_struct format;
     callbacks.on_drag_receive_select(myHandle, current_drag_data, &format);
 
     if (format != nullptr) {
@@ -150,3 +154,4 @@ void CrystalWindow_Windows::DragStart(P_INSTANCE(DragDropData)  data, int32_t x,
     pDataObject->Release();
 }
 
+}

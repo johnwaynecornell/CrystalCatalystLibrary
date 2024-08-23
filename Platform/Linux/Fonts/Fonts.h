@@ -5,5 +5,6 @@
 #define LINUX_FONTS_H
 
 #include "CrystalCatalystLibrary/CrystalCatalystLibrary.h"
+#include "../Platform.h"
 
 #endif //FONTS_H

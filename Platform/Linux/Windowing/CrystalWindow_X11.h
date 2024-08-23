@@ -4,50 +4,55 @@
 #ifndef CRYSTALCATALYST_LINUX_CRYSTALWINDOW_H
 #define CRYSTALCATALYST_LINUX_CRYSTALWINDOW_H
 
-#include "../../../include/CrystalCatalystLibrary/CrystalCatalystLibrary.h"
-#include "../Platform.h"
-#include "DragProvide_X11.h"
+#include <GL/glx.h>
 
-class CrystalWindow_X11 : public CrystalWindow {
-public:
-    Window window;
-    P_INSTANCE(Display)  display;
-    GLXContext gl_context;
-    DragProvide_X11* drag_provide;
+#include "CrystalCatalystLibrary/CrystalCatalystLibrary.h"
 
-    bool draw_queued=true;
+using namespace JWCEssentials;
 
-    virtual ~CrystalWindow_X11();
+namespace NewAge {
+    class DragProvide_X11;
 
-    virtual void PresentImage(utf8_string_const pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height);
-    virtual void QueueRedraw();
+    class CrystalWindow_X11 : public CrystalWindow {
+    public:
+        Window window;
+        P_INSTANCE(Display)  display;
+        GLXContext gl_context;
+        DragProvide_X11* drag_provide;
 
-    virtual void MouseCapture();
-    virtual void MouseRelease();
-    virtual void GL_Init();
-    virtual void Show(bool restore);
+        bool draw_queued=true;
 
-    virtual void RegisterDragTarget();
-    virtual void DragStart(P_INSTANCE(DragDropData) data, int32_t x, int32_t y);
+        ~CrystalWindow_X11() override;
 
-    /* INTERNAL */
-    virtual bool handle_xevent(P_INSTANCE(XEvent)  event);
-    virtual bool handle_drop_xevents(P_INSTANCE(XEvent)  event);
+        void PresentImage(utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height) override;
+        void QueueRedraw() override;
 
-    virtual bool handle_client_message(P_INSTANCE(XEvent)  event);
-    virtual bool handle_xdnd_enter(P_INSTANCE(XEvent)  event);
-    virtual bool handle_xdnd_position(P_INSTANCE(XEvent)  event);
-    virtual bool handle_xdnd_leave(P_INSTANCE(XEvent)  event);
-    virtual bool handle_xdnd_drop(P_INSTANCE(XEvent)  event);
+        void MouseCapture() override;
+        void MouseRelease() override;
+        void GL_Init() override;
+        void Show(bool restore) override;
 
-    virtual bool handle_selection_notify(P_INSTANCE(XEvent)  event);
-    virtual bool handle_selection_request(P_INSTANCE(XEvent) event);
+        void RegisterDragTarget() override;
+        void DragStart(P_INSTANCE(DragDropData) data, int32_t x, int32_t y) override;
 
-    bool CoordsToRoot(int32_t &x, int32_t &y);
-    bool CoordsFromRoot(int32_t &x, int32_t &y);
-};
+        /* INTERNAL */
+        virtual bool handle_xevent(P_INSTANCE(XEvent)  event);
+        virtual bool handle_drop_xevents(P_INSTANCE(XEvent)  event);
 
-void DataImterchange_FormatsFromAtomArray(P_INSTANCE(DataInterchange) dataInterchange, P_ELEMENTS(Atom) types, int num_types);
-void DataImterchange_AtomArrayFromFormats(P_INSTANCE(DataInterchange) dataInterchange, P_INSTANCE(P_ELEMENTS(Atom)) types, P_INSTANCE(int) num_types);
+        virtual bool handle_client_message(P_INSTANCE(XEvent)  event);
+        virtual bool handle_xdnd_enter(P_INSTANCE(XEvent)  event);
+        virtual bool handle_xdnd_position(P_INSTANCE(XEvent)  event);
+        virtual bool handle_xdnd_leave(P_INSTANCE(XEvent)  event);
+        virtual bool handle_xdnd_drop(P_INSTANCE(XEvent)  event);
 
+        virtual bool handle_selection_notify(P_INSTANCE(XEvent)  event);
+        virtual bool handle_selection_request(P_INSTANCE(XEvent) event);
+
+        bool CoordsToRoot(int32_t &x, int32_t &y);
+        bool CoordsFromRoot(int32_t &x, int32_t &y);
+    };
+
+    void DataImterchange_FormatsFromAtomArray(P_INSTANCE(DataInterchange) dataInterchange, P_ELEMENTS(Atom) types, int num_types);
+    void DataImterchange_AtomArrayFromFormats(P_INSTANCE(DataInterchange) dataInterchange, P_INSTANCE(P_ELEMENTS(Atom)) types, P_INSTANCE(int) num_types);
+}
 #endif //CRYSTALCATALYST_CRYSTALWINDOW_H

@@ -7,7 +7,7 @@
 #include <atomic>
 #include <cstddef>
 
-namespace JWCEssentials {
+namespace NewAge {
     class CrystalCatalystMutex
     {
     public:

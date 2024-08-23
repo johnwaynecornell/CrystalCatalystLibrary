@@ -5,6 +5,7 @@
 #define CRYSTALAPPLICATION_X11_H
 
 #include <vector>
+#include <X11/Xresource.h>
 
 #include "CrystalCatalystLibrary/CrystalCatalystLibrary.h"
 

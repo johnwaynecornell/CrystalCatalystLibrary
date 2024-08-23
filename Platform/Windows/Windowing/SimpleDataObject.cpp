@@ -4,6 +4,10 @@
 #include "CrystalWindow_Windows.h"
 #include "SimpleDataObject.h"
 
+using namespace JWCEssentials;
+
+namespace NewAge {
+
 FormatEtcEnumerator::FormatEtcEnumerator(FORMATETC *fmt, int32_t count)
         : m_refs(1), m_count(count), m_index(0) {
     m_fmt = new FORMATETC[count];
@@ -105,7 +109,7 @@ ULONG SimpleDataObject::Release() {
     return refs;
 }
 
-HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange, utf8_string_const format, UINT *cfFormat)
+HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange, utf8_string_struct format, UINT *cfFormat)
 {
     P_INSTANCE(void)data_ptr = nullptr;
     size_t size = 0;
@@ -134,7 +138,7 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
     HGLOBAL hGlobal = nullptr;
 
     if (strcmp(format, "text/plain") == 0 || strcmp(format, "text/html") == 0) {
-        std::string utf8_text = static_cast<utf8_string_const >(data_ptr);
+        std::string utf8_text = static_cast<utf8_string_struct >(data_ptr);
         int32_t len = MultiByteToWideChar(CP_UTF8, 0, utf8_text.c_str(), -1, nullptr, 0);
         hGlobal = GlobalAlloc(GMEM_MOVEABLE, (len + 1) * sizeof(WCHAR));
         if (hGlobal) {
@@ -146,7 +150,7 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
         }
     } else if (strcmp(format, "text/file-uri") == 0) {
         // Parse URIs
-        std::string uri_list(static_cast<utf8_string_const >(data_ptr), size);
+        std::string uri_list(static_cast<utf8_string_struct >(data_ptr), size);
         std::vector<std::wstring> files;
         size_t pos = 0;
         size_t new_pos;
@@ -203,7 +207,7 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
 }
 
 HRESULT SimpleDataObject::GetData(FORMATETC *pFormatEtc, STGMEDIUM *pMedium) {
-    utf8_string_const format = nullptr;
+    utf8_string_struct format = nullptr;
     P_INSTANCE(void)data_ptr = nullptr;
     size_t size = 0;
 
@@ -353,7 +357,7 @@ HRESULT DataInterchange_ReadFormats(P_INSTANCE(DataInterchange) data, IDataObjec
     do {
         E->Next(1, &fmt, &fetched);
         if (fetched) {
-            utf8_string_const my_type = nullptr;
+            utf8_string_struct my_type = nullptr;
 
             if (fmt.cfFormat == CF_UNICODETEXT) my_type = "text/plain";
             else if (fmt.cfFormat == RegisterClipboardFormat(CFSTR_HTML)) my_type = "text/html";
@@ -376,7 +380,7 @@ HRESULT DataInterchange_ReadFormats(P_INSTANCE(DataInterchange) data, IDataObjec
     return S_OK;
 }
 
-void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_const format)
+void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_struct format)
 {
 
     FORMATETC fmt = { 0, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
@@ -430,4 +434,5 @@ void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_const 
         	data->m_handle->crystal_window->callbacks.on_clipboard_receive_data(data->m_handle, data);
 
     }
+}
 }

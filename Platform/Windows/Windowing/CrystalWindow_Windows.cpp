@@ -20,6 +20,10 @@
 
 #define mod_header() "CrystalWindow_Windows:"
 
+using namespace JWCEssentials;
+
+namespace NewAge {
+
 
 wchar_t ConvertKeyCodeToUnicode(uint32_t  keyCode) {
     BYTE keyboardState[256];
@@ -207,7 +211,7 @@ LRESULT CALLBACK CrystalWindow_Windows_WindowProc(HWND hwnd, uint32_t  uMsg, WPA
     return 0;
 }
 
-void CrystalWindow_Windows::PresentImage(utf8_string_const pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height)
+void CrystalWindow_Windows::PresentImage(utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height)
 {
     if (!pixdata || !pixformat) return;
 
@@ -287,4 +291,5 @@ ULONG __stdcall CrystalWindow_Windows::Release()
     }
 
     return m_cRef;
+}
 }

@@ -5,7 +5,11 @@
 #define TLS_Windows_H
 
 
-#include "../../CrystalCatalystLibrary.h"
+#include "CrystalCatalystLibrary/CrystalCatalystLibrary.h"
+
+using namespace JWCEssentials;
+
+namespace NewAge {
 
 class TLS_Windows : public TLS {
 public:
@@ -18,7 +22,7 @@ public:
 protected:
     DWORD fls_index;
 };
-
+}
 
 
 #endif //TLS_Windows_H

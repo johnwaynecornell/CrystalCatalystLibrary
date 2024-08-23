@@ -10,12 +10,14 @@
 #include <GL/glx.h>
 
 #include <string>
-#include "../../Platform.h"
-#include "../../include/CrystalCatalystLibrary/CrystalCatalystLibrary.h"
+#include "CrystalCatalystLibrary/CrystalCatalystLibrary.h"
 
-std::string get_distro_name();
-bool is_rpm_based();
+using namespace JWCEssentials;
 
-P_INSTANCE(CrystalApplication) platform_initialize();
+namespace NewAge {
+    std::string get_distro_name();
+    bool is_rpm_based();
 
+    P_INSTANCE(CrystalApplication) platform_initialize();
+}
 #endif //PLATFORM_H

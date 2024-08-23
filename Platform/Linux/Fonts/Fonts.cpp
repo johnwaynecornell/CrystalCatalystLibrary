@@ -13,8 +13,8 @@ using namespace JWCEssentials;
 
 namespace NewAge {
     struct StringKeyval {
-        utf8_string_const key;
-        utf8_string_const value;
+        utf8_string_struct key;
+        utf8_string_struct value;
     };
 
     StringKeyval distro_instructions[] = {
@@ -33,7 +33,7 @@ namespace NewAge {
         {nullptr, nullptr}
     };
 
-    bool CrystalCatalyst_Fonts_Has_MSCoreFonts(void (*callback)(utf8_string_const OS, utf8_string_const Instructions)) {
+    bool CrystalCatalyst_Fonts_Has_MSCoreFonts(void (*callback)(utf8_string_struct OS, utf8_string_struct Instructions)) {
         // Check if the directory exists
         if (fs::exists("/usr/share/fonts/truetype/msttcorefonts/")) return true;
 
@@ -42,7 +42,7 @@ namespace NewAge {
 
         int32_t i;
         for (int32_t i; distro_instructions[i].key != nullptr; i++) {
-            std::string d = distro_instructions[i].key;
+            std::string d = distro_instructions[i].key.c_str;
             if (distro == d) {
                 message += "To perform the install, try:\n";
                 message += distro_instructions[i].value;

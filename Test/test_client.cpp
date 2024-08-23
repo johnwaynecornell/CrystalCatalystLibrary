@@ -8,7 +8,9 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
-#include "../include/CrystalCatalystLibrary/CrystalCatalystLibrary.h"
+#include "CrystalCatalystLibrary/CrystalCatalystLibrary.h"
+
+using namespace NewAge;
 
 #ifdef mod_header
 #undef mod_header
@@ -16,8 +18,8 @@ namespace fs = std::filesystem;
 
 #define mod_header() "test_client:"
 
-utf8_string_const format_prec[] = { "text/file-uri", "text/html", "text/plain", nullptr };
-//utf8_string_const format_prec[] = { "text/file-uri", "text/plain", nullptr };
+utf8_string_struct format_prec[] = { "text/file-uri", "text/html", "text/plain", nullptr };
+//utf8_string_struct format_prec[] = { "text/file-uri", "text/plain", nullptr };
 
 struct Pix {
     double R;
@@ -26,7 +28,7 @@ struct Pix {
     double G;
 };
 
-utf8_string_const Pix_format = "RABG:float64";
+utf8_string_struct Pix_format = "RABG:float64";
 
 int32_t window_width =0;
 int32_t window_height =0;
@@ -93,18 +95,18 @@ void on_key_down(P_INSTANCE(WindowHandle) window_handle, int32_t keycode) {
 
         std::cerr << mod_header() << "Clipboard paste" << std::endl;
         // Process the pasted data
-        utf8_string_const type;
+        utf8_string_struct type;
         P_INSTANCE(void)data_ptr;
         size_t size;
 
         int32_t i = 0;
         while (format_prec[i] != nullptr) i++;
 
-        utf8_string_const format = nullptr;
+        utf8_string_struct format = nullptr;
 
         for (P_INSTANCE(DragDropData::Node)node = DataInterchange_FormatEnum(data);
              i != 0 && node != nullptr; node = DataInterchange_FormatEnum_Next(node)) {
-            utf8_string_const drop_format = nullptr;
+            utf8_string_struct drop_format = nullptr;
 
             DataInterchange_FormatEnum_Text(node, &drop_format);
 
@@ -188,8 +190,9 @@ void on_drag_receive_motion(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(D
     // Optionally: Update visual feedback as the data is dragged over the window
     // Example: Check if the data can be accepted at the current location
 
-    char DragString[1024];
-    DragActions_String(data->action_selections, DragString, 1024);
+    utf8_string_struct DragString;
+
+    DragString = DragActions_String(data->action_selections);
     //
     // std::cerr << mod_header() << DragString << std::endl;
 
@@ -202,14 +205,14 @@ void on_drag_receive_leave(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(Dr
     // Example: Clean up any temporary states related to the drag action
 }
 
-void on_drag_receive_select(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DragDropData)  data, P_OUT(utf8_string_const) format) {
+void on_drag_receive_select(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DragDropData)  data, P_OUT(utf8_string_struct) format) {
     int32_t i = 0;
     while (format_prec[i] != nullptr) i++;
 
     *format = nullptr;
 
     for (P_INSTANCE(DragDropData::Node) node = DataInterchange_FormatEnum(data); i != 0 && node != nullptr; node = DataInterchange_FormatEnum_Next(node)) {
-        utf8_string_const drop_format;
+        utf8_string_struct drop_format;
         DataInterchange_FormatEnum_Text(node, &drop_format);
 
         for (int32_t i2 = 0; i2 < i; i2++) {
@@ -222,7 +225,7 @@ void on_drag_receive_select(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(D
     }
 }
 
-void on_drag_provide_chosen(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DragDropData)  data, utf8_string_const format) {
+void on_drag_provide_chosen(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DragDropData)  data, utf8_string_struct format) {
 
     if (strcmp(format, "text/file-uri") == 0) {
         std::string paths = "";
@@ -248,7 +251,7 @@ void on_drag_provide_chosen(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(D
         pth = fs::absolute("test2.txt").string();
         paths += pth; paths += "\n";
 
-        DataInterchange_Selection_Set(data, format, (utf8_string ) paths.c_str(), paths.length());
+        DataInterchange_Selection_Set(data, format, (void *) paths.c_str(), paths.length());
     }
 }
 
@@ -261,7 +264,7 @@ void on_drag_provide_finished(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE
     DataInterchange_Free(data);
 }
 
-void on_clipboard_provide_chosen(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DataInterchange)  data, utf8_string_const format)
+void on_clipboard_provide_chosen(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DataInterchange)  data, utf8_string_struct format)
 {
     if (strcmp(format, "text/file-uri") == 0) {
         std::string paths = "";
@@ -287,7 +290,7 @@ void on_clipboard_provide_chosen(P_INSTANCE(WindowHandle) window_handle, P_INSTA
         pth = fs::absolute("test2.txt").string();
         paths += pth; paths += "\n";
 
-        DataInterchange_Selection_Set(data, format, (utf8_string ) paths.c_str(), paths.length());
+        DataInterchange_Selection_Set(data, format, (void *) paths.c_str(), paths.length());
     }
 }
 
@@ -299,7 +302,7 @@ void receive(std::string label, P_INSTANCE(WindowHandle) window_handle, P_INSTAN
 
     std::cerr << mod_header() << label << " event" << std::endl;
     // Process the dropped data
-    utf8_string_const type;
+    utf8_string_struct type;
     P_INSTANCE(void) data_ptr;
     size_t size;
 
@@ -309,7 +312,7 @@ void receive(std::string label, P_INSTANCE(WindowHandle) window_handle, P_INSTAN
 
     if (StartingWith("text/", type)) {
         std::cerr << mod_header() << "Text data:" << std::endl;
-        std::cerr << mod_header() << (utf8_string_const ) data_ptr << std::endl;
+        std::cerr << mod_header() << (const char *) data_ptr << std::endl;
 
     } else {
         std::cerr << mod_header() << "Non-text data of size " << size << std::endl;
@@ -333,9 +336,19 @@ void on_idle(P_INSTANCE(WindowHandle) window_handle) {
     //std::cerr << mod_header() << "Idle event" << std::endl;
 }
 
-int32_t main(int32_t argc, P_ELEMENTS(utf8_string)  argv) {
+int32_t main(int32_t argc, P_ELEMENTS(char *)  argv) {
     std::cerr << mod_header() << "Initializing application..." << std::endl;
-    Application_Init(argc, argv);
+
+    struct_array_struct<utf8_string_struct> args;
+    args.Alloc(argc);
+
+    for (int i=0; i < argc; i++) {
+        args[i] = argv[i];
+    }
+
+
+
+    Application_Init(args);
 
     std::string l;
     while (!CrystalCatalyst_Fonts_Has_MSCoreFonts(nullptr)) {

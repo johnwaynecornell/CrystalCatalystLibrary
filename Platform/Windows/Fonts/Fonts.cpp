@@ -3,6 +3,11 @@
 // See LICENSE file in the project root for full license information.
 #include "Fonts.h"
 
-bool CrystalCatalyst_Fonts_Has_MSCoreFonts(void (*callback)(utf8_string_const OS, utf8_string_const Instructions)) {
+using namespace JWCEssentials;
+
+namespace NewAge {
+
+bool CrystalCatalyst_Fonts_Has_MSCoreFonts(void (*callback)(utf8_string_struct OS, utf8_string_struct Instructions)) {
     return true;
+}
 }

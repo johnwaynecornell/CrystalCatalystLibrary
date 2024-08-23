@@ -47,7 +47,7 @@ namespace NewAge {
         AppX11 = this;
     }
 
-    P_INSTANCE(WindowHandle) CrystalApplication_X11::WindowCreate(int32_t width, int32_t height, utf8_string_const title) {
+    P_INSTANCE(WindowHandle) CrystalApplication_X11::WindowCreate(int32_t width, int32_t height, utf8_string_struct title) {
         if (!globalDisplay) {
             std::cerr << "Global display is not initialized" << std::endl;
             return nullptr;

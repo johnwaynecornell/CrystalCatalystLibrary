@@ -38,8 +38,8 @@ namespace NewAge {
         P_INSTANCE(TLS) errors;
     };
 
-    _CLASSEXPORT_ P_INSTANCE(CrystalCatalystLibrary)  TheCrystalCatalystLibrary;
-    _CLASSEXPORT_ P_INSTANCE(CrystalCatalystMutex)  TheCrystalCatalystMutex;
+    _CLASSEXPORT_ extern P_INSTANCE(CrystalCatalystLibrary)  TheCrystalCatalystLibrary;
+    _CLASSEXPORT_ extern P_INSTANCE(CrystalCatalystMutex)  TheCrystalCatalystMutex;
 
     _EXPORT_ bool CrystalCatalystLibrary_Initialize();
     _EXPORT_ bool CrystalCatalystLibrary_Close();

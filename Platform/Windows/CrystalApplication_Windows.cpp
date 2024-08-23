@@ -7,6 +7,10 @@
 
 #include "CrystalApplication_Windows.h"
 
+using namespace JWCEssentials;
+
+namespace NewAge {
+
 
 /*
     HINSTANCE hInstance = GetModuleHandle(nullptr);
@@ -39,7 +43,7 @@ void CrystalApplication_Windows::Init() {
 
 }
 
-P_INSTANCE(WindowHandle) CrystalApplication_Windows::WindowCreate(int32_t width, int32_t height, utf8_string_const title) {
+P_INSTANCE(WindowHandle) CrystalApplication_Windows::WindowCreate(int32_t width, int32_t height, utf8_string_struct title) {
 
     auto* window = new CrystalWindow_Windows();
     memset(&window->callbacks, 0, sizeof(WindowCallbacks));  // Initialize callbacks to null
@@ -85,4 +89,5 @@ bool CrystalApplication_Windows::HasMessage()
     if (PeekMessage(&msg, nullptr, 0, 0, PM_NOREMOVE)) return true;  // Approximately 60 FPS
     Sleep(16);
     return false;
+}
 }

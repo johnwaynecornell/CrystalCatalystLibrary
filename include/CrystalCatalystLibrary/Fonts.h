@@ -6,9 +6,9 @@
 
 #include "CrystalCatalystLibrary.h"
 
-extern "C"
-{
-    _EXPORT_ bool CrystalCatalyst_Fonts_Has_MSCoreFonts(void (*callback)(utf8_string_const OS, utf8_string_const Instructions) = nullptr);
-}
+using namespace JWCEssentials;
 
+namespace NewAge {
+    _EXPORT_ bool CrystalCatalyst_Fonts_Has_MSCoreFonts(void (*callback)(utf8_string_struct OS, utf8_string_struct Instructions) = nullptr);
+}
 #endif //FONTS_H

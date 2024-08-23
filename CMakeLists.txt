@@ -54,9 +54,13 @@ initPlatformConfig()
 
 set_target_output(CrystalCatalystLibrary ${CRYSTAL_FUNDAMENTALS_VERSION_MAJOR} ${CRYSTAL_FUNDAMENTALS_VERSION_MINOR} ${CRYSTAL_FUNDAMENTALS_VERSION_BUILD})
 
-target_link_libraries(CrystalCatalystLibrary PUBLIC UnderCrystalCatalyst)
+target_link_libraries(CrystalCatalystLibrary PUBLIC JWCEssentials)
 
- include($ENV{NewAge}/include/JWCEssentials/JWCEssentials.cmake)
+include($ENV{NewAge}/include/JWCEssentials/JWCEssentials.cmake)
 
 add_subdirectory(Test)
 
+target_compile_options(CrystalCatalystLibrary PUBLIC "-Wno-return-type-c-linkage")
+
+ shuttle(CrystalCatalystLibrary lib)
+ 

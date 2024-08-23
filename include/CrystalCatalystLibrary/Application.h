@@ -25,7 +25,7 @@ namespace NewAge {
 
         bool CloseSignalled;
 
-        virtual void SetArguments(utf8_string_struct args);
+        virtual void SetArguments(struct_array_struct<utf8_string_struct> args);
         virtual void Init();
         virtual int32_t Run();
         virtual void SignalClose();

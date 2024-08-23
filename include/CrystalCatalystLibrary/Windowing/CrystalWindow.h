@@ -6,6 +6,7 @@
 
 #include "DragDrop.h"
 #include "Clipboard.h"
+#include "Pixels.h"
 
 using namespace JWCEssentials;
 
@@ -48,11 +49,11 @@ namespace NewAge {
 
     //##### end DUMP REGION ##### callbacks
 
-    _EXPORT_ P_INSTANCE(WindowHandle) CrystalWindow_Create(int32_t width, int32_t height, utf8_string_const title);
+    _EXPORT_ P_INSTANCE(WindowHandle) CrystalWindow_Create(int32_t width, int32_t height, utf8_string_struct title);
     _EXPORT_ void CrystalWindow_ApplicationRetain(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ void CrystalWindow_ApplicationRelease(P_INSTANCE(WindowHandle) window_handle);
 
-    _EXPORT_ void CrystalWindow_PresentImage(P_INSTANCE(WindowHandle) window_handle, utf8_string_const pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height);
+    _EXPORT_ void CrystalWindow_PresentImage(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height);
     _EXPORT_ void CrystalWindow_QueueRedraw(P_INSTANCE(WindowHandle) window_handle);
 
     _EXPORT_ void CrystalWindow_MouseCapture(P_INSTANCE(WindowHandle) window_handle);
@@ -60,9 +61,9 @@ namespace NewAge {
     _EXPORT_ void CrystalWindow_GL_Init(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ void CrystalWindow_Show(P_INSTANCE(WindowHandle) window_handle, bool restore);
 
-    _EXPORT_ bool CrystalWindow_SetMessaqgeHandler(P_INSTANCE(WindowHandle) window_handle, utf8_string_const handler_name, P_INSTANCE(void) handler);
+    _EXPORT_ bool CrystalWindow_SetMessaqgeHandler(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct handler_name, P_INSTANCE(void) handler);
 
-    _EXPORT_ ReturnBuffer CrystalWindow_ConvertPixels(utf8_string_const pixformat, utf8_string_const pixformat_dest, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height);
+    _EXPORT_ struct_array_struct<uint8_t> CrystalWindow_ConvertPixels(utf8_string_struct pixformat, utf8_string_struct pixformat_dest, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height);
 
     class CrystalWindow {
     public:
@@ -80,7 +81,7 @@ namespace NewAge {
         int width = 0;
         int height = 0;
 
-        virtual void PresentImage(utf8_string_const pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height) =0;
+        virtual void PresentImage(utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height) =0;
         virtual void QueueRedraw() = 0;
 
         virtual void MouseCapture() = 0;

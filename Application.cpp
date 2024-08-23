@@ -9,22 +9,18 @@ namespace NewAge {
 
 
     P_INSTANCE(CrystalApplication) platform_initialize();
-    void platform_uninitialize(int32_t argc, P_ELEMENTS(utf8_string) argv);
+    void platform_uninitialize();
 
-    void Application_Init(int32_t argc, P_ELEMENTS(utf8_string) argv)
+    void Application_Init(struct_array_struct<utf8_string_struct> args)
     {
         TheApplication = platform_initialize();
-        TheApplication->SetArguments(argc, argv);
+        TheApplication->SetArguments(args);
         TheApplication->Init();
     }
 
-    void CrystalApplication::SetArguments(int32_t argc, P_ELEMENTS(utf8_string) argv) {
+    void CrystalApplication::SetArguments(struct_array_struct<utf8_string_struct> args) {
         // Initialize arguments (if any)
-        argument_count = argc;
-        argument_array = new utf8_string [argument_count];
-        for (int32_t i = 0; i < argument_count; i++) {
-            argument_array[i] = argv[i];
-        }
+        argument_array = std::move(args);
     }
 
 
@@ -50,14 +46,13 @@ namespace NewAge {
     }
 
 
-    void Application_Argument(int32_t index, P_OUT(utf8_string)  argument_out)
+    utf8_string_struct Application_Argument(int32_t index)
     {
-        TheApplication->Argument(index, argument_out);
+        return TheApplication->Argument(index);
     }
 
-    void CrystalApplication::Argument(int32_t index, P_OUT(utf8_string) argument_out) {
-        if (index < 0 || index >= argument_count) *argument_out = nullptr;
-        else *argument_out = argument_array[index];
+    utf8_string_struct CrystalApplication::Argument(int32_t index) {
+        return this->argument_array[index];
     }
 
 

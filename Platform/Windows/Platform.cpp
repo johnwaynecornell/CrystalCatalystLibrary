@@ -5,6 +5,11 @@
 #include "Platform.h"
 #include "CrystalApplication_Windows.h"
 
+using namespace JWCEssentials;
+
+namespace NewAge {
+
+
 P_INSTANCE(CrystalApplication) platform_initialize() {
     return new CrystalApplication_Windows();
 }
@@ -47,4 +52,5 @@ uint32_t map_windows_key_state(DWORD grfKeyState) {
     }
 
     return key_state;
+}
 }

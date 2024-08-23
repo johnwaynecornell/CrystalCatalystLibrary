@@ -11,6 +11,8 @@ typedef double float64;
 
 #include <cstddef>
 
+using namespace JWCEssentials;
+
 namespace NewAge {
     // Key state flags compatible with both Windows and Linux
 #define KEY_STATE_CONTROL 0x0008
@@ -26,9 +28,11 @@ namespace NewAge {
         int32_t height;
 
         bool (*pix_data_free)(P_ELEMENTS(uint8_t) pixdata);
+
+        operator bool();
     };
 
-    _EXPORT_ ReturnBuffer Pixels_ConvertPixels(utf8_string_const pixformat, utf8_string_const pixformat_dest, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height);
+    _EXPORT_ PixData Pixels_ConvertPixels(utf8_string_struct pixformat, utf8_string_struct pixformat_dest, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height);
 }
 
 #endif //PLATFORM_H
