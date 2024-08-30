@@ -171,7 +171,7 @@ namespace NewAge {
             // Store drop types in DragDropData
             for (int32_t i = 0; i < num_types; ++i) {
                 if (drop_types[i] != None) {
-                    utf8_string_struct type_name = XGetAtomName(display, drop_types[i]);
+                    utf8_string_struct type_name = XGetAtomName_struct(display, drop_types[i]);
                     std::cerr << mod_header() << "Format: " << type_name << std::endl;
 
                     if (strcmp(type_name, "text/plain") == 0) {
@@ -181,7 +181,6 @@ namespace NewAge {
                     } else if (strcmp(type_name, "text/uri-list") == 0) {
                         DataInterchange_FormatAdd(current_drag_receive_data, "text/file-uri");
                     }
-                    XFree(type_name);
                 }
             }
 
@@ -202,13 +201,14 @@ namespace NewAge {
 
                 if (XGetWindowProperty(display,
                     event->xclient.data.l[0], XdndSupportedActions, 0, (~0L), False, XA_ATOM,
-                    &actual_type, &actual_format, &nitems, &bytes_after, &prop) == Success) {
-                    if (prop != nullptr) {
-                        int64_t actions = *(P_ELEMENTS(int64_t))prop;
-                        current_drag_receive_data->action_selections = xint64_t_to_drag_actions(actions, display);
-                        XFree(prop);
+                    &actual_type, &actual_format, &nitems, &bytes_after, &prop) == Success)
+                    {
+                        if (prop != nullptr) {
+                            int64_t actions = *(P_ELEMENTS(int64_t))prop;
+                            current_drag_receive_data->action_selections = xint64_t_to_drag_actions(actions, display);
+                            XFree(prop);
                     }
-                    }
+                }
             }
 
             callbacks.on_drag_receive_enter(myHandle, current_drag_receive_data);
@@ -356,7 +356,7 @@ namespace NewAge {
 
             if (XGetWindowProperty(event->xselection.display, event->xselection.requestor, event->xselection.property, 0, (~0L), False, AnyPropertyType, &actual_type, &actual_format, &nitems, &bytes_after, &prop) == Success) {
     */
-                utf8_string_struct format = XGetAtomName(event->xselection.display, actual_type);
+                utf8_string_struct format = XGetAtomName_struct(event->xselection.display, actual_type);
                 std::cerr << mod_header() << "SelectionNotify format: " << format << std::endl;
 
                 current_data->selected_format = format;
@@ -384,15 +384,22 @@ namespace NewAge {
 
                     std::cerr << mod_header() << "Setting selection for text/html: " << text_data << std::endl;
 
-                    DataInterchange_Selection_Set(current_data, format, (utf8_string_struct )text_data.c_str(), text_data.length());
+                    DataInterchange_Selection_Set(current_data, format, (void *) text_data.c_str(), text_data.length());
                     XFree(prop);
                 } else if (strcmp("text/plain", format) == 0) {
                     std::cerr << mod_header() << "Setting selection for text/plain" << std::endl;
                     DataInterchange_Selection_Set(current_data, format, prop, nitems);
                     XFree(prop);
                 } else if (strcmp("text/uri-list", format) == 0) {
-                    std::string uri_list(std::string((char *) prop), nitems);
-                    std::istringstream stream(uri_list);
+                    utf8_string_struct uri_list;
+                    uri_list.Alloc(nitems);
+
+                    for (int i=0; i<nitems && ((char *) prop)[i]; i++)
+                        uri_list.c_str[i] = ((char *) prop)[i];
+
+
+                    //std::string uri_list(std::string((char *) prop), nitems);
+                    std::istringstream stream(uri_list.c_str);
                     std::string line;
                     std::string cleaned_uri_list;
 
@@ -467,7 +474,7 @@ namespace NewAge {
             // Handle drag-and-drop-specific logic if necessary
         } else throw std::runtime_error("Unknow Selection class ");
 
-        const char *target = XGetAtomName(req->display, req->target);
+        utf8_string_struct target = XGetAtomName_struct(req->display, req->target);
 
         std::cerr << mod_header() << "SelectionRequest for target: " << target << std::endl;
 
@@ -512,9 +519,9 @@ namespace NewAge {
                 }
 
                 std::cerr << mod_header() << "Cleaned URI list: " << cleaned_uri_list << std::endl;
-                XChangeProperty(req->display, req->requestor, req->property, req->target, 8, PropModeReplace, (P_ELEMENTS(uint8_t) )cleaned_uri_list.data(), (int) cleaned_uri_list.size());
+                XChangeProperty(req->display, req->requestor, req->property, req->target, 8, PropModeReplace, (P_ELEMENTS(uint8_t) )cleaned_uri_list.c_str(), (int) cleaned_uri_list.size());
             } else {
-                XChangeProperty(req->display, req->requestor, req->property, req->target, 8, PropModeReplace, (P_ELEMENTS(uint8_t) )d, sz);
+                XChangeProperty(req->display, req->requestor, req->property, req->target, 8, PropModeReplace, (P_ELEMENTS(uint8_t) )d, (int) sz);
             }
         } else {
             std::cerr << mod_header() << "No current_drag_provide_data available" << std::endl;

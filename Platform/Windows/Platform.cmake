@@ -14,9 +14,6 @@ set(PLATFORM_SOURCES
         Platform/Windows/Platform.cpp
         Platform/Windows/Platform.h
 
-        Platform/Windows/TLS.cpp
-        Platform/Windows/TLS.h
-
         Platform/Windows/Synchronization/CrystalSync.cpp
         Platform/Windows/Synchronization/CrystalSync.h
 

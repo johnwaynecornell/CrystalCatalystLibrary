@@ -46,4 +46,12 @@ namespace NewAge {
     {
 
     }
+
+    utf8_string_struct XGetAtomName_struct(Display *display, Atom A) {
+        char *val = XGetAtomName(display, A);
+        utf8_string_struct R = val;
+        XFree(val);
+
+        return R;
+    }
 }

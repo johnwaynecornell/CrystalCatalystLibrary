@@ -14,9 +14,6 @@ set(PLATFORM_SOURCES
         Platform/Linux/Platform.cpp
         Platform/Linux/Platform.h
 
-        Platform/Linux/TLS.cpp
-        Platform/Linux/TLS.h
-
         Platform/Linux/Synchronization/CrystalSync.cpp
         Platform/Linux/Synchronization/CrystalSync.h
 

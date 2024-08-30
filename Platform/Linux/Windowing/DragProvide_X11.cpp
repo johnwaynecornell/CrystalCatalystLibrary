@@ -15,7 +15,10 @@
 #undef mod_header
 #endif
 
-#define mod_header() std::hex << std::setw(8) << std::setfill('0') << "DragProvide_X11: source=" << source_window->window << " target=" << target_window << " << " << std::dec
+#define mod_header() std::hex << std::setw(8) << std::setfill('0') << "DragProvide_X11: source=" \
+<< std::hex << std::setw(8) << std::setfill('0') << (unsigned long long) source_window->window << std::dec \
+<< " target=" \
+<< std::hex << std::setw(8) << std::setfill('0') << (unsigned long long) target_window << std::dec << " "\
 
 using namespace JWCEssentials;
 
@@ -79,9 +82,10 @@ namespace NewAge {
 
         if (new_target != target_window) {
             if (entered) {
-                send_xdnd_leave();
-                entered = false;
-                clear_target();
+                if (target_window) {
+                    send_xdnd_leave();
+                    clear_target();
+                }
             }
             if (new_target != None) {
                 target_window = new_target;
@@ -314,7 +318,7 @@ namespace NewAge {
         XSendEvent(source_window->display, target_window, False, NoEventMask, &event);
         XFlush(source_window->display);
 
-        std::cerr << mod_header() << "XdndPosition message sent to " << target_window << " x=" << x << " y=" << y
+        std::cerr << mod_header() << "XdndPosition message sent from " << source_window->window << ", to " << target_window << " x=" << x << " y=" << y
         << " l[0]=" << std::hex << std::setw(8) << std::setfill('0') << event.xclient.data.l[0] << std::dec
         << " l[1]=" << std::hex << std::setw(8) << std::setfill('0') << event.xclient.data.l[1] << std::dec
         << " l[3]=" << std::hex << std::setw(8) << std::setfill('0') << event.xclient.data.l[3] << std::dec

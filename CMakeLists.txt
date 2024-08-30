@@ -43,12 +43,6 @@ initPlatformConfig()
      Platform.cpp
          include/CrystalCatalystLibrary/Platform.h
 
-     TLS.cpp
-         include/CrystalCatalystLibrary/TLS.h
-
-     ErrorSystem.cpp
-         include/CrystalCatalystLibrary/ErrorSystem.h
-
      ${PLATFORM_SOURCES})
 
  add_definitions(-DBUILD_CRYSTALCATALYSTLIBRARY)

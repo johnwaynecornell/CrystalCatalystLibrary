@@ -65,9 +65,6 @@ namespace NewAge {
         return rc;
     }
 
-
-    P_INSTANCE(TLS)  _initialize_errors_();
-
     bool CrystalCatalystLibrary::Initialize()
     {
         return true;
@@ -83,6 +80,7 @@ namespace NewAge {
         if (str == nullptr) return false;
 
         for (int32_t i = 0; prefix[i] != 0; i++) {
+            if (str[i] == 0) return false;
             if (str[i] != prefix[i]) return false;
         }
 

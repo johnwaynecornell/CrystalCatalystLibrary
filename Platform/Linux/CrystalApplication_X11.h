@@ -10,6 +10,7 @@
 #include "CrystalCatalystLibrary/CrystalCatalystLibrary.h"
 
 #include "Windowing/CrystalWindow_X11.h"
+#include "Platform.h"
 
 namespace NewAge {
     class CrystalApplication_X11 : public CrystalApplication {
@@ -64,6 +65,7 @@ namespace NewAge {
             atoms.xdnd.msg.drop = GetAtom("XdndDrop");
             atoms.xdnd.msg.finished = GetAtom("XdndFinished");
 
+            atoms.xdnd.aware = GetAtom("XdndAware");
             atoms.xdnd.type_list = GetAtom("XdndTypeList");
             atoms.xdnd.supported_actions = GetAtom("XdndSupportedActions");
             atoms.xdnd.selection = GetAtom("XdndSelection");

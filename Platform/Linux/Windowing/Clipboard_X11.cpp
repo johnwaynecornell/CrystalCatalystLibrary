@@ -33,7 +33,7 @@ namespace NewAge {
 
         for (int32_t i = 0; i < num_types; ++i) {
             if (types[i] != None) {
-                utf8_string_struct type_name = XGetAtomName(display, types[i]);
+                utf8_string_struct type_name = XGetAtomName_struct(display, types[i]);
                 std::cerr << mod_header() << "Format: " << type_name << std::endl;
 
                 if (strcmp(type_name, "text/plain") == 0) {
@@ -43,12 +43,13 @@ namespace NewAge {
                 } else if (strcmp(type_name, "text/uri-list") == 0) {
                     DataInterchange_FormatAdd(dataInterchange, "text/file-uri");
                 }
-                XFree(type_name);
             }
         }
     }
 
     bool FormatToAtom(Display * display, utf8_string_struct format, P_OUT(Atom) atom) {
+        *atom = 0;
+
         if (strcmp(format, "text/plain") == 0) {
             *atom= XInternAtom(display, "text/plain", False);
             return true;
@@ -77,7 +78,7 @@ namespace NewAge {
         for (P_INSTANCE(DragDropData::Node) node = DataInterchange_FormatEnum(dataInterchange); node != nullptr; node = DataInterchange_FormatEnum_Next(node)) {
             utf8_string_struct ty;
             DataInterchange_FormatEnum_Text(node, &ty);
-            if (!FormatToAtom(display, ty, *types+(I++))) {
+            if (!FormatToAtom(display, ty, (*types)+(I++))) {
                 std::cerr << mod_header() << "DragProvide_X11::send_xdnd_enter can't convert " << ty << " to an Atom" << std::endl;
 
                 throw std::runtime_error("Unsupported format type");

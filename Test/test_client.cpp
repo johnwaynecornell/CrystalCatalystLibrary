@@ -205,11 +205,10 @@ void on_drag_receive_leave(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(Dr
     // Example: Clean up any temporary states related to the drag action
 }
 
-void on_drag_receive_select(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DragDropData)  data, P_OUT(utf8_string_struct) format) {
+utf8_string_struct on_drag_receive_select(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DragDropData)  data)
+{
     int32_t i = 0;
     while (format_prec[i] != nullptr) i++;
-
-    *format = nullptr;
 
     for (P_INSTANCE(DragDropData::Node) node = DataInterchange_FormatEnum(data); i != 0 && node != nullptr; node = DataInterchange_FormatEnum_Next(node)) {
         utf8_string_struct drop_format;
@@ -218,11 +217,11 @@ void on_drag_receive_select(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(D
         for (int32_t i2 = 0; i2 < i; i2++) {
             if (strcmp(format_prec[i2], drop_format) == 0) {
                 i = i2;
-                *format = format_prec[i];
-                break;
+                return format_prec[i];
             }
         }
     }
+    return nullptr;
 }
 
 void on_drag_provide_chosen(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DragDropData)  data, utf8_string_struct format) {
@@ -362,8 +361,6 @@ int32_t main(int32_t argc, P_ELEMENTS(char *)  argv) {
 
     CrystalWindow_ApplicationRetain(window_handle);
 
-    CrystalWindow_RegisterDragTarget(window_handle);
-
     std::cerr << mod_header() << "Setting message handlers..." << std::endl;
     CrystalWindow_SetMessaqgeHandler(window_handle, "on_draw", (P_INSTANCE(void))on_draw);
     CrystalWindow_SetMessaqgeHandler(window_handle, "on_key_down", (P_INSTANCE(void))on_key_down);
@@ -392,6 +389,7 @@ int32_t main(int32_t argc, P_ELEMENTS(char *)  argv) {
     std::cerr << mod_header() << "Starting application..." << std::endl;
 
     CrystalWindow_Show(window_handle, true);
+    CrystalWindow_RegisterDragTarget(window_handle);
 
     Application_Run();
 

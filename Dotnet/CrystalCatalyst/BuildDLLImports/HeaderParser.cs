@@ -162,9 +162,17 @@ namespace BuildDLLImports
                 cursor = nextEntry.NewCursor(nextEntry.Contents.Head.Next);
                 value = cursor.Take().ToString();
             }
+            
+            if (cursor.AtLeast(1) && IsChar(cursor.Current, '<'))
+            {
+                cursor.CurrentNode = cursor.CurrentNode.Next;
+                value += $"<{cursor.Take()}>";
+                cursor.CurrentNode = cursor.CurrentNode.Next;
+
+            }
 
             typeInfo.Type = value;
-
+            
             if (value == "const")
             {
                 typeInfo.Type += " " + cursor.Take().ToString();
@@ -187,12 +195,11 @@ namespace BuildDLLImports
 
         public ParsedFunction LineToFunction(QuickList<object>.Cursor cursor)
         {
-            var function = new ParsedFunction
-            {
-                ReturnType = GetTypeInfo(cursor),
-                Name = cursor.Take().ToString()
-            };
+            var function = new ParsedFunction();
 
+            function.ReturnType = GetTypeInfo(cursor);
+            function.Name = cursor.Take().ToString();
+            
             if (!(cursor.Current is Entry parameters))
             {
                 Console.Error.WriteLine($"ERROR: {cursor.List} has invalid parameters");

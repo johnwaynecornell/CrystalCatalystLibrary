@@ -14,7 +14,7 @@ namespace NewAge {
         P_INSTANCE(void) spiderMutex;
 
         CrystalCatalystMutex();
-        ~CrystalCatalystMutex();
+        virtual ~CrystalCatalystMutex();
 
         virtual bool Init(utf8_string_struct name);
         virtual bool Free();
@@ -25,12 +25,11 @@ namespace NewAge {
     class CrystalCatalystMutexGimp : public CrystalCatalystMutex
     {
     public:
-        P_INSTANCE(void) spiderMutex;
 
-        virtual bool Init(utf8_string_struct name);
-        virtual bool Free();
-        virtual bool Lock();
-        virtual bool Unlock();
+        bool Init(utf8_string_struct name) override;
+        bool Free() override;
+        bool Lock() override;
+        bool Unlock() override;
     };
 
     _EXPORT_ bool CrystalCatalyst_SubMutex_Size(P_OUT(size_t) sz);

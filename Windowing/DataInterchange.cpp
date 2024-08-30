@@ -14,10 +14,7 @@ namespace NewAge {
     }
 
     void clear_selection(P_INSTANCE(DataInterchange) drag) {
-        if (drag->selected_format != nullptr) {
-            free((P_INSTANCE(void) ) drag->selected_format);
-            drag->selected_format = nullptr;
-        }
+        drag->selected_format = nullptr;
 
         if (drag->selected_data != nullptr) {
             free(drag->selected_data);

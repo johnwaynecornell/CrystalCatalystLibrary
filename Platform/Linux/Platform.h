@@ -18,6 +18,8 @@ namespace NewAge {
     std::string get_distro_name();
     bool is_rpm_based();
 
+    utf8_string_struct XGetAtomName_struct(Display *display, Atom A);
+
     P_INSTANCE(CrystalApplication) platform_initialize();
 }
 #endif //PLATFORM_H
