@@ -12,7 +12,7 @@
 #endif
 
 
-#include "CrystalCatalystLibrary.h"
+#include "CrystalCatalystLibrary/CrystalCatalystLibrary.h"
 
 using namespace JWCEssentials;
 

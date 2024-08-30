@@ -29,13 +29,11 @@
 using namespace JWCEssentials;
 
 namespace NewAge {
-    _CLASSEXPORT_ class CrystalCatalystLibrary {
+    class _CLASSEXPORT_ CrystalCatalystLibrary {
     public:
         std::atomic<int> initializationCount;
-        _CLASSEXPORT_ bool Initialize();
-        _CLASSEXPORT_ bool Free();
-
-        P_INSTANCE(TLS) errors;
+        bool Initialize();
+        bool Free();
     };
 
     _CLASSEXPORT_ extern P_INSTANCE(CrystalCatalystLibrary)  TheCrystalCatalystLibrary;

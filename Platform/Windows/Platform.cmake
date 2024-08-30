@@ -40,5 +40,4 @@ set(PLATFORM_SOURCES
         Platform/Windows/Fonts/Fonts.h
 )
 
-add_definitions(-D_EXPORT_=__declspec\(dllexport\))
 target_link_libraries(CrystalCatalystLibrary PUBLIC user32 opengl32)

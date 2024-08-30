@@ -4,7 +4,8 @@
 #ifndef CRYSTALCATALYST_WINDOWS_CRYSTALWINDOW_H
 #define CRYSTALCATALYST_WINDOWS_CRYSTALWINDOW_H
 
-#include "CrystalCXatalystLibrary/CrystalCatalystLibrary.h"
+#include "CrystalCatalystLibrary/CrystalCatalystLibrary.h"
+#include "../Platform.h"
 
 using namespace JWCEssentials;
 

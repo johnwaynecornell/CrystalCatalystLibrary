@@ -115,7 +115,7 @@ HRESULT __stdcall CrystalWindow_Windows::Drop(IDataObject* pDataObject, DWORD gr
     *pdwEffect = DROPEFFECT_COPY;
 
     utf8_string_struct format;
-    callbacks.on_drag_receive_select(myHandle, current_drag_data, &format);
+    format = callbacks.on_drag_receive_select(myHandle, current_drag_data);
 
     if (format != nullptr) {
         DataInterchange_Select(current_drag_data, format);

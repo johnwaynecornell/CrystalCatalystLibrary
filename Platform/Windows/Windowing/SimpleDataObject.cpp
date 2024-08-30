@@ -114,7 +114,7 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
     P_INSTANCE(void)data_ptr = nullptr;
     size_t size = 0;
 
-    std::string  f = format;
+    std::string  f = format.c_str;
 
     if (cfFormat != nullptr) {
 
@@ -122,7 +122,8 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
             *cfFormat = CF_UNICODETEXT;
 
         } else if (f == "text/html") {
-            *cfFormat = RegisterClipboardFormat(CFSTR_HTML);
+            //*cfFormat = RegisterClipboardFormat(CFSTR_HTML);
+            *cfFormat = RegisterClipboardFormat(CFSTR_MIME_HTML);
         } else if (f == "text/file-uri") {
             *cfFormat = CF_HDROP;
         } else {
@@ -138,7 +139,7 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
     HGLOBAL hGlobal = nullptr;
 
     if (strcmp(format, "text/plain") == 0 || strcmp(format, "text/html") == 0) {
-        std::string utf8_text = static_cast<utf8_string_struct >(data_ptr);
+        std::string utf8_text = std::string((char *) data_ptr, size);
         int32_t len = MultiByteToWideChar(CP_UTF8, 0, utf8_text.c_str(), -1, nullptr, 0);
         hGlobal = GlobalAlloc(GMEM_MOVEABLE, (len + 1) * sizeof(WCHAR));
         if (hGlobal) {
@@ -150,7 +151,7 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
         }
     } else if (strcmp(format, "text/file-uri") == 0) {
         // Parse URIs
-        std::string uri_list(static_cast<utf8_string_struct >(data_ptr), size);
+        std::string uri_list = std::string((char *) data_ptr, size);
         std::vector<std::wstring> files;
         size_t pos = 0;
         size_t new_pos;
@@ -187,14 +188,20 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
 
                 // Copy file paths to the global memory block
                 LPWSTR pwsz = (LPWSTR) ((LPBYTE) pDropFiles + sizeof(DROPFILES));
+                size_t max = (total_size - sizeof(WCHAR) - sizeof(DROPFILES)) / sizeof(WCHAR);
+
                 for (const auto &file: files) {
-                    wcscpy(pwsz, file.c_str());
+                    //std::wstring = std::wstring(pwsz)
 
-                    std::string text_data_ptr(file.begin(), file.end());
+                    int i;
+                    for (i=0; i<max+1 && i < file.size(); i++) pwsz[i] = file[i];
+                    if (i == max+1)
+                        throw std::runtime_error("corruption");
 
-                    //std::cerr << mod_header() << "SimpleDataObject::GetData " << text_data_ptr  << " included in drop" << std::endl;
+                    pwsz[i++] = 0;
 
-                    pwsz += file.length(); // Move the pointer to the next location after the null terminator
+                    pwsz += i; // Move the pointer to the next locati
+                    max -= i;// on after the null terminator
                 }
                 *pwsz = L'\0'; // Extra null terminator
 
@@ -367,7 +374,7 @@ HRESULT DataInterchange_ReadFormats(P_INSTANCE(DataInterchange) data, IDataObjec
 
             std::string my_t;
             if (my_type == nullptr) my_t = "nullptr";
-            else my_t = (std::string) "\"" + my_type + "\"";
+            else my_t = (std::string) "\"" + my_type.c_str + "\"";
 
             std::cerr << mod_header() << "\ttype:" << my_t << "\tformat:" << fmt.cfFormat << "\tName:\"" << name << "\"" << std::endl;
 
@@ -385,7 +392,7 @@ void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_struct
 
     FORMATETC fmt = { 0, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
 
-    std::string f = format;
+    std::string f = format.c_str;
     if (f == "text/plain") fmt.cfFormat = CF_UNICODETEXT;
     else if (f == "text/html") fmt.cfFormat = RegisterClipboardFormat(CFSTR_HTML);
     else if (f == "text/file-uri") fmt.cfFormat = CF_HDROP;

@@ -215,10 +215,10 @@ void CrystalWindow_Windows::PresentImage(utf8_string_struct pixformat, P_ELEMENT
 {
     if (!pixdata || !pixformat) return;
 
-    ReturnBuffer proxy= Pixels_ConvertPixels(pixformat, "bgra:int8", pixdata, pixdata_length, width, height);
+    PixData proxy= Pixels_ConvertPixels(pixformat, "bgra:int8", pixdata, pixdata_length, width, height);
     /* TODO */ //Check error condition
 
-    P_ELEMENTS(void) m = proxy ? proxy.memory : pixdata;
+    P_ELEMENTS(void) m = proxy ? proxy.pix_data : pixdata;
 
     HDC hdc = GetDC(hwnd);
 
@@ -234,8 +234,8 @@ void CrystalWindow_Windows::PresentImage(utf8_string_struct pixformat, P_ELEMENT
 
     StretchDIBits(hdc, 0, 0, width, height, 0, 0, width, height, m, &bmi, DIB_RGB_COLORS, SRCCOPY);
 
-    if (proxy) ReturnBuffer_Deallocate(proxy);
-
+    if (proxy) proxy.pix_data_free(proxy.pix_data);
+    
     ReleaseDC(hwnd, hdc);
 }
 

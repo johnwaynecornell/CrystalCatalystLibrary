@@ -70,7 +70,6 @@ namespace NewAge {
 
     bool CrystalCatalystLibrary::Initialize()
     {
-        errors = _initialize_errors_();
         return true;
     }
 

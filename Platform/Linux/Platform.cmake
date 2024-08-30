@@ -39,7 +39,6 @@ set(PLATFORM_SOURCES
         Platform/Linux/Fonts/Fonts.h
 )
 
-add_definitions(-D_EXPORT_=)
 target_link_libraries(CrystalCatalystLibrary PUBLIC  pthread X11 GL)
 
 #include_directories(${CMAKE_CURRENT_LIST_DIR})

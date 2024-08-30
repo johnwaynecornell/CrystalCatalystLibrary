@@ -11,6 +11,7 @@ set(CRYSTAL_FUNDAMENTALS_VERSION_BUILD 1)
 project(CrystalCatalyst VERSION "${CRYSTAL_FUNDAMENTALS_VERSION_MAJOR}.${CRYSTAL_FUNDAMENTALS_VERSION_MINOR}.${CRYSTAL_FUNDAMENTALS_VERSION_BUILD}")
 include(PlatformConfig.cmake)
 initPlatformConfig()
+ include($ENV{NewAge}/include/JWCEssentials/JWCEssentials.cmake)
 
  add_library(CrystalCatalystLibrary SHARED
  )
@@ -54,9 +55,8 @@ initPlatformConfig()
 
 set_target_output(CrystalCatalystLibrary ${CRYSTAL_FUNDAMENTALS_VERSION_MAJOR} ${CRYSTAL_FUNDAMENTALS_VERSION_MINOR} ${CRYSTAL_FUNDAMENTALS_VERSION_BUILD})
 
-target_link_libraries(CrystalCatalystLibrary PUBLIC JWCEssentials)
-
-include($ENV{NewAge}/include/JWCEssentials/JWCEssentials.cmake)
+find_library(LIBJWCEssentials JWCEssentials)
+target_link_libraries(CrystalCatalystLibrary PUBLIC ${LIBJWCEssentials})
 
 add_subdirectory(Test)
 
