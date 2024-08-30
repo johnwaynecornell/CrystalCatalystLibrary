@@ -61,6 +61,7 @@ HRESULT __stdcall CrystalWindow_Windows::DragEnter(IDataObject* pDataObject, DWO
     current_drag_data->context = pDataObject;
 	current_drag_data->selection_type = DataInterchange::E_DND;
 
+    current_drag_data->m_handle = myHandle;
 
     DataInterchange_ReadFormats(current_drag_data, pDataObject);
 

@@ -188,22 +188,24 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
 
                 // Copy file paths to the global memory block
                 LPWSTR pwsz = (LPWSTR) ((LPBYTE) pDropFiles + sizeof(DROPFILES));
+                LPWSTR cur = pwsz;
                 size_t max = (total_size - sizeof(WCHAR) - sizeof(DROPFILES)) / sizeof(WCHAR);
 
-                for (const auto &file: files) {
-                    //std::wstring = std::wstring(pwsz)
-
+                for (std::wstring &file: files) {
                     int i;
-                    for (i=0; i<max+1 && i < file.size(); i++) pwsz[i] = file[i];
+                    for (i=0; i<max+1 && i < file.length(); i++)
+                    {
+                        cur[i] = file[i];
+                    }
                     if (i == max+1)
                         throw std::runtime_error("corruption");
 
-                    pwsz[i++] = 0;
+                    cur[i] = 0;
 
-                    pwsz += i; // Move the pointer to the next locati
+                    cur += i; // Move the pointer to the next location
                     max -= i;// on after the null terminator
                 }
-                *pwsz = L'\0'; // Extra null terminator
+                *cur = L'\0'; // Extra null terminator
 
                 GlobalUnlock(hGlobal);
             }
@@ -415,7 +417,7 @@ void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_struct
             if (hDrop != nullptr) {
                 uint32_t  fileCount = DragQueryFile(hDrop, 0xFFFFFFFF, nullptr, 0);
 
-                std::cout << "drop of " << fileCount << " files" << std::endl;
+                std::cout << "drag of " << fileCount << " files" << std::endl;
 
                 std::string uri = "";
                 for (uint32_t  i = 0; i < fileCount; i++) {
