@@ -382,7 +382,7 @@ namespace NewAge {
                         text_data = std::string((char *)prop, nitems);
                     }
 
-                    std::cerr << mod_header() << "Setting selection for text/html: " << text_data << std::endl;
+                    std::cerr << mod_header() << "Setting selection for text/html" << std::endl;
 
                     DataInterchange_Selection_Set(current_data, format, (void *) text_data.c_str(), text_data.length());
                     XFree(prop);
