@@ -1,6 +1,7 @@
 // MIT License
 // Copyright (c) 2024 John W. Cornell
 // See LICENSE file in the project root for full license information.
+#include "../CrystalApplication_X11.h"
 #include "CrystalWindow_X11.h"
 #include "DragProvide_X11.h"
 #include <unistd.h>
@@ -14,6 +15,7 @@
 
 #define mod_header() "CrystalWindow_X11:"
 
+#include <iomanip>
 #include <X11/XKBlib.h>
 #include <X11/keysym.h>
 
@@ -26,6 +28,41 @@ namespace NewAge {
 
     void CrystalWindow_X11::Show(bool restore) {
         XRaiseWindow(display, window);
+    }
+
+    void CrystalWindow_X11::Close(){
+        XDestroyWindow(display, window);
+    }
+
+    void CrystalWindow_X11::PostClose() {
+        XEvent event;
+        memset(&event, 0, sizeof(event));
+        event.type = ClientMessage;
+        event.xclient.display = display;
+        event.xclient.window = window;
+
+        event.xclient.format = 32;
+
+        event.xclient.data.l[0] = AppX11->atoms.window._delete;
+        event.xclient.data.l[1] = 0;
+        event.xclient.data.l[2] = 0;
+        event.xclient.data.l[3] = 0;
+        event.xclient.data.l[4] = 0;
+
+        XSendEvent(display, window, False, NoEventMask, &event);
+        XFlush(display);
+
+        /*
+        std::cerr << mod_header() << "XdndPosition message sent from " << source_window->window << ", to " << target_window << " x=" << x << " y=" << y
+        << " l[0]=" << std::hex << std::setw(8) << std::setfill('0') << event.xclient.data.l[0] << std::dec
+        << " l[1]=" << std::hex << std::setw(8) << std::setfill('0') << event.xclient.data.l[1] << std::dec
+        << " l[3]=" << std::hex << std::setw(8) << std::setfill('0') << event.xclient.data.l[3] << std::dec
+        << " l[4]=" << std::hex << std::setw(8) << std::setfill('0') << event.xclient.data.l[4] << std::dec
+        << std::endl;
+
+        drag_data->has_status = false;
+        wait_for_status = true;
+        */
     }
 
     // Function to convert X11 keycode to Unicode
@@ -188,6 +225,14 @@ namespace NewAge {
                     callbacks.on_focus_out(myHandle);
                 }
             return true;
+            case ClientMessage:
+                if (event->xclient.data.l[0] == AppX11->atoms.window._delete) {
+                    if (callbacks.on_close) {
+                        callbacks.on_close(myHandle);
+                    } else Close();
+
+                    return true;
+                }
         }
 
         return false;

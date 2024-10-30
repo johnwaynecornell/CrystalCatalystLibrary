@@ -65,6 +65,8 @@ namespace NewAge {
             return nullptr;
         }
 
+        XSetWMProtocols(globalDisplay, win, &((CrystalApplication_X11 *) TheApplication)->atoms.window._delete, 1);
+
         XStoreName(globalDisplay, win, title);
         XMapWindow(globalDisplay, win);
 
@@ -93,7 +95,59 @@ namespace NewAge {
         XSaveContext(globalDisplay, win, windowContext, (XPointer)window_handle);
 
         Application_WindowAdd(window_handle);
-        std::cout << "Window created successfully" << std::endl;
+
+        return window_handle;
+    }
+
+    P_INSTANCE(WindowHandle) CrystalApplication_X11::WindowCreate_Simple(int32_t width, int32_t height, utf8_string_struct title) {
+        if (!globalDisplay) {
+            std::cerr << "Global display is not initialized" << std::endl;
+            return nullptr;
+        }
+
+        int32_t screen = DefaultScreen(globalDisplay);
+        Window root = RootWindow(globalDisplay, screen);
+        //XSetWindowAttributes swa;
+        //swa.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | StructureNotifyMask;
+
+        Window win = XCreateSimpleWindow(globalDisplay, root,0,0,width,height,0,0,0);
+
+
+
+        if (!win) {
+            std::cerr << "Failed to create window" << std::endl;
+            return nullptr;
+        }
+
+        XStoreName(globalDisplay, win, title);
+        XMapWindow(globalDisplay, win);
+
+        XSelectInput(globalDisplay, win, ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | StructureNotifyMask);
+        XFlush(globalDisplay);  // Ensure commands are sent to the X server
+
+        auto* window_structure = new CrystalWindow_X11();
+        if (!window_structure) {
+            std::cerr << "Failed to allocate memory for window_structure" << std::endl;
+            return nullptr;
+        }
+
+        window_structure->window = win;
+        window_structure->display = globalDisplay;
+        window_structure->gl_context = nullptr;
+
+        auto* window_handle = (P_INSTANCE(WindowHandle))malloc(sizeof(WindowHandle));
+        if (!window_handle) {
+            std::cerr << "Failed to allocate memory for window_handle" << std::endl;
+            free(window_structure);
+            return nullptr;
+        }
+        window_handle->crystal_window = window_structure;
+        window_handle->crystal_window->myHandle = window_handle;
+
+        XSaveContext(globalDisplay, win, windowContext, (XPointer)window_handle);
+
+        Application_WindowAdd(window_handle);
+
         return window_handle;
     }
 

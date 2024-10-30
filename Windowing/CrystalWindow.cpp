@@ -37,6 +37,10 @@ namespace NewAge {
         return TheApplication->WindowCreate(width, height, title);
     }
 
+    P_INSTANCE(WindowHandle) CrystalWindow_CreateSimple(int32_t width, int32_t height, utf8_string_struct title) {
+        return TheApplication->WindowCreate_Simple(width, height, title);
+    }
+
     void CrystalWindow_PresentImage(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height) {
         window_handle->crystal_window->PresentImage(pixformat, pixdata, pixdata_length, width, height);
     }
@@ -70,6 +74,14 @@ namespace NewAge {
         window_handle->crystal_window->Show(restore);
     }
 
+    void CrystalWindow_Close(P_INSTANCE(WindowHandle) window_handle)
+    {
+        window_handle->crystal_window->Close();
+    }
+
+    void CrystalWindow_PostClose(P_INSTANCE(WindowHandle) window_handle) {
+        window_handle->crystal_window->PostClose();
+    }
 
     P_INSTANCE(WindowCallbacks)  get_callbacks(P_INSTANCE(WindowHandle)  handle);
 

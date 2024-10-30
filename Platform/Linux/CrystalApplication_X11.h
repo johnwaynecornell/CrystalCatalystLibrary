@@ -44,6 +44,10 @@ namespace NewAge {
                 Atom selection;
             } xdnd;
 
+            struct {
+                Atom _delete;
+            } window;
+
         } atoms;
 #pragma pack(pop)
 
@@ -69,6 +73,8 @@ namespace NewAge {
             atoms.xdnd.type_list = GetAtom("XdndTypeList");
             atoms.xdnd.supported_actions = GetAtom("XdndSupportedActions");
             atoms.xdnd.selection = GetAtom("XdndSelection");
+
+            atoms.window._delete = GetAtom("WM_DELETE_WINDOW");
         }
 
         Atom GetAtom(const char* name) {
@@ -89,6 +95,7 @@ namespace NewAge {
         virtual void Init();
 
         virtual P_INSTANCE(WindowHandle) WindowCreate(int32_t width, int32_t height, utf8_string_struct title);
+        virtual P_INSTANCE(WindowHandle) WindowCreate_Simple(int32_t width, int32_t height, utf8_string_struct title);
 
         virtual void DispatchEvent(XEvent &event);
 

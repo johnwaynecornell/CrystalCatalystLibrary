@@ -31,7 +31,8 @@ namespace NewAge {
         void MouseRelease() override;
         void GL_Init() override;
         void Show(bool restore) override;
-
+        void Close() override;
+        void PostClose() override;
         void RegisterDragTarget() override;
         void DragStart(P_INSTANCE(DragDropData) data, int32_t x, int32_t y) override;
 

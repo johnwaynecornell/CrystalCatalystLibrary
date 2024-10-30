@@ -10,6 +10,7 @@ set(CRYSTAL_FUNDAMENTALS_VERSION_BUILD 1)
 
 project(CrystalCatalyst VERSION "${CRYSTAL_FUNDAMENTALS_VERSION_MAJOR}.${CRYSTAL_FUNDAMENTALS_VERSION_MINOR}.${CRYSTAL_FUNDAMENTALS_VERSION_BUILD}")
 include(PlatformConfig.cmake)
+
 initPlatformConfig()
  include($ENV{NewAge}/include/JWCEssentials/JWCEssentials.cmake)
 
@@ -53,6 +54,7 @@ find_library(LIBJWCEssentials JWCEssentials)
 target_link_libraries(CrystalCatalystLibrary PUBLIC ${LIBJWCEssentials})
 
 add_subdirectory(Test)
+add_subdirectory(Tools/clipboard_html)
 
 target_compile_options(CrystalCatalystLibrary PUBLIC "-Wno-return-type-c-linkage")
 

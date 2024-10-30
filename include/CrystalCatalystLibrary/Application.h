@@ -38,6 +38,7 @@ namespace NewAge {
         virtual void WindowRemove(P_INSTANCE(WindowHandle) window_handle);
 
         virtual P_INSTANCE(WindowHandle) WindowCreate(int32_t width, int32_t height, utf8_string_struct title) = 0;
+        virtual P_INSTANCE(WindowHandle) WindowCreate_Simple(int32_t width, int32_t height, utf8_string_struct title) = 0;
 
         virtual void DispatchCycle() = 0;
         virtual bool HasMessage() = 0;

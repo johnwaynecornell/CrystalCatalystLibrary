@@ -50,6 +50,7 @@ namespace NewAge {
     //##### end DUMP REGION ##### callbacks
 
     _EXPORT_ P_INSTANCE(WindowHandle) CrystalWindow_Create(int32_t width, int32_t height, utf8_string_struct title);
+    _EXPORT_ P_INSTANCE(WindowHandle) CrystalWindow_CreateSimple(int32_t width, int32_t height, utf8_string_struct title);
     _EXPORT_ void CrystalWindow_ApplicationRetain(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ void CrystalWindow_ApplicationRelease(P_INSTANCE(WindowHandle) window_handle);
 
@@ -60,6 +61,8 @@ namespace NewAge {
     _EXPORT_ void CrystalWindow_MouseRelease(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ void CrystalWindow_GL_Init(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ void CrystalWindow_Show(P_INSTANCE(WindowHandle) window_handle, bool restore);
+    _EXPORT_ void CrystalWindow_Close(P_INSTANCE(WindowHandle) window_handle);
+    _EXPORT_ void CrystalWindow_PostClose(P_INSTANCE(WindowHandle) window_handle);
 
     _EXPORT_ bool CrystalWindow_SetMessaqgeHandler(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct handler_name, P_INSTANCE(void) handler);
 
@@ -88,6 +91,9 @@ namespace NewAge {
         virtual void MouseRelease() = 0;
         virtual void GL_Init() = 0;
         virtual void Show(bool restore) = 0;
+        virtual void Close() = 0;
+        virtual void PostClose() = 0;
+
 
         virtual void RegisterDragTarget() = 0;
         virtual void DragStart(P_INSTANCE(DragDropData) data, int32_t x, int32_t y) = 0;
