@@ -38,7 +38,6 @@ namespace NewAge {
 
     _EXPORT_ bool CrystalCatalystLibrary_Initialize();
     _EXPORT_ bool CrystalCatalystLibrary_Close();
-    _EXPORT_ bool StartingWith(utf8_string_struct prefix, utf8_string_struct str);
 }
 
 #undef _EXPORT__

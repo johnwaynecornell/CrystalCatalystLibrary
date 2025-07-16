@@ -317,7 +317,7 @@ namespace NewAge {
 #include <GL/gl.h>
 #include <GL/glx.h>
 
-    void CrystalWindow_X11::GL_Init() {
+    void CrystalWindow_X11::GLInit() {
         // Define the GLX attributes for the visual
         int32_t attributes[] = {
             GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None

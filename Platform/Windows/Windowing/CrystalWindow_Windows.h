@@ -30,7 +30,7 @@ public:
 
     virtual void MouseCapture();
     virtual void MouseRelease();
-    virtual void GL_Init();
+    virtual void GLInit();
     virtual void Show(bool restore);
 
     virtual void RegisterDragTarget();

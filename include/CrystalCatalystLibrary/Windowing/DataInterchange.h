@@ -47,14 +47,14 @@ namespace NewAge {
     _EXPORT_ P_INSTANCE(DataInterchange::Node)  DataInterchange_FormatAdd(P_INSTANCE(DataInterchange) drop, utf8_string_struct format);
     _EXPORT_ bool DataInterchange_FormatExists(P_INSTANCE(DataInterchange) data, utf8_string_struct format);
     _EXPORT_ P_INSTANCE(DataInterchange::Node) DataInterchange_FormatEnum(P_INSTANCE(DataInterchange) drop);
-    _EXPORT_ P_INSTANCE(DataInterchange::Node) DataInterchange_FormatEnum_Next(P_INSTANCE(DataInterchange::Node) node);
-    _EXPORT_ void DataInterchange_FormatEnum_Text(P_INSTANCE(DataInterchange::Node) node, P_OUT(utf8_string_struct) text);
+    _EXPORT_ P_INSTANCE(DataInterchange::Node) DataInterchange_FormatEnumNext(P_INSTANCE(DataInterchange::Node) node);
+    _EXPORT_ void DataInterchange_FormatEnumText(P_INSTANCE(DataInterchange::Node) node, P_OUT(utf8_string_struct) text);
 
-    _EXPORT_ P_INSTANCE(DataInterchange::Node) DataInterchange_Items_FormatRemove(P_INSTANCE(DataInterchange) drop, P_INSTANCE(DataInterchange::Node) node);
+    _EXPORT_ P_INSTANCE(DataInterchange::Node) DataInterchange_ItemsFormatRemove(P_INSTANCE(DataInterchange) drop, P_INSTANCE(DataInterchange::Node) node);
 
     _EXPORT_ void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_struct format);
-    _EXPORT_ void DataInterchange_Selection_Reveal(P_INSTANCE(DataInterchange) drag, P_OUT(utf8_string_struct) format, P_OUT(P_INSTANCE(void)) data, P_OUT(size_t) size);
-    _EXPORT_ void DataInterchange_Selection_Set(P_INSTANCE(DataInterchange) drag, utf8_string_struct format, P_INSTANCE(void) data, size_t size);
+    _EXPORT_ void DataInterchange_SelectionReveal(P_INSTANCE(DataInterchange) drag, P_OUT(utf8_string_struct) format, P_OUT(P_INSTANCE(void)) data, P_OUT(size_t) size);
+    _EXPORT_ void DataInterchange_SelectionSet(P_INSTANCE(DataInterchange) drag, utf8_string_struct format, P_INSTANCE(void) data, size_t size);
 }
 
 #endif //CRYSTALCATALYST_DATAINTERCHANGE_H

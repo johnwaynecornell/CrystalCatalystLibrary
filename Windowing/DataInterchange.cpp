@@ -27,7 +27,7 @@ namespace NewAge {
     void DataInterchange_Free(P_INSTANCE(DataInterchange) drag) {
         P_INSTANCE(DataInterchange::Node) I;
         for (I = DataInterchange_FormatEnum(drag); I != nullptr; I = I->next) {
-            DataInterchange_Items_FormatRemove(drag, I);
+            DataInterchange_ItemsFormatRemove(drag, I);
         }
         clear_selection(drag);
         delete drag;
@@ -59,15 +59,15 @@ namespace NewAge {
         return drop->data_head.next;
     }
 
-    P_INSTANCE(DataInterchange::Node) DataInterchange_FormatEnum_Next(P_INSTANCE(DataInterchange::Node) node) {
+    P_INSTANCE(DataInterchange::Node) DataInterchange_FormatEnumNext(P_INSTANCE(DataInterchange::Node) node) {
         return node->next;
     }
 
-    void DataInterchange_FormatEnum_Text(P_INSTANCE(DataInterchange::Node) node, P_OUT(utf8_string_struct) text) {
+    void DataInterchange_FormatEnumText(P_INSTANCE(DataInterchange::Node) node, P_OUT(utf8_string_struct) text) {
         *text = node->type;
     }
 
-    P_INSTANCE(DataInterchange::Node) DataInterchange_Items_FormatRemove(P_INSTANCE(DataInterchange) drop, P_INSTANCE(DataInterchange::Node) node) {
+    P_INSTANCE(DataInterchange::Node) DataInterchange_ItemsFormatRemove(P_INSTANCE(DataInterchange) drop, P_INSTANCE(DataInterchange::Node) node) {
         P_INSTANCE(DataInterchange::Node) I;
 
         for (I = DataInterchange_FormatEnum(drop); I != nullptr && I->next != node; I = I->next){}
@@ -81,14 +81,14 @@ namespace NewAge {
         return I->next;
     }
 
-    void DataInterchange_Selection_Reveal(P_INSTANCE(DataInterchange) drag, P_OUT(utf8_string_struct) format, P_OUT(P_INSTANCE(void)) data, P_OUT(size_t) size)
+    void DataInterchange_SelectionReveal(P_INSTANCE(DataInterchange) drag, P_OUT(utf8_string_struct) format, P_OUT(P_INSTANCE(void)) data, P_OUT(size_t) size)
     {
         if (format) *format = drag->selected_format;
         if (data) *data = drag->selected_data;
         if (size) *size = drag->selected_size;
     }
 
-    void DataInterchange_Selection_Set(P_INSTANCE(DataInterchange) drag, utf8_string_struct format, P_INSTANCE(void) data, size_t size) {
+    void DataInterchange_SelectionSet(P_INSTANCE(DataInterchange) drag, utf8_string_struct format, P_INSTANCE(void) data, size_t size) {
 
         drag->selected_format = format;
 

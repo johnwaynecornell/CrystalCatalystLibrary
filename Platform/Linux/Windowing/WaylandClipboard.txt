@@ -45,6 +45,6 @@ bool Clipboard_Wayland::isClipboardDataAvailable() const {
     return hasData;
 }
 
-void Clipboard_Wayland::Clipboard_Copy_Persist() {
+void Clipboard_Wayland::CrystalWindow_ClipboardCopyPersist() {
     copyToClipboard();
 }

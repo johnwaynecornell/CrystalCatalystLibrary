@@ -133,7 +133,7 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
     }
 
     dataInterchange->provide_chosen(dataInterchange, format);
-    DataInterchange_Selection_Reveal(dataInterchange, &format, &data_ptr, &size);
+    DataInterchange_SelectionReveal(dataInterchange, &format, &data_ptr, &size);
 
 
     HGLOBAL hGlobal = nullptr;
@@ -410,7 +410,7 @@ void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_struct
                 std::string text_data(ws.begin(), ws.end());
                 GlobalUnlock(stg.hGlobal);
 
-                DataInterchange_Selection_Set(data, format, (P_INSTANCE(void))text_data.c_str(), text_data.length() + 1);
+                DataInterchange_SelectionSet(data, format, (P_INSTANCE(void))text_data.c_str(), text_data.length() + 1);
             }
         } else if (f == "text/file-uri") {
             HDROP hDrop = static_cast<HDROP>(GlobalLock(stg.hGlobal));
@@ -431,7 +431,7 @@ void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_struct
                 }
                 GlobalUnlock(stg.hGlobal);
 
-                DataInterchange_Selection_Set(data, "text/file-uri", (P_INSTANCE(void) ) uri.c_str(),
+                DataInterchange_SelectionSet(data, "text/file-uri", (P_INSTANCE(void) ) uri.c_str(),
                                               uri.length() + 1);
             }
         }

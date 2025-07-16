@@ -7,7 +7,7 @@ using namespace JWCEssentials;
 
 namespace NewAge {
 
-bool CrystalCatalyst_Fonts_Has_MSCoreFonts(void (*callback)(utf8_string_struct OS, utf8_string_struct Instructions)) {
+bool CrystalCatalyst_Fonts_HasMSCoreFonts(void (*callback)(utf8_string_struct OS, utf8_string_struct Instructions)) {
     return true;
 }
 }

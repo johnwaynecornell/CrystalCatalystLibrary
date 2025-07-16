@@ -47,7 +47,7 @@ wchar_t ConvertKeyCodeToUnicode(uint32_t  keyCode) {
 
 LRESULT CALLBACK WindowProc(HWND hwnd, uint32_t  uMsg, WPARAM wParam, LPARAM lParam);
 
-void CrystalWindow_Windows::GL_Init() {
+void CrystalWindow_Windows::GLInit() {
     PIXELFORMATDESCRIPTOR pfd = {
             sizeof(PIXELFORMATDESCRIPTOR),   // size of this pfd
             1,                               // version number

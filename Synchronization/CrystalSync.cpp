@@ -35,16 +35,16 @@ namespace NewAge
     {
         size_t sz;
 
-        if (!CrystalCatalyst_SubMutex_Size(&sz)) return false;
+        if (!SubMutex_Size(&sz)) return false;
         spiderMutex = malloc(sz);
         if (spiderMutex == nullptr) return false;
 
-        return CrystalCatalyst_SubMutex_Init(spiderMutex, name);
+        return SubMutex_Init(spiderMutex, name);
     }
 
     bool CrystalCatalystMutex::Free()
     {
-        bool RC = CrystalCatalyst_SubMutex_Close(spiderMutex);
+        bool RC = SubMutex_Close(spiderMutex);
         if (RC)
         {
             free(spiderMutex);
@@ -56,37 +56,37 @@ namespace NewAge
 
     bool CrystalCatalystMutex::Lock()
     {
-        return CrystalCatalyst_SubMutex_Lock(spiderMutex);
+        return SubMutex_Lock(spiderMutex);
     }
 
     bool CrystalCatalystMutex::Unlock()
     {
-        return CrystalCatalyst_SubMutex_Unlock(spiderMutex);
+        return SubMutex_Unlock(spiderMutex);
     }
 
     bool CrystalCatalystMutexGimp::Init(utf8_string_struct name)
     {
         size_t sz;
 
-        if (!CrystalCatalyst_SubMutex_Size(&sz)) return false;
+        if (!SubMutex_Size(&sz)) return false;
         spiderMutex = malloc(sz);
         if (spiderMutex == nullptr) return false;
 
-        return CrystalCatalyst_SubMutex_Init(spiderMutex, name);
+        return SubMutex_Init(spiderMutex, name);
     }
 
     bool CrystalCatalystMutexGimp::Free()
     {
-        return CrystalCatalyst_SubMutex_Close(spiderMutex);
+        return SubMutex_Close(spiderMutex);
     }
 
     bool CrystalCatalystMutexGimp::Lock()
     {
-        return CrystalCatalyst_SubMutex_Lock(spiderMutex);
+        return SubMutex_Lock(spiderMutex);
     }
 
     bool CrystalCatalystMutexGimp::Unlock()
     {
-        return CrystalCatalyst_SubMutex_Unlock(spiderMutex);
+        return SubMutex_Unlock(spiderMutex);
     }
 }

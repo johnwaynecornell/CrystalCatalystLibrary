@@ -33,7 +33,7 @@ namespace NewAge {
         {nullptr, nullptr}
     };
 
-    bool CrystalCatalyst_Fonts_Has_MSCoreFonts(void (*callback)(utf8_string_struct OS, utf8_string_struct Instructions)) {
+    bool CrystalCatalyst_Fonts_HasMSCoreFonts(void (*callback)(utf8_string_struct OS, utf8_string_struct Instructions)) {
         // Check if the directory exists
         if (fs::exists("/usr/share/fonts/truetype/msttcorefonts/")) return true;
 

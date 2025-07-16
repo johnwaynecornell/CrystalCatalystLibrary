@@ -8,9 +8,12 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
-#include "CrystalCatalystLibrary/CrystalCatalystLibrary.h"
+#include "JWCEssentials/JWCEssentials.h"
 #include "JWCCommandSpawn/CommandSpawn.h"
+#include "CrystalCatalystLibrary/CrystalCatalystLibrary.h"
 
+
+using namespace JWCEssentials;
 using namespace JWCCommandSpawn;
 using namespace NewAge;
 
@@ -90,7 +93,7 @@ void on_mouse_move(P_INSTANCE(WindowHandle) window_handle, int32_t x, int32_t y)
 void on_mouse_down(P_INSTANCE(WindowHandle) window_handle, int32_t button, int32_t x, int32_t y) {
 
     if (button == 1) {
-        DataInterchange *data = Clipboard_Paste(window_handle);
+        DataInterchange *data = CrystalWindow_ClipboardPaste(window_handle);
 
         // Process the pasted data
         utf8_string_struct type;
@@ -103,10 +106,10 @@ void on_mouse_down(P_INSTANCE(WindowHandle) window_handle, int32_t button, int32
         utf8_string_struct format = nullptr;
 
         for (P_INSTANCE(DragDropData::Node)node = DataInterchange_FormatEnum(data);
-             i != 0 && node != nullptr; node = DataInterchange_FormatEnum_Next(node)) {
+             i != 0 && node != nullptr; node = DataInterchange_FormatEnumNext(node)) {
             utf8_string_struct drop_format = nullptr;
 
-            DataInterchange_FormatEnum_Text(node, &drop_format);
+            DataInterchange_FormatEnumText(node, &drop_format);
 
             for (int32_t i2 = 0; i2 < i; i2++) {
                 if (strcmp(format_prec[i2], drop_format) == 0) {
@@ -166,7 +169,7 @@ void on_drag_receive_motion(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(D
 
     utf8_string_struct DragString;
 
-    DragString = DragActions_String(data->action_selections);
+    DragString = DragDropData_DragActionsString(data->action_selections);
     //
     // std::cerr << mod_header() << DragString << std::endl;
 
@@ -183,9 +186,9 @@ utf8_string_struct on_drag_receive_select(P_INSTANCE(WindowHandle) window_handle
     int32_t i = 0;
     while (format_prec[i] != nullptr) i++;
 
-    for (P_INSTANCE(DragDropData::Node) node = DataInterchange_FormatEnum(data); i != 0 && node != nullptr; node = DataInterchange_FormatEnum_Next(node)) {
+    for (P_INSTANCE(DragDropData::Node) node = DataInterchange_FormatEnum(data); i != 0 && node != nullptr; node = DataInterchange_FormatEnumNext(node)) {
         utf8_string_struct drop_format;
-        DataInterchange_FormatEnum_Text(node, &drop_format);
+        DataInterchange_FormatEnumText(node, &drop_format);
 
         for (int32_t i2 = 0; i2 < i; i2++) {
             if (strcmp(format_prec[i2], drop_format) == 0) {
@@ -223,7 +226,7 @@ void on_drag_provide_chosen(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(D
         pth = fs::absolute("test2.txt").string();
         paths += pth; paths += "\n";
 
-        DataInterchange_Selection_Set(data, format, (void *) paths.c_str(), paths.length());
+        DataInterchange_SelectionSet(data, format, (void *) paths.c_str(), paths.length());
     }
 }
 
@@ -242,7 +245,7 @@ void on_clipboard_provide_chosen(P_INSTANCE(WindowHandle) window_handle, P_INSTA
 {
     if (strcmp(format, "text/plain") == 0) {
 
-        DataInterchange_Selection_Set(data, format, (void *) payload.c_str, payload.length);
+        DataInterchange_SelectionSet(data, format, (void *) payload.c_str, payload.length);
         //CrystalWindow_PostClose(window_handle);
     }
 }
@@ -257,7 +260,7 @@ void receive(std::string label, P_INSTANCE(WindowHandle) window_handle, P_INSTAN
     P_INSTANCE(void) data_ptr;
     size_t size;
 
-    DataInterchange_Selection_Reveal(data, &type, &data_ptr, &size);
+    DataInterchange_SelectionReveal(data, &type, &data_ptr, &size);
 
     if (StartingWith("text/", type)) {
 
@@ -278,7 +281,7 @@ void receive(std::string label, P_INSTANCE(WindowHandle) window_handle, P_INSTAN
         data->selection_type = DataInterchange::E_CLIPBOARD;
 
         DataInterchange_FormatAdd(data, "text/plain");
-        Clipboard_Copy(window_handle, data);
+        CrystalWindow_ClipboardCopy(window_handle, data);
 
         std::cout << (const char *) payload << std::endl;
 
@@ -318,29 +321,29 @@ int32_t main(int32_t argc, P_ELEMENTS(char *)  argv) {
 
     CrystalWindow_ApplicationRetain(window_handle);
 
-    CrystalWindow_SetMessaqgeHandler(window_handle, "on_draw", (P_INSTANCE(void))on_draw);
-    CrystalWindow_SetMessaqgeHandler(window_handle, "on_key_down", (P_INSTANCE(void))on_key_down);
-    CrystalWindow_SetMessaqgeHandler(window_handle, "on_key_up", (P_INSTANCE(void))on_key_up);
-    CrystalWindow_SetMessaqgeHandler(window_handle, "on_mouse_move", (P_INSTANCE(void))on_mouse_move);
-    CrystalWindow_SetMessaqgeHandler(window_handle, "on_mouse_down", (P_INSTANCE(void))on_mouse_down);
-    CrystalWindow_SetMessaqgeHandler(window_handle, "on_mouse_up", (P_INSTANCE(void))on_mouse_up);
-    CrystalWindow_SetMessaqgeHandler(window_handle, "on_resize", (P_INSTANCE(void))on_resize);
-    CrystalWindow_SetMessaqgeHandler(window_handle, "on_close", (P_INSTANCE(void))on_close);
-    CrystalWindow_SetMessaqgeHandler(window_handle, "on_focus_in", (P_INSTANCE(void))on_focus_in);
-    CrystalWindow_SetMessaqgeHandler(window_handle, "on_focus_out", (P_INSTANCE(void))on_focus_out);
-    CrystalWindow_SetMessaqgeHandler(window_handle, "on_drag_receive_start", (P_INSTANCE(void))on_drag_receive_start);
-    CrystalWindow_SetMessaqgeHandler(window_handle, "on_drag_receive_enter", (P_INSTANCE(void))on_drag_receive_enter);
-    CrystalWindow_SetMessaqgeHandler(window_handle, "on_drag_receive_motion", (P_INSTANCE(void))on_drag_receive_motion);
-    CrystalWindow_SetMessaqgeHandler(window_handle, "on_drag_receive_leave", (P_INSTANCE(void))on_drag_receive_leave);
-    CrystalWindow_SetMessaqgeHandler(window_handle, "on_drag_receive_select", (P_INSTANCE(void))on_drag_receive_select);
-    CrystalWindow_SetMessaqgeHandler(window_handle, "on_drag_receive_drop", (P_INSTANCE(void))on_drag_receive_drop);
+    CrystalWindow_SetMessaqeHandler(window_handle, "on_draw", (P_INSTANCE(void))on_draw);
+    CrystalWindow_SetMessaqeHandler(window_handle, "on_key_down", (P_INSTANCE(void))on_key_down);
+    CrystalWindow_SetMessaqeHandler(window_handle, "on_key_up", (P_INSTANCE(void))on_key_up);
+    CrystalWindow_SetMessaqeHandler(window_handle, "on_mouse_move", (P_INSTANCE(void))on_mouse_move);
+    CrystalWindow_SetMessaqeHandler(window_handle, "on_mouse_down", (P_INSTANCE(void))on_mouse_down);
+    CrystalWindow_SetMessaqeHandler(window_handle, "on_mouse_up", (P_INSTANCE(void))on_mouse_up);
+    CrystalWindow_SetMessaqeHandler(window_handle, "on_resize", (P_INSTANCE(void))on_resize);
+    CrystalWindow_SetMessaqeHandler(window_handle, "on_close", (P_INSTANCE(void))on_close);
+    CrystalWindow_SetMessaqeHandler(window_handle, "on_focus_in", (P_INSTANCE(void))on_focus_in);
+    CrystalWindow_SetMessaqeHandler(window_handle, "on_focus_out", (P_INSTANCE(void))on_focus_out);
+    CrystalWindow_SetMessaqeHandler(window_handle, "on_drag_receive_start", (P_INSTANCE(void))on_drag_receive_start);
+    CrystalWindow_SetMessaqeHandler(window_handle, "on_drag_receive_enter", (P_INSTANCE(void))on_drag_receive_enter);
+    CrystalWindow_SetMessaqeHandler(window_handle, "on_drag_receive_motion", (P_INSTANCE(void))on_drag_receive_motion);
+    CrystalWindow_SetMessaqeHandler(window_handle, "on_drag_receive_leave", (P_INSTANCE(void))on_drag_receive_leave);
+    CrystalWindow_SetMessaqeHandler(window_handle, "on_drag_receive_select", (P_INSTANCE(void))on_drag_receive_select);
+    CrystalWindow_SetMessaqeHandler(window_handle, "on_drag_receive_drop", (P_INSTANCE(void))on_drag_receive_drop);
 
-    CrystalWindow_SetMessaqgeHandler(window_handle, "on_drag_provide_chosen", (P_INSTANCE(void))on_drag_provide_chosen);
-    CrystalWindow_SetMessaqgeHandler(window_handle, "on_drag_provide_status", (P_INSTANCE(void))on_drag_provide_status);
-    CrystalWindow_SetMessaqgeHandler(window_handle, "on_drag_provide_finished", (P_INSTANCE(void))on_drag_provide_finished);
-    CrystalWindow_SetMessaqgeHandler(window_handle, "on_clipboard_provide_chosen", (P_INSTANCE(void))on_clipboard_provide_chosen);
-    CrystalWindow_SetMessaqgeHandler(window_handle, "on_clipboard_receive_data", (P_INSTANCE(void))on_clipboard_receive_data);
-    CrystalWindow_SetMessaqgeHandler(window_handle, "on_idle", (P_INSTANCE(void))on_idle);
+    CrystalWindow_SetMessaqeHandler(window_handle, "on_drag_provide_chosen", (P_INSTANCE(void))on_drag_provide_chosen);
+    CrystalWindow_SetMessaqeHandler(window_handle, "on_drag_provide_status", (P_INSTANCE(void))on_drag_provide_status);
+    CrystalWindow_SetMessaqeHandler(window_handle, "on_drag_provide_finished", (P_INSTANCE(void))on_drag_provide_finished);
+    CrystalWindow_SetMessaqeHandler(window_handle, "on_clipboard_provide_chosen", (P_INSTANCE(void))on_clipboard_provide_chosen);
+    CrystalWindow_SetMessaqeHandler(window_handle, "on_clipboard_receive_data", (P_INSTANCE(void))on_clipboard_receive_data);
+    CrystalWindow_SetMessaqeHandler(window_handle, "on_idle", (P_INSTANCE(void))on_idle);
 
     CrystalWindow_Show(window_handle, true);
     CrystalWindow_RegisterDragTarget(window_handle);

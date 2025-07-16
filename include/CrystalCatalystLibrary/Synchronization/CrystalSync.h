@@ -32,11 +32,11 @@ namespace NewAge {
         bool Unlock() override;
     };
 
-    _EXPORT_ bool CrystalCatalyst_SubMutex_Size(P_OUT(size_t) sz);
-    _EXPORT_ bool CrystalCatalyst_SubMutex_Init(P_INSTANCE(void) spiderMutex, utf8_string_struct name);
-    _EXPORT_ bool CrystalCatalyst_SubMutex_Close(P_INSTANCE(void) spiderMutex);
-    _EXPORT_ bool CrystalCatalyst_SubMutex_Lock(P_INSTANCE(void) spiderMutex);
-    _EXPORT_ bool CrystalCatalyst_SubMutex_Unlock(P_INSTANCE(void) spiderMutex);
+    _EXPORT_ bool SubMutex_Size(P_OUT(size_t) sz);
+    _EXPORT_ bool SubMutex_Init(P_INSTANCE(void) spiderMutex, utf8_string_struct name);
+    _EXPORT_ bool SubMutex_Close(P_INSTANCE(void) spiderMutex);
+    _EXPORT_ bool SubMutex_Lock(P_INSTANCE(void) spiderMutex);
+    _EXPORT_ bool SubMutex_Unlock(P_INSTANCE(void) spiderMutex);
 }
 
 #endif //CRYSTALCATALYST__CRYSTALSYNC_H

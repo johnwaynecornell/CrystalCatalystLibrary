@@ -34,7 +34,7 @@ namespace NewAge {
     _EXPORT_ void CrystalWindow_RegisterDragTarget(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ void CrystalWindow_DragStart(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DragDropData)  data, int32_t x, int32_t y); // Implemented in Platform
     _EXPORT_ void CrystalWindow_DragChoose(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DragDropData)  data, utf8_string_struct fmt); // Implemented in Platform
-    _EXPORT_ utf8_string_struct DragActions_String(DragActions actions);
+    _EXPORT_ utf8_string_struct DragDropData_DragActionsString(DragActions actions);
     _EXPORT_ P_INSTANCE(DragDropData)  DragDropData_Create();
 
 }

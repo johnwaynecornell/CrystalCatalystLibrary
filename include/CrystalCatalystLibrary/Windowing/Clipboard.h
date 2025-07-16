@@ -8,12 +8,12 @@
 #include "DataInterchange.h"
 
 namespace NewAge {
-    _EXPORT_ P_INSTANCE(DataInterchange)  Clipboard_Paste(P_INSTANCE(WindowHandle) handle);
-    _EXPORT_ void Clipboard_Copy(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) data);
-    _EXPORT_ void Clipboard_Copy_WithCallback(void (*provide)(P_INSTANCE(DataInterchange)  data), P_INSTANCE(DataInterchange) data);
-    _EXPORT_ void Clipboard_Copy_Persist(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) data);
+    _EXPORT_ P_INSTANCE(DataInterchange)  CrystalWindow_ClipboardPaste(P_INSTANCE(WindowHandle) handle);
+    _EXPORT_ void CrystalWindow_ClipboardCopy(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) data);
+    _EXPORT_ void CrystalWindow_ClipboardCopyWithCallback(void (*provide)(P_INSTANCE(DataInterchange)  data), P_INSTANCE(DataInterchange) data);
+    _EXPORT_ void CrystalWindow_ClipboardCopyPersist(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) data);
 
-    _EXPORT_ void Clipboard_Clear();
+    _EXPORT_ void CrystalWindow_ClipboardClear();
 }
 
 

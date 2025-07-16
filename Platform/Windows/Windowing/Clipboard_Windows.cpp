@@ -6,7 +6,7 @@ using namespace JWCEssentials;
 
 namespace NewAge {
 
-P_INSTANCE(DataInterchange)  Clipboard_Paste(P_INSTANCE(WindowHandle) handle)
+P_INSTANCE(DataInterchange)  CrystalWindow_ClipboardPaste(P_INSTANCE(WindowHandle) handle)
 {
     IDataObject* pDataObject = nullptr;
     HRESULT hr = OleGetClipboard(&pDataObject);
@@ -28,7 +28,7 @@ P_INSTANCE(DataInterchange)  Clipboard_Paste(P_INSTANCE(WindowHandle) handle)
     return data;
 }
 
-void Clipboard_Copy(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) data)
+void CrystalWindow_ClipboardCopy(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) data)
 {
     DataInterchange_CreateContext(data);
     data->m_handle = handle;
@@ -46,7 +46,7 @@ void Clipboard_Copy(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange)
     data->provide_chosen = DataInterchange::provide_for_clipboard;
 }
 
-void Clipboard_Copy_WithCallback(void (*provide)(P_INSTANCE(DataInterchange)  data, utf8_string_struct format), P_INSTANCE(DataInterchange)  data)
+void CrystalWindow_ClipboardCopyWithCallback(void (*provide)(P_INSTANCE(DataInterchange)  data, utf8_string_struct format), P_INSTANCE(DataInterchange)  data)
 {
     DataInterchange_CreateContext(data);
 	data->selection_type = DataInterchange::E_CLIPBOARD;
@@ -63,7 +63,7 @@ void Clipboard_Copy_WithCallback(void (*provide)(P_INSTANCE(DataInterchange)  da
     data->provide_chosen = provide;
 }
 
-void Clipboard_Copy_Persist(P_INSTANCE(DataInterchange) dataInterchange) {
+void CrystalWindow_ClipboardCopyPersist(P_INSTANCE(DataInterchange) dataInterchange) {
     if (!OpenClipboard(nullptr)) {
         std::cerr << "Failed to open clipboard." << std::endl;
         return;
@@ -89,7 +89,7 @@ void Clipboard_Copy_Persist(P_INSTANCE(DataInterchange) dataInterchange) {
     CloseClipboard();
 }
 
-void Clipboard_Clear()
+void CrystalWindow_ClipboardClear()
 {
     if (!OpenClipboard(nullptr)) {
         std::cerr << "Failed to open clipboard." << std::endl;

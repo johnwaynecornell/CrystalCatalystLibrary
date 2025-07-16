@@ -102,7 +102,7 @@ namespace NewAge {
         std::string status_message;
 
         if (status.accept) {
-            status_message = "accept " + DragActions_String(status.action);
+            status_message = "accept " + DragDropData_DragActionsString(status.action);
         } else status_message = "reject";
 
         std::cerr << mod_header() << "XdndStatus event sent to provide feedback to " << status_message << std::endl;
@@ -384,11 +384,11 @@ namespace NewAge {
 
                     std::cerr << mod_header() << "Setting selection for text/html" << std::endl;
 
-                    DataInterchange_Selection_Set(current_data, format, (void *) text_data.c_str(), text_data.length());
+                    DataInterchange_SelectionSet(current_data, format, (void *) text_data.c_str(), text_data.length());
                     XFree(prop);
                 } else if (strcmp("text/plain", format) == 0) {
                     std::cerr << mod_header() << "Setting selection for text/plain" << std::endl;
-                    DataInterchange_Selection_Set(current_data, format, prop, nitems);
+                    DataInterchange_SelectionSet(current_data, format, prop, nitems);
                     XFree(prop);
                 } else if (strcmp("text/uri-list", format) == 0) {
                     utf8_string_struct uri_list;
@@ -411,7 +411,7 @@ namespace NewAge {
                     }
 
                     std::cerr << mod_header() << "Setting selection for text/uri-list: " << cleaned_uri_list << std::endl;
-                    DataInterchange_Selection_Set(current_data, "text/file-uri", cleaned_uri_list.data(), cleaned_uri_list.size());
+                    DataInterchange_SelectionSet(current_data, "text/file-uri", cleaned_uri_list.data(), cleaned_uri_list.size());
                     XFree(prop);
                 }
 
@@ -498,7 +498,7 @@ namespace NewAge {
 
             P_INSTANCE(void) d;
             size_t sz;
-            DataInterchange_Selection_Reveal(drag_data, nullptr, &d, &sz);
+            DataInterchange_SelectionReveal(drag_data, nullptr, &d, &sz);
 
             std::cerr << mod_header() << "Providing data for format: " << format << std::endl;
             if (strcmp(format, "text/file-uri") == 0) {

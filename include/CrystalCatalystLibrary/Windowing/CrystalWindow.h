@@ -59,14 +59,12 @@ namespace NewAge {
 
     _EXPORT_ void CrystalWindow_MouseCapture(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ void CrystalWindow_MouseRelease(P_INSTANCE(WindowHandle) window_handle);
-    _EXPORT_ void CrystalWindow_GL_Init(P_INSTANCE(WindowHandle) window_handle);
+    _EXPORT_ void CrystalWindow_GLInit(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ void CrystalWindow_Show(P_INSTANCE(WindowHandle) window_handle, bool restore);
     _EXPORT_ void CrystalWindow_Close(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ void CrystalWindow_PostClose(P_INSTANCE(WindowHandle) window_handle);
 
-    _EXPORT_ bool CrystalWindow_SetMessaqgeHandler(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct handler_name, P_INSTANCE(void) handler);
-
-    _EXPORT_ struct_array_struct<uint8_t> CrystalWindow_ConvertPixels(utf8_string_struct pixformat, utf8_string_struct pixformat_dest, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height);
+    _EXPORT_ bool CrystalWindow_SetMessaqeHandler(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct handler_name, P_INSTANCE(void) handler);
 
     class CrystalWindow {
     public:
@@ -89,7 +87,7 @@ namespace NewAge {
 
         virtual void MouseCapture() = 0;
         virtual void MouseRelease() = 0;
-        virtual void GL_Init() = 0;
+        virtual void GLInit() = 0;
         virtual void Show(bool restore) = 0;
         virtual void Close() = 0;
         virtual void PostClose() = 0;

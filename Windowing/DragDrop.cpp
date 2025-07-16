@@ -6,7 +6,7 @@
 #include <ios>
 
 namespace NewAge {
-    utf8_string_struct DragActions_String(DragActions actions)
+    utf8_string_struct DragDropData_DragActionsString(DragActions actions)
     {
         std::string str = "";
 

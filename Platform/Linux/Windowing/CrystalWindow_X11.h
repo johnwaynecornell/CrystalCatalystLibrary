@@ -29,7 +29,7 @@ namespace NewAge {
 
         void MouseCapture() override;
         void MouseRelease() override;
-        void GL_Init() override;
+        void GLInit() override;
         void Show(bool restore) override;
         void Close() override;
         void PostClose() override;

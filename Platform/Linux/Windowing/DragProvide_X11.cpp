@@ -139,7 +139,7 @@ namespace NewAge {
         drag_data->status.action = xint64_t_to_drag_actions(action, source_window->display);
 
         std::cerr << mod_header() << "XdndStatus received. Accept: " << accept
-                      << ", Action: " << DragActions_String(drag_data->status.action)
+                      << ", Action: " << DragDropData_DragActionsString(drag_data->status.action)
                       << ", Rect: [" << x << ", " << y << ", " << width << ", " << height << "]"
                       << std::endl;
 
@@ -279,7 +279,7 @@ namespace NewAge {
 
         int64_t actions = drag_actions_to_xint64_t(drag_data->action_selections, source_window->display);
 
-        std::cerr << mod_header() << DragActions_String(drag_data->action_selections) << " translated as "
+        std::cerr << mod_header() << DragDropData_DragActionsString(drag_data->action_selections) << " translated as "
             << std::hex << std::setw(8) << std::setfill('0') << actions << std::dec << std::endl;
 
         XChangeProperty(

@@ -1,0 +1,16 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrystalCatalystLibrary.net", "CrystalCatalystLibrary.net\CrystalCatalystLibrary.net.csproj", "{0587A7CC-A345-4A47-AD50-C6FE43F5FA28}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0587A7CC-A345-4A47-AD50-C6FE43F5FA28}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0587A7CC-A345-4A47-AD50-C6FE43F5FA28}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0587A7CC-A345-4A47-AD50-C6FE43F5FA28}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0587A7CC-A345-4A47-AD50-C6FE43F5FA28}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

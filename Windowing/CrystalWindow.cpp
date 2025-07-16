@@ -65,8 +65,8 @@ namespace NewAge {
         window_handle->crystal_window->MouseRelease();
     }
 
-    void CrystalWindow_GL_Init(P_INSTANCE(WindowHandle) window_handle) {
-        window_handle->crystal_window->GL_Init();
+    void CrystalWindow_GLInit(P_INSTANCE(WindowHandle) window_handle) {
+        window_handle->crystal_window->GLInit();
     }
 
     void CrystalWindow_Show(P_INSTANCE(WindowHandle) window_handle, bool restore)
@@ -138,7 +138,7 @@ namespace NewAge {
         return (handler_ptr != nullptr);
     }
 
-    bool CrystalWindow_SetMessaqgeHandler(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct handler_name, P_INSTANCE(void) handler) {
+    bool CrystalWindow_SetMessaqeHandler(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct handler_name, P_INSTANCE(void) handler) {
         P_INSTANCE(void) *addr;
         if (!lookup_message_handler(window_handle, handler_name, addr)) return false;
         *addr = handler;

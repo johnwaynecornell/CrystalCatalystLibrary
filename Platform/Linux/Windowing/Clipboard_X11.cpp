@@ -68,16 +68,16 @@ namespace NewAge {
         Display *display = ((CrystalWindow_X11 *) dataInterchange->m_handle->crystal_window)->display;
 
         int32_t type_count = 0;
-        for (P_INSTANCE(DragDropData::Node) node = DataInterchange_FormatEnum(dataInterchange); node != nullptr; node = DataInterchange_FormatEnum_Next(node)) {
+        for (P_INSTANCE(DragDropData::Node) node = DataInterchange_FormatEnum(dataInterchange); node != nullptr; node = DataInterchange_FormatEnumNext(node)) {
             type_count++;
         }
 
         (*types) = new Atom[type_count];
         int32_t I = 0;
 
-        for (P_INSTANCE(DragDropData::Node) node = DataInterchange_FormatEnum(dataInterchange); node != nullptr; node = DataInterchange_FormatEnum_Next(node)) {
+        for (P_INSTANCE(DragDropData::Node) node = DataInterchange_FormatEnum(dataInterchange); node != nullptr; node = DataInterchange_FormatEnumNext(node)) {
             utf8_string_struct ty;
-            DataInterchange_FormatEnum_Text(node, &ty);
+            DataInterchange_FormatEnumText(node, &ty);
             if (!FormatToAtom(display, ty, (*types)+(I++))) {
                 std::cerr << mod_header() << "DragProvide_X11::send_xdnd_enter can't convert " << ty << " to an Atom" << std::endl;
 
@@ -96,7 +96,7 @@ namespace NewAge {
     // targets = AppX11->atoms.targets;
     // utf8_string = XInternAtom(display, "UTF8_STRING", False);
 
-    P_INSTANCE(DataInterchange)  Clipboard_Paste(P_INSTANCE(WindowHandle) handle)
+    P_INSTANCE(DataInterchange)  CrystalWindow_ClipboardPaste(P_INSTANCE(WindowHandle) handle)
     {
         /*
         IDataObject* pDataObject = nullptr;
@@ -152,7 +152,7 @@ namespace NewAge {
         return data;
     }
 
-    void Clipboard_Copy(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) data)
+    void CrystalWindow_ClipboardCopy(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) data)
     {
         data->m_handle = handle;
         CrystalWindow_X11 *xwin = ((CrystalWindow_X11 *)handle->crystal_window);
@@ -178,7 +178,7 @@ namespace NewAge {
         data->provide_chosen = DataInterchange::provide_for_clipboard;
     }
 
-    void Clipboard_Copy_WithCallback(void (*provide)(P_INSTANCE(DataInterchange)  data), P_INSTANCE(DataInterchange) data)
+    void CrystalWindow_ClipboardCopyWithCallback(void (*provide)(P_INSTANCE(DataInterchange)  data), P_INSTANCE(DataInterchange) data)
     {
         /*
         DataInterchange_CreateContext(data);
@@ -196,15 +196,15 @@ namespace NewAge {
         */
     }
 
-    void Clipboard_Copy_Persist(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) data)
+    void CrystalWindow_ClipboardCopyPersist(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) data)
     {
         CrystalWindow_X11 *xwin = ((CrystalWindow_X11 *)handle->crystal_window);
 
-        std::cerr << mod_header() << "Clipboard_Copy_Persist()"  << std::endl;
+        std::cerr << mod_header() << "CrystalWindow_ClipboardCopyPersist()"  << std::endl;
 
-        for (P_INSTANCE(DragDropData::Node) node = DataInterchange_FormatEnum(data); node != nullptr; node = DataInterchange_FormatEnum_Next(node)) {
+        for (P_INSTANCE(DragDropData::Node) node = DataInterchange_FormatEnum(data); node != nullptr; node = DataInterchange_FormatEnumNext(node)) {
             utf8_string_struct ty;
-            DataInterchange_FormatEnum_Text(node, &ty);
+            DataInterchange_FormatEnumText(node, &ty);
 
             Atom A;
 
@@ -219,14 +219,14 @@ namespace NewAge {
             void *data_ptr;
             size_t size;
 
-            DataInterchange_Selection_Reveal(data, nullptr, &data_ptr, &size);
+            DataInterchange_SelectionReveal(data, nullptr, &data_ptr, &size);
 
             XChangeProperty(xwin->display, xwin->window, AppX11->atoms.clipboard, A, 8, PropModeReplace,
                             reinterpret_cast<const unsigned char*>(data_ptr), size);
         }
     }
 
-    void Clipboard_Clear()
+    void CrystalWindow_ClipboardClear()
     {
         Display *display = ((CrystalApplication_X11 *)TheApplication)->globalDisplay;
 
@@ -307,7 +307,7 @@ namespace NewAge {
                         std::string text_data(ws.begin(), ws.end());
                         GlobalUnlock(stg.hGlobal);
 
-                        DataInterchange_Selection_Set(data, format, (P_INSTANCE(void))text_data.c_str(), text_data.length() + 1);
+                        DataInterchange_SelectionSet(data, format, (P_INSTANCE(void))text_data.c_str(), text_data.length() + 1);
                     }
                 } else if (f == "text/file-uri") {
                     HDROP hDrop = static_cast<HDROP>(GlobalLock(stg.hGlobal));
@@ -329,7 +329,7 @@ namespace NewAge {
                         }
                         GlobalUnlock(stg.hGlobal);
 
-                        DataInterchange_Selection_Set(data, "text/file-uri", (P_INSTANCE(void) ) uri.c_str(),
+                        DataInterchange_SelectionSet(data, "text/file-uri", (P_INSTANCE(void) ) uri.c_str(),
                                                       uri.length() + 1);
                     }
                 }
