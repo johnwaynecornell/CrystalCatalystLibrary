@@ -27,6 +27,45 @@ namespace NewAge {
     // Function to get callbacks associated with a window handle
     P_INSTANCE(WindowCallbacks)  get_callbacks(P_INSTANCE(WindowHandle) handle);
 
+    // CrystalWindow_X11.cpp (or a private X11 translation unit)
+
+    struct X11IncrState {
+        bool active = false;
+
+        // Who/where the owner will stream chunks
+        Window requestor = 0;
+        Atom   property  = None;
+
+        // First non-empty chunk’s type decides final format (e.g., UTF8_STRING, text/html)
+        Atom   first_chunk_type = None;
+
+        // Optional size hint from initial INCR property (uint32)
+        uint32_t size_hint = 0;
+
+        // Channel separation (handy when same class is used for both)
+        bool is_clipboard = false;
+
+        // Accumulator
+        std::vector<uint8_t> buffer;
+
+        // (Optional) safety
+        Time started = 0;
+    };
+
+    static void DI_X11_IncrFree(void* p) {
+        delete static_cast<X11IncrState*>(p);
+    }
+
+    // Helper: ensure DI has an X11IncrState
+    static X11IncrState* DI_X11_get_incr(NewAge::DataInterchange* di) {
+        if (!di->os_specific) {
+            di->os_specific = new X11IncrState();
+            di->os_specific_free = &DI_X11_IncrFree;
+        }
+        return static_cast<X11IncrState*>(di->os_specific);
+    }
+
+
     // Function to convert DragActions to X11 int64_t
     int64_t drag_actions_to_xint64_t(DragActions actions, P_INSTANCE(Display)  display) {
         int64_t result = 0;
@@ -329,7 +368,7 @@ namespace NewAge {
 
             bool isClipboard = false;
 
-            DataInterchange * current_data = this->current_drag_receive_data;
+            DataInterchange * current_data;
 
             if (XGetWindowProperty(event->xselection.display, event->xselection.requestor, event->xselection.property, 0, (~0L), False, AnyPropertyType,
                 &actual_type, &actual_format, &nitems, &bytes_after, &prop) == Success) {
@@ -344,12 +383,55 @@ namespace NewAge {
                 } else if (event->xselection.selection == AppX11->atoms.xdnd.selection) {
                     std::cerr << "Handling drag-and-drop selection" << std::endl;
                     // Handle drag-and-drop-specific logic if necessary
+                    isClipboard = false;
+                    current_data = this->current_drag_receive_data;
 
                 } else {
                     {
                         std::cerr << "UNKNOWN selection" << std::endl;
                     }
                 }
+
+                Atom INCR = XInternAtom(event->xselection.display, "INCR", False);
+
+                if (actual_type == INCR) {
+                    // 1) Read the size hint (optional)
+                    //    actual_format should be 32, nitems == 1
+                    //    uint32_t size_hint = prop ? *(uint32_t*)prop : 0;
+
+                    uint32_t hint = 0;
+                    if (prop && actual_format == 32 && nitems == 1) {
+                        hint = *(uint32_t*)prop;
+                    }
+                    if (prop) XFree(prop);
+
+                    // 2) Mark that we’re in an incremental transfer
+                    // Set up state on the correct DI object
+                    DataInterchange* di = current_data;
+                    auto* incr = DI_X11_get_incr(di);
+                    incr->active = true;
+                    incr->requestor = event->xselection.requestor;
+                    incr->property  = event->xselection.property;
+                    incr->first_chunk_type = None;
+                    incr->size_hint = hint;
+                    incr->is_clipboard = isClipboard;
+                    incr->buffer.clear();
+                    incr->started = CurrentTime; // or X server time if you prefer
+
+
+                    // 3) We must select for PropertyChange events on the requestor window
+                    XSelectInput(event->xselection.display, event->xselection.requestor,
+                                 PropertyChangeMask | /* keep existing masks */ StructureNotifyMask);
+
+                    // 4) Delete the property to signal "ready for first chunk"
+                    XDeleteProperty(event->xselection.display,
+                                    event->xselection.requestor,
+                                    event->xselection.property);
+
+                    // Don’t call callbacks yet; we’ll finish in PropertyNotify
+                    return true;
+                }
+
 
                 /*
                 }
@@ -448,6 +530,103 @@ namespace NewAge {
         return false;
     }
 
+    bool CrystalWindow_X11::handle_property_notify(P_INSTANCE(XEvent)  event) {
+
+        if (event->type != PropertyNotify) return false;
+
+        std::cerr << mod_header() << "PropertyNotify event received" << std::endl;
+
+        bool isClipboard = false;
+
+        DataInterchange * current_data;
+
+        if (event->xselection.selection == AppX11->atoms.clipboard) {
+            isClipboard = true;
+
+            current_data = this->current_clipboard_receive_data;
+
+        } else if (event->xselection.selection == AppX11->atoms.xdnd.selection) {
+            isClipboard = false;
+            current_data = this->current_drag_receive_data;
+
+        } else {
+            {
+                std::cerr << "UNKNOWN selection" << std::endl;
+            }
+        }
+
+        auto* incr = static_cast<X11IncrState*>(current_data->os_specific);
+    
+
+        if (incr->active) {
+            if (event->xproperty.window == incr->requestor &&
+                event->xproperty.atom   == incr->property &&
+                event->xproperty.state  == PropertyNewValue) {
+
+                Atom type;
+                int format;
+                unsigned long nitems, bytes_after;
+                unsigned char *data = nullptr;
+
+                // Get and DELETE the property to acknowledge receipt of this chunk
+                if (XGetWindowProperty(display, incr->requestor, incr->property,
+                                       0, (~0L), True, AnyPropertyType,
+                                       &type, &format, &nitems, &bytes_after, &data) == Success) {
+
+                    if (nitems == 0) {
+                        // Zero-length property => end of INCR stream
+                        // Cleanup + finalize
+                        incr->active = false;
+
+                        // Decide the final format (type we saw on the first non-empty chunk)
+                        if (incr->first_chunk_type != None) {
+                            utf8_string_struct final_fmt = XGetAtomName_struct(display, incr->first_chunk_type);
+                            current_data->selected_format = final_fmt;
+
+                            // Dispatch to your usual handlers using the accumulated buffer
+                            DataInterchange_SelectionSet(current_data, final_fmt,
+                                incr->buffer.data(), incr->buffer.size());
+                        }
+
+                        if (incr->is_clipboard) {
+                            if (callbacks.on_clipboard_receive_data)
+                                callbacks.on_clipboard_receive_data(myHandle, current_data);
+                        } else {
+                            if (callbacks.on_drag_receive_drop)
+                                callbacks.on_drag_receive_drop(myHandle, (DragDropData*)current_data);
+                            send_xdnd_finished(display, window, incr->requestor, ((DragDropData*)current_data)->status.accept);
+                        }
+
+                        if (data) XFree(data);
+                        return true;
+                    }
+
+                    // First non-empty chunk decides the final type
+                    if (incr->first_chunk_type == None) {
+                        incr->first_chunk_type = type;
+                    }
+
+                    // Append chunk
+                    incr->buffer.insert(incr->buffer.end(), data, data + nitems * (format/8));
+
+                    if (data) XFree(data);
+
+                    // Tell owner we’re ready for the next chunk
+                    XDeleteProperty(display, incr->requestor, incr->property);
+                    return true;
+                                       }
+                }
+        }
+
+        
+        
+        
+        
+        
+        
+
+    }
+
     bool CrystalWindow_X11::handle_selection_request(P_INSTANCE(XEvent) event) {
         if (event->type != SelectionRequest) return false;
 
@@ -543,6 +722,7 @@ namespace NewAge {
 
         if (handle_client_message(event)) return true;
         if (handle_selection_notify(event)) return true;
+        if (handle_property_notify(event)) return true;
         return false;
     }
 

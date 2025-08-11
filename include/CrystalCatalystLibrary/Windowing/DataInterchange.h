@@ -36,6 +36,12 @@ namespace NewAge {
 
         WindowHandle *m_handle = nullptr;
 
+        // Opaque per-OS storage (X11 uses it for INCR; Windows leaves it null)
+        P_INSTANCE(void) os_specific = nullptr;
+
+        // Called by DataInterchange_Free if not null
+        void (*os_specific_free)(P_INSTANCE(void)) = nullptr;
+
         void (*provide_chosen)(P_INSTANCE(DataInterchange) data, utf8_string_struct format) = nullptr;
         static void provide_for_drag(P_INSTANCE(DataInterchange) data, utf8_string_struct format);
         static void provide_for_clipboard(P_INSTANCE(DataInterchange) data, utf8_string_struct format);

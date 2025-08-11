@@ -306,6 +306,7 @@ void on_idle(P_INSTANCE(WindowHandle) window_handle) {
                       break;
                   }
               }
+              if (format != nullptr) break;
           }
 
           DataInterchange_Select(data, format);

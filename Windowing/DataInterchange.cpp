@@ -30,6 +30,13 @@ namespace NewAge {
             DataInterchange_ItemsFormatRemove(drag, I);
         }
         clear_selection(drag);
+
+        if (drag->os_specific && drag->os_specific_free) {
+            drag->os_specific_free(drag->os_specific);
+        }
+        drag->os_specific = nullptr;
+        drag->os_specific_free = nullptr;
+
         delete drag;
     }
 
@@ -44,8 +51,6 @@ namespace NewAge {
 
 
     P_INSTANCE(DataInterchange::Node)  DataInterchange_FormatAdd(P_INSTANCE(DataInterchange) drop, utf8_string_struct format) {
-        if (strcmp(format, "text/uri=list") == 0) __asm("int3");
-
         P_INSTANCE(DataInterchange::Node) N = &drop->data_head;
         while (N->next != nullptr) N = N->next;
 

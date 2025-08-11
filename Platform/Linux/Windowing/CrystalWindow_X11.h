@@ -47,6 +47,7 @@ namespace NewAge {
         virtual bool handle_xdnd_drop(P_INSTANCE(XEvent)  event);
 
         virtual bool handle_selection_notify(P_INSTANCE(XEvent)  event);
+        virtual bool handle_property_notify(P_INSTANCE(XEvent) event);
         virtual bool handle_selection_request(P_INSTANCE(XEvent) event);
 
         bool CoordsToRoot(int32_t &x, int32_t &y);
