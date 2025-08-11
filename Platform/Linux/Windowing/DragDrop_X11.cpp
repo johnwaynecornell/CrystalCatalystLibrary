@@ -530,102 +530,88 @@ namespace NewAge {
         return false;
     }
 
-    bool CrystalWindow_X11::handle_property_notify(P_INSTANCE(XEvent)  event) {
-
+    bool CrystalWindow_X11::handle_property_notify(P_INSTANCE(XEvent) event) {
         if (event->type != PropertyNotify) return false;
 
-        std::cerr << mod_header() << "PropertyNotify event received" << std::endl;
+        // Find which DataInterchange this PropertyNotify belongs to by matching the INCR state
+        DataInterchange* current_data = nullptr;
+        X11IncrState* incr = nullptr;
 
-        bool isClipboard = false;
-
-        DataInterchange * current_data;
-
-        if (event->xselection.selection == AppX11->atoms.clipboard) {
-            isClipboard = true;
-
-            current_data = this->current_clipboard_receive_data;
-
-        } else if (event->xselection.selection == AppX11->atoms.xdnd.selection) {
-            isClipboard = false;
-            current_data = this->current_drag_receive_data;
-
-        } else {
-            {
-                std::cerr << "UNKNOWN selection" << std::endl;
+        auto pick_active = [&](DataInterchange* di) -> bool {
+            if (!di || !di->os_specific) return false;
+            auto* s = static_cast<X11IncrState*>(di->os_specific);
+            if (!s->active) return false;
+            if (event->xproperty.window == s->requestor && event->xproperty.atom == s->property) {
+                current_data = di; incr = s; return true;
             }
+            return false;
+        };
+
+        if (!pick_active(this->current_clipboard_receive_data) &&
+            !pick_active(this->current_drag_receive_data)) {
+            // Not ours
+            return false;
+            }
+
+        if (event->xproperty.state != PropertyNewValue) return false;
+
+        Display* dpy = event->xproperty.display;
+
+        Atom type;
+        int format;
+        unsigned long nitems, bytes_after;
+        unsigned char* data = nullptr;
+
+        if (XGetWindowProperty(dpy, incr->requestor, incr->property,
+                               0, (~0L), True, AnyPropertyType,
+                               &type, &format, &nitems, &bytes_after, &data) != Success) {
+            return false;
+                               }
+
+        if (nitems == 0) {
+            // End of INCR
+            incr->active = false;
+
+            if (incr->first_chunk_type != None) {
+                utf8_string_struct final_fmt = XGetAtomName_struct(dpy, incr->first_chunk_type);
+                current_data->selected_format = final_fmt;
+
+                DataInterchange_SelectionSet(
+                    current_data,
+                    final_fmt,
+                    incr->buffer.data(),
+                    incr->buffer.size()
+                );
+            }
+
+            if (incr->is_clipboard) {
+                if (callbacks.on_clipboard_receive_data)
+                    callbacks.on_clipboard_receive_data(myHandle, current_data);
+            } else {
+                if (callbacks.on_drag_receive_drop)
+                    callbacks.on_drag_receive_drop(myHandle, (DragDropData*)current_data);
+                send_xdnd_finished(dpy, window, incr->requestor,
+                                   ((DragDropData*)current_data)->status.accept);
+            }
+
+            if (data) XFree(data);
+            return true;
         }
 
-        auto* incr = static_cast<X11IncrState*>(current_data->os_specific);
-    
+        // First non-empty chunk decides final type
+        if (incr->first_chunk_type == None) incr->first_chunk_type = type;
 
-        if (incr->active) {
-            if (event->xproperty.window == incr->requestor &&
-                event->xproperty.atom   == incr->property &&
-                event->xproperty.state  == PropertyNewValue) {
+        // Append chunk (format is 8/16/32 bits per item)
+        size_t bytes = nitems * (size_t)(format / 8);
+        incr->buffer.insert(incr->buffer.end(), data, data + bytes);
 
-                Atom type;
-                int format;
-                unsigned long nitems, bytes_after;
-                unsigned char *data = nullptr;
+        if (data) XFree(data);
 
-                // Get and DELETE the property to acknowledge receipt of this chunk
-                if (XGetWindowProperty(display, incr->requestor, incr->property,
-                                       0, (~0L), True, AnyPropertyType,
-                                       &type, &format, &nitems, &bytes_after, &data) == Success) {
-
-                    if (nitems == 0) {
-                        // Zero-length property => end of INCR stream
-                        // Cleanup + finalize
-                        incr->active = false;
-
-                        // Decide the final format (type we saw on the first non-empty chunk)
-                        if (incr->first_chunk_type != None) {
-                            utf8_string_struct final_fmt = XGetAtomName_struct(display, incr->first_chunk_type);
-                            current_data->selected_format = final_fmt;
-
-                            // Dispatch to your usual handlers using the accumulated buffer
-                            DataInterchange_SelectionSet(current_data, final_fmt,
-                                incr->buffer.data(), incr->buffer.size());
-                        }
-
-                        if (incr->is_clipboard) {
-                            if (callbacks.on_clipboard_receive_data)
-                                callbacks.on_clipboard_receive_data(myHandle, current_data);
-                        } else {
-                            if (callbacks.on_drag_receive_drop)
-                                callbacks.on_drag_receive_drop(myHandle, (DragDropData*)current_data);
-                            send_xdnd_finished(display, window, incr->requestor, ((DragDropData*)current_data)->status.accept);
-                        }
-
-                        if (data) XFree(data);
-                        return true;
-                    }
-
-                    // First non-empty chunk decides the final type
-                    if (incr->first_chunk_type == None) {
-                        incr->first_chunk_type = type;
-                    }
-
-                    // Append chunk
-                    incr->buffer.insert(incr->buffer.end(), data, data + nitems * (format/8));
-
-                    if (data) XFree(data);
-
-                    // Tell owner we’re ready for the next chunk
-                    XDeleteProperty(display, incr->requestor, incr->property);
-                    return true;
-                                       }
-                }
-        }
-
-        
-        
-        
-        
-        
-        
-
+        // Ask for the next chunk
+        XDeleteProperty(dpy, incr->requestor, incr->property);
+        return true;
     }
+
 
     bool CrystalWindow_X11::handle_selection_request(P_INSTANCE(XEvent) event) {
         if (event->type != SelectionRequest) return false;
