@@ -359,38 +359,70 @@ namespace NewAge {
 
         std::cerr << mod_header() << "SelectionNotify event received" << std::endl;
 
-        if (event->xselection.property) {
+        bool have_selection = false;
+        bool is_dnd = false;
+        bool is_clipboard = false;
+
+        Atom sel = event->xselection.selection;
+        char* sel_name = XGetAtomName(event->xselection.display, sel);
+        std::cerr << "Selection is: " << (sel_name ? sel_name : "<null>") << "\n";
+        if (sel_name) XFree(sel_name);
+
+        DataInterchange * current_data;
+
+        if (sel == AppX11->atoms.clipboard || sel == AppX11->atoms.primary) {
+            is_clipboard = true;  have_selection = true;
+            current_data = this->current_clipboard_receive_data;
+        } else if (sel == AppX11->atoms.xdnd.selection) {
+            is_dnd = true; have_selection = true;
+            current_data = this->current_drag_receive_data;
+        }
+
+        if (!have_selection) {
+            // Unknown selection: don’t run DnD tail; just stop here.
+            return true;
+        }
+
+
+
+
+
+
+        if (sel) {
 
             Atom actual_type;
             int actual_format;
             unsigned long nitems, bytes_after;
             unsigned char* prop;
 
-            bool isClipboard = false;
+            std::cerr << mod_header() << "SelectionNotify marker 'is sel' " << std::endl;
 
-            DataInterchange * current_data;
+            // early in handle_selection_notify, after classifying sel...
+            if (event->xselection.property == None) {
+                std::cerr << mod_header() << "Selection conversion failed (property=None)\n";
+
+                // Optional: if CLIPBOARD failed, try PRIMARY as a fallback
+                if (sel == AppX11->atoms.clipboard) {
+                    Window owner = XGetSelectionOwner(event->xselection.display, AppX11->atoms.primary);
+                    //if (owner != None)
+                    {
+                        std::cerr << mod_header() << "Selection conversion fallback to primary.\n";
+                        // Issue XConvertSelection for PRIMARY here and return
+                        XConvertSelection(display, AppX11->atoms.primary, selection_atom, AppX11->atoms.selection_data, window, CurrentTime);
+
+                        // XConvertSelection(dpy, AppX11->atoms.primary, desired_target, property_atom, window, CurrentTime);
+                        XFlush(display);
+                        std::cerr << mod_header() << "fallback to primary complete.\n";
+                        return true;
+                    }
+                }
+
+                // Don’t call on_* callbacks here; many implementations assume non-null DI.
+                return true;
+            }
 
             if (XGetWindowProperty(event->xselection.display, event->xselection.requestor, event->xselection.property, 0, (~0L), False, AnyPropertyType,
                 &actual_type, &actual_format, &nitems, &bytes_after, &prop) == Success) {
-                if (event->xselection.selection == AppX11->atoms.clipboard) {
-                    std::cerr << "Handling clipboard selection" << std::endl;
-                    // Handle clipboard-specific logic if necessary
-
-                    isClipboard = true;
-
-                    current_data = this->current_clipboard_receive_data;
-
-                } else if (event->xselection.selection == AppX11->atoms.xdnd.selection) {
-                    std::cerr << "Handling drag-and-drop selection" << std::endl;
-                    // Handle drag-and-drop-specific logic if necessary
-                    isClipboard = false;
-                    current_data = this->current_drag_receive_data;
-
-                } else {
-                    {
-                        std::cerr << "UNKNOWN selection" << std::endl;
-                    }
-                }
 
                 Atom INCR = XInternAtom(event->xselection.display, "INCR", False);
 
@@ -398,6 +430,9 @@ namespace NewAge {
                     // 1) Read the size hint (optional)
                     //    actual_format should be 32, nitems == 1
                     //    uint32_t size_hint = prop ? *(uint32_t*)prop : 0;
+
+                    std::cerr << mod_header() << "SelectionNotify style INCR " << std::endl;
+
 
                     uint32_t hint = 0;
                     if (prop && actual_format == 32 && nitems == 1) {
@@ -414,7 +449,7 @@ namespace NewAge {
                     incr->property  = event->xselection.property;
                     incr->first_chunk_type = None;
                     incr->size_hint = hint;
-                    incr->is_clipboard = isClipboard;
+                    incr->is_clipboard = is_clipboard;
                     incr->buffer.clear();
                     incr->started = CurrentTime; // or X server time if you prefer
 
@@ -499,18 +534,29 @@ namespace NewAge {
                 }
 
                 //XDeleteProperty(event->xselection.display, event->xselection.requestor, event->xselection.property);
+            } else {
+                std::cerr << mod_header() << "Selection conversion failed." << std::endl;
+
+                if (is_dnd) {
+                    if (callbacks.on_drag_receive_drop)
+                        callbacks.on_drag_receive_drop(myHandle, nullptr);
+                } else { // clipboard/primary
+                    if (callbacks.on_clipboard_receive_data)
+                        callbacks.on_clipboard_receive_data(myHandle, nullptr);
                 }
 
-            if (!isClipboard) {
-                if (callbacks.on_drag_receive_drop) {
-                    callbacks.on_drag_receive_drop(myHandle, (DragDropData *) current_data);
-                }
-                send_xdnd_finished(event->xselection.display, window, event->xselection.requestor,
-                    ((DragDropData *) current_data)->status.accept);
-            } else {
-                if (callbacks.on_clipboard_receive_data) {
+                return true;
+            }
+
+            if (is_dnd) {
+                if (callbacks.on_drag_receive_drop)
+                    callbacks.on_drag_receive_drop(myHandle, (DragDropData*)current_data);
+                send_xdnd_finished(event->xselection.display, window,
+                                   event->xselection.requestor,
+                                   ((DragDropData*)current_data)->status.accept);
+            } else { // clipboard/primary
+                if (callbacks.on_clipboard_receive_data)
                     callbacks.on_clipboard_receive_data(myHandle, current_data);
-                }
             }
 
         } else {
@@ -535,26 +581,23 @@ namespace NewAge {
     bool CrystalWindow_X11::handle_property_notify(P_INSTANCE(XEvent) event) {
         if (event->type != PropertyNotify) return false;
 
-        // Find which DataInterchange this PropertyNotify belongs to by matching the INCR state
         DataInterchange* current_data = nullptr;
         X11IncrState* incr = nullptr;
 
-        auto pick_active = [&](DataInterchange* di) -> bool {
-            if (!di || !di->os_specific) return false;
-            auto* s = static_cast<X11IncrState*>(di->os_specific);
+        auto pick = [&](DataInterchange* cand) {
+            if (!cand || !cand->os_specific) return false;
+            auto* s = static_cast<X11IncrState*>(cand->os_specific);
             if (!s->active) return false;
             if (event->xproperty.window == s->requestor && event->xproperty.atom == s->property) {
-                current_data = di; incr = s; return true;
+                current_data = cand; incr = s; return true;
             }
             return false;
         };
 
-        if (!pick_active(this->current_clipboard_receive_data) &&
-            !pick_active(this->current_drag_receive_data)) {
-            // Not ours
-            return false;
+        if (!pick(this->current_clipboard_receive_data) &&
+            !pick(this->current_drag_receive_data)) {
+            return false; // not ours, or already freed
             }
-
         if (event->xproperty.state != PropertyNewValue) return false;
 
         Display* dpy = event->xproperty.display;

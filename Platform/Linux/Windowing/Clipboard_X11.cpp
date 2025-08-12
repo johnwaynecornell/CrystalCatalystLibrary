@@ -272,6 +272,7 @@ namespace NewAge {
         */
     }
 
+    /*
     void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_struct format)
     {
         CrystalWindow_X11 *xwin = ((CrystalWindow_X11 *)data->m_handle->crystal_window);
@@ -280,61 +281,41 @@ namespace NewAge {
             std::cerr << "ERROR DataInterchange_Select called during drag. This endpoint should be handled internally by dnd" << std::endl;
         }
 
-
-        Atom T;
         Atom ID =AppX11->atoms.clipboard;
 
-        FormatToAtom(xwin->display,format,&T);
-        XConvertSelection(xwin->display, ID, T, ID, xwin->window, CurrentTime);
+        FormatToAtom(xwin->display,format,&((CrystalWindow_X11 *)data->m_handle->crystal_window)->selection_atom);
 
-        /*
-
-            FORMATETC fmt = { 0, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
-
-            std::string f = format;
-            if (f == "text/plain") fmt.cfFormat = CF_UNICODETEXT;
-            else if (f == "text/html") fmt.cfFormat = RegisterClipboardFormat(CFSTR_HTML);
-            else if (f == "text/file-uri") fmt.cfFormat = CF_HDROP;
-
-            STGMEDIUM stg;
-            HRESULT hr = ((IDataObject *)data->context)->GetData(&fmt, &stg);
-
-            if (SUCCEEDED(hr)) {
-                if (f == "text/plain" || f == "text/html") {
-                    LPWSTR lpszText = static_cast<LPWSTR>(GlobalLock(stg.hGlobal));
-                    if (lpszText != nullptr) {
-                        std::wstring ws(lpszText);
-                        std::string text_data(ws.begin(), ws.end());
-                        GlobalUnlock(stg.hGlobal);
-
-                        DataInterchange_SelectionSet(data, format, (P_INSTANCE(void))text_data.c_str(), text_data.length() + 1);
-                    }
-                } else if (f == "text/file-uri") {
-                    HDROP hDrop = static_cast<HDROP>(GlobalLock(stg.hGlobal));
-                    if (hDrop != nullptr) {
-                        uint32_t  fileCount = DragQueryFile(hDrop, 0xFFFFFFFF, nullptr, 0);
+        Window owner = XGetSelectionOwner(xwin->display, AppX11->atoms.clipboard);
+        if (owner == None) {
+            // try PRIMARY, or report “clipboard empty” UI state
+            std::cerr << "Clipboard owner=None checking primary" << std::endl;
+            //ID =AppX11->atoms.primary;
+        }
 
 
-                        std::cout << "drop of " << fileCount << " files" << std::endl;
+        XConvertSelection(xwin->display, ID, ((CrystalWindow_X11 *)data->m_handle->crystal_window)->selection_atom, ID, xwin->window, CurrentTime);
 
-                        std::string uri = "";
-                        for (uint32_t  i = 0; i < fileCount; i++) {
-                            WCHAR filePath[MAX_PATH];
-                            if (DragQueryFileW(hDrop, i, filePath, MAX_PATH)) {
-                                std::wstring ws(filePath);
-                                std::string filePathStr(ws.begin(), ws.end());
-                                std::cout << "File Path: " << filePathStr << std::endl; // Debug log
-                                uri += filePathStr + "\n";
-                            }
-                        }
-                        GlobalUnlock(stg.hGlobal);
+    }*/
 
-                        DataInterchange_SelectionSet(data, "text/file-uri", (P_INSTANCE(void) ) uri.c_str(),
-                                                      uri.length() + 1);
-                    }
-                }
-                ReleaseStgMedium(&stg);
+    void DataInterchange_Select(DataInterchange* data, utf8_string_struct format) {
+        auto* xwin = static_cast<CrystalWindow_X11*>(data->m_handle->crystal_window);
 
-            }*/
+        // 1) Which selection to query
+        Atom selection = AppX11->atoms.clipboard;
+
+        // 2) Target atom from 'format' (e.g., "text/html", "UTF8_STRING", etc.)
+        Atom target;
+        FormatToAtom(xwin->display, format, &target);
+
+        // 3) Property atom on *our* window where owner should place data
+        Atom property = AppX11->atoms.selection_data; // "CRYSTAL_SELECTION"
+
+        // (Optional) fallback if no CLIPBOARD owner
+        if (XGetSelectionOwner(xwin->display, selection) == None) {
+             selection = AppX11->atoms.primary; // enable if you want PRIMARY fallback
+        }
+
+        XConvertSelection(xwin->display, selection, target, property, xwin->window, CurrentTime);
+        XFlush(xwin->display);
     }
 }

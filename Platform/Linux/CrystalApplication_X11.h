@@ -18,8 +18,10 @@ namespace NewAge {
 #pragma pack(push, 1) // Save the current packing and set the new packing to 1 byte
         struct {
             Atom clipboard;
+            Atom primary;
             Atom xdnd_selection;
             Atom targets;
+            Atom selection_data;
 
             struct {
                 struct {
@@ -54,8 +56,11 @@ namespace NewAge {
     private:
         inline void InitAtoms() {
             atoms.clipboard = GetAtom("CLIPBOARD");
+            atoms.primary = GetAtom("PRIMARY");
             atoms.xdnd_selection = GetAtom("XdndSelection");
             atoms.targets = GetAtom("TARGETS");
+            // at app init
+            atoms.selection_data = GetAtom("CRYSTAL_SELECTION");
 
             atoms.xdnd.action.none = GetAtom("XdndActionNone");
             atoms.xdnd.action.copy = GetAtom("XdndActionCopy");

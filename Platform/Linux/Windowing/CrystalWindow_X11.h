@@ -19,6 +19,7 @@ namespace NewAge {
         P_INSTANCE(Display)  display;
         GLXContext gl_context;
         DragProvide_X11* drag_provide;
+        Atom selection_atom;
 
         bool draw_queued=true;
 
