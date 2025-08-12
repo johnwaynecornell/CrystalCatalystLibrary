@@ -19,7 +19,13 @@ namespace NewAge {
         P_INSTANCE(Display)  display;
         GLXContext gl_context;
         DragProvide_X11* drag_provide;
-        Atom selection_atom;
+        // In CrystalWindow_X11 members, add:
+        Atom target_atom = None;     // the requested "format" (e.g., UTF8_STRING/text/html)
+        Atom property_atom = None;   // the property we expect data on (e.g., CRYSTAL_SELECTION)
+        Atom expected_selection = None;
+        bool clipboard_pending = false;
+        bool retry_with_property = false;   // add this bool in your window state
+        bool tried_primary = false;         // add this too
 
         bool draw_queued=true;
 
@@ -57,5 +63,13 @@ namespace NewAge {
 
     void DataImterchange_FormatsFromAtomArray(P_INSTANCE(DataInterchange) dataInterchange, P_ELEMENTS(Atom) types, int num_types);
     void DataImterchange_AtomArrayFromFormats(P_INSTANCE(DataInterchange) dataInterchange, P_INSTANCE(P_ELEMENTS(Atom)) types, P_INSTANCE(int) num_types);
+
+    // Issue XConvertSelection with either property=None (first try) or property=target (retry).
+    static void request_selection(Display* dpy, Window win, Atom selection, Atom target, bool with_property_atom) {
+        Atom property = with_property_atom ? target : None; // fallback uses target as property
+        XConvertSelection(dpy, selection, target, property, win, CurrentTime);
+        XFlush(dpy);
+    }
+
 }
 #endif //CRYSTALCATALYST_CRYSTALWINDOW_H

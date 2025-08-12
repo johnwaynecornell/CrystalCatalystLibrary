@@ -1,5 +1,6 @@
 #include "Clipboard_X11.h"
 
+#include <chrono>
 #include <iostream>
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
@@ -96,59 +97,60 @@ namespace NewAge {
     // targets = AppX11->atoms.targets;
     // utf8_string = XInternAtom(display, "UTF8_STRING", False);
 
-    P_INSTANCE(DataInterchange)  CrystalWindow_ClipboardPaste(P_INSTANCE(WindowHandle) handle)
+    P_INSTANCE(DataInterchange) CrystalWindow_ClipboardPaste(P_INSTANCE(WindowHandle) handle)
     {
-        /*
-        IDataObject* pDataObject = nullptr;
-        HRESULT hr = OleGetClipboard(&pDataObject);
-        if (FAILED(hr)) {
-            std::cerr << "Failed to get clipboard data. HRESULT: " << std::hex << hr << std::endl;
-        }
-        */
+        /*            XSynchronize(display, True);
+            XSetErrorHandler([](Display* d, XErrorEvent* e) {
+                char buf[256]; XGetErrorText(d, e->error_code, buf, sizeof buf);
+                fprintf(stderr, "XError: %s (req=%u, res=0x%lx, minor=%u)\n",
+                        buf, e->request_code, e->resourceid, e->minor_code);
+                return 0;
+            });
+*/
+
+
+
 
         P_INSTANCE(DataInterchange) data = DataInterchange_Create();
         data->m_handle = handle;
         data->provide_chosen = DataInterchange::provide_for_clipboard;
         data->selection_type = DataInterchange::E_CLIPBOARD;
 
-        CrystalWindow_X11 *xwin = ((CrystalWindow_X11 *)handle->crystal_window);
-
+        auto* xwin = static_cast<CrystalWindow_X11*>(handle->crystal_window);
         xwin->current_clipboard_receive_data = data;
 
-        Atom clipboard =AppX11->atoms.clipboard;
-        Atom targets = AppX11->atoms.targets;
-
-        XConvertSelection(xwin->display, clipboard, targets, clipboard, xwin->window, CurrentTime);
-
-        XEvent event;
-
-        do {
-            XNextEvent(xwin->display, &event);
-            ((CrystalApplication_X11 *) TheApplication)->DispatchEvent(event);
-        } while (event.type != SelectionNotify);
+        Window oc = XGetSelectionOwner(xwin->display, AppX11->atoms.clipboard);
+        Window op = XGetSelectionOwner(xwin->display, AppX11->atoms.primary);
+        std::cerr << "Owners: CLIPBOARD=" << std::hex << oc << " PRIMARY=" << op << std::dec << "\n";
 
 
-        /*
-            Atom actual_type;
-            int actual_format;
-            unsigned long nitems;
-            unsigned long bytes_after;
-            unsigned char* prop;
+        Display* dpy = xwin->display;
+        Window   win = xwin->window;
 
-            Window SelectionOwner;
-            SelectionOwner = XGetSelectionOwner(xwin->display, AppX11->atoms.clipboard);
+        xwin->clipboard_pending = true;
 
-            XGetWindowProperty(xwin->display, SelectionOwner, AppX11->atoms.targets, 0, ~0, False, XA_ATOM,
-                               &actual_type, &actual_format, &nitems, &bytes_after, &prop);
-        // XGetWindowProperty(xwin->display, xwin->window, AppX11->atoms.clipboard, 0, ~0, False, AppX11->atoms.targets,
-        //                        &actual_type, &actual_format, &nitems, &bytes_after, &prop);
+        // Kick off: ask for TARGETS (list formats)
+        Atom selection = AppX11->atoms.clipboard;
+        Atom target    = AppX11->atoms.targets;
 
-            if (actual_type == XA_ATOM) {
-                Atom* atoms = reinterpret_cast<Atom*>(prop);
-                DataImterchange_FormatsFromAtomArray(data, atoms, nitems);
+        XConvertSelection(xwin->display, selection, target, None, xwin->window, CurrentTime);
+        XFlush(xwin->display);
+
+        // Pump until handlers mark done (or timeout)
+        XEvent ev;
+        auto t0 = std::chrono::steady_clock::now();
+        for (;;) {
+            XNextEvent(xwin->display, &ev);
+            static_cast<CrystalApplication_X11*>(TheApplication)->DispatchEvent(ev);
+
+            if (!xwin->clipboard_pending) break;
+
+            // safety timeout (e.g., 5s)
+            if (std::chrono::steady_clock::now() - t0 > std::chrono::seconds(5)) {
+                std::cerr << "Clipboard paste timed out\n";
+                break;
             }
-            XFree(prop);
-        */
+        }
         return data;
     }
 
@@ -297,25 +299,37 @@ namespace NewAge {
 
     }*/
 
+
+
     void DataInterchange_Select(DataInterchange* data, utf8_string_struct format) {
         auto* xwin = static_cast<CrystalWindow_X11*>(data->m_handle->crystal_window);
 
-        // 1) Which selection to query
         Atom selection = AppX11->atoms.clipboard;
 
-        // 2) Target atom from 'format' (e.g., "text/html", "UTF8_STRING", etc.)
         Atom target;
         FormatToAtom(xwin->display, format, &target);
 
-        // 3) Property atom on *our* window where owner should place data
-        Atom property = AppX11->atoms.selection_data; // "CRYSTAL_SELECTION"
+        Atom property = AppX11->atoms.selection_data; // XInternAtom(..., "CRYSTAL_SELECTION", False) at init
 
-        // (Optional) fallback if no CLIPBOARD owner
+        // Persist for fallback/retry
+        xwin->target_atom   = target;
+        xwin->property_atom = property;
+        xwin->expected_selection = selection; // optional: track which selection we asked for
+
         if (XGetSelectionOwner(xwin->display, selection) == None) {
-             selection = AppX11->atoms.primary; // enable if you want PRIMARY fallback
+            selection = AppX11->atoms.primary;           // if you want automatic fallback here
+            xwin->expected_selection = selection;        // keep in sync
         }
 
-        XConvertSelection(xwin->display, selection, target, property, xwin->window, CurrentTime);
+        // Start by asking for TARGETS on CLIPBOARD with property=None
+        request_selection(xwin->display, xwin->window, AppX11->atoms.clipboard, target, /*with_property_atom=*/false);
+        xwin->clipboard_pending = true;
+        xwin->retry_with_property = false;   // add this bool in your window state
+        xwin->tried_primary = false;         // add this too
+
+
+        //XConvertSelection(xwin->display, selection, target, None, xwin->window, CurrentTime);
         XFlush(xwin->display);
     }
+
 }

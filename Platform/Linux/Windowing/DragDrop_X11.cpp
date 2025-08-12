@@ -353,11 +353,23 @@ namespace NewAge {
         return false;
     }
 
+    static void request_selection(Display* dpy, Window win, Atom selection, Atom target, bool with_property_atom);
     // Function to handle SelectionNotify events
     bool CrystalWindow_X11::handle_selection_notify(P_INSTANCE(XEvent)  event) {
         if (event->type != SelectionNotify) return false;
 
         std::cerr << mod_header() << "SelectionNotify event received" << std::endl;
+
+        auto log_atom = [&](Display* dpy, Atom a, const char* label){
+            char* n;
+            bool fr = false;
+            if (a == None) n="NONE"; else { n= XGetAtomName(dpy, a); fr = true; }
+            std::cerr << mod_header() << label << ": " << (n ? n : "<null>") << "\n";
+            if (n && fr) XFree(n);
+        };
+        log_atom(event->xselection.display, event->xselection.selection, "selection");
+        log_atom(event->xselection.display, event->xselection.target,    "target");
+        log_atom(event->xselection.display, event->xselection.property,  "property");
 
         bool have_selection = false;
         bool is_dnd = false;
@@ -383,12 +395,90 @@ namespace NewAge {
             return true;
         }
 
+        if (event->xselection.property == None) {
+            std::cerr << mod_header() << "Selection conversion failed (property=None)\n";
+
+            // First refusal on CLIPBOARD? Retry same selection/target with property=target
+            if (sel == AppX11->atoms.clipboard && !this->retry_with_property) {
+                this->retry_with_property = true;
+                request_selection(event->xselection.display,
+                                  window,
+                                  AppX11->atoms.clipboard,
+                                  event->xselection.target,   // same target as request (TARGETS here)
+                                  /*with_property_atom=*/true);
+                return true;
+            }
+
+            // Still refused? Now try PRIMARY with UTF8_STRING (property=None first)
+            if (!this->tried_primary) {
+                this->tried_primary = true;
+                this->retry_with_property = false; // reset for the new selection
+                request_selection(event->xselection.display,
+                                  window,
+                                  AppX11->atoms.primary,
+                                  AppX11->atoms.utf8_string,  // make sure you intern UTF8_STRING at init
+                                  /*with_property_atom=*/false);
+                return true;
+            }
+
+            // PRIMARY refused with property=None? final retry using property=target
+            if (this->tried_primary && !this->retry_with_property) {
+                this->retry_with_property = true;
+                request_selection(event->xselection.display,
+                                  window,
+                                  AppX11->atoms.primary,
+                                  AppX11->atoms.utf8_string,
+                                  /*with_property_atom=*/true);
+                return true;
+            }
+
+            // All attempts refused. Quietly give up; do NOT call callbacks with nullptr.
+            this->clipboard_pending = false;
+            return true;
+        }
 
 
 
 
 
-        if (sel) {
+
+
+
+
+  /*
+        // early in handle_selection_notify, after classifying sel...
+        if (event->xselection.property == None) {
+            std::cerr << mod_header() << "Selection conversion failed (property=None)\n";
+
+            XSynchronize(display, True);
+            XSetErrorHandler([](Display* d, XErrorEvent* e) {
+                char buf[256]; XGetErrorText(d, e->error_code, buf, sizeof buf);
+                fprintf(stderr, "XError: %s (req=%u, res=0x%lx, minor=%u)\n",
+                        buf, e->request_code, e->resourceid, e->minor_code);
+                return 0;
+            });
+
+            if (sel == AppX11->atoms.clipboard) {
+                auto* xwin = this;
+                if (xwin->target_atom == None)
+                    xwin->target_atom = XInternAtom(xwin->display, "UTF8_STRING", False); // or your desired
+                if (xwin->property_atom == None)
+                    xwin->property_atom = XInternAtom(xwin->display, "CRYSTAL_SELECTION", False);
+
+                XConvertSelection(xwin->display,
+                                  AppX11->atoms.primary,
+                                  xwin->target_atom,
+                                  None,
+                                  xwin->window,
+                                  CurrentTime);
+                XFlush(xwin->display);
+                return true; // and DO NOT fire any callbacks here
+            }
+
+            return true;
+        }
+*/
+        if (event->xselection.property != None)  {
 
             Atom actual_type;
             int actual_format;
@@ -397,29 +487,6 @@ namespace NewAge {
 
             std::cerr << mod_header() << "SelectionNotify marker 'is sel' " << std::endl;
 
-            // early in handle_selection_notify, after classifying sel...
-            if (event->xselection.property == None) {
-                std::cerr << mod_header() << "Selection conversion failed (property=None)\n";
-
-                // Optional: if CLIPBOARD failed, try PRIMARY as a fallback
-                if (sel == AppX11->atoms.clipboard) {
-                    Window owner = XGetSelectionOwner(event->xselection.display, AppX11->atoms.primary);
-                    //if (owner != None)
-                    {
-                        std::cerr << mod_header() << "Selection conversion fallback to primary.\n";
-                        // Issue XConvertSelection for PRIMARY here and return
-                        XConvertSelection(display, AppX11->atoms.primary, selection_atom, AppX11->atoms.selection_data, window, CurrentTime);
-
-                        // XConvertSelection(dpy, AppX11->atoms.primary, desired_target, property_atom, window, CurrentTime);
-                        XFlush(display);
-                        std::cerr << mod_header() << "fallback to primary complete.\n";
-                        return true;
-                    }
-                }
-
-                // Don’t call on_* callbacks here; many implementations assume non-null DI.
-                return true;
-            }
 
             if (XGetWindowProperty(event->xselection.display, event->xselection.requestor, event->xselection.property, 0, (~0L), False, AnyPropertyType,
                 &actual_type, &actual_format, &nitems, &bytes_after, &prop) == Success) {
@@ -464,6 +531,14 @@ namespace NewAge {
                                     event->xselection.requestor,
                                     event->xselection.property);
 
+                    XSynchronize(display, True);
+                    XSetErrorHandler([](Display* d, XErrorEvent* e){
+                        char buf[256]; XGetErrorText(d, e->error_code, buf, sizeof buf);
+                        fprintf(stderr, "XError: %s (req=%u, res=0x%lx, minor=%u)\n",
+                                buf, e->request_code, e->resourceid, e->minor_code);
+                        return 0;
+                    });
+
                     // Don’t call callbacks yet; we’ll finish in PropertyNotify
                     return true;
                 }
@@ -483,6 +558,7 @@ namespace NewAge {
                     Atom* atoms = reinterpret_cast<Atom*>(prop);
                     DataImterchange_FormatsFromAtomArray(current_data, atoms, nitems);
                     XFree(prop);
+                    clipboard_pending = false;
                     return true;
 
                 } else if (strcmp("text/html", format) == 0) {
@@ -555,6 +631,7 @@ namespace NewAge {
                                    event->xselection.requestor,
                                    ((DragDropData*)current_data)->status.accept);
             } else { // clipboard/primary
+                this->clipboard_pending = false;
                 if (callbacks.on_clipboard_receive_data)
                     callbacks.on_clipboard_receive_data(myHandle, current_data);
             }
@@ -565,7 +642,7 @@ namespace NewAge {
                 callbacks.on_drag_receive_drop(myHandle, nullptr);
             }
 
-            send_xdnd_finished(event->xselection.display, window, event->xselection.requestor, false);
+            //send_xdnd_finished(event->xselection.display, window, event->xselection.requestor, false);
 
             if (current_drag_receive_data) {
                 DataInterchange_Free(current_drag_receive_data);
@@ -578,7 +655,7 @@ namespace NewAge {
         return false;
     }
 
-    bool CrystalWindow_X11::handle_property_notify(P_INSTANCE(XEvent) event) {
+    bool CrystalWindow_X11::handle_property_notify(XEvent* event) {
         if (event->type != PropertyNotify) return false;
 
         DataInterchange* current_data = nullptr;
@@ -588,16 +665,21 @@ namespace NewAge {
             if (!cand || !cand->os_specific) return false;
             auto* s = static_cast<X11IncrState*>(cand->os_specific);
             if (!s->active) return false;
-            if (event->xproperty.window == s->requestor && event->xproperty.atom == s->property) {
+            if (event->xproperty.window == s->requestor &&
+                event->xproperty.atom   == s->property) {
                 current_data = cand; incr = s; return true;
-            }
+                }
             return false;
         };
 
         if (!pick(this->current_clipboard_receive_data) &&
             !pick(this->current_drag_receive_data)) {
-            return false; // not ours, or already freed
+            return false; // not our stream
             }
+
+        // 🔹 Ignore PropertyDelete notifications (they’re from our own deletes)
+        if (event->xproperty.state == PropertyDelete) return true;
+
         if (event->xproperty.state != PropertyNewValue) return false;
 
         Display* dpy = event->xproperty.display;
@@ -607,14 +689,15 @@ namespace NewAge {
         unsigned long nitems, bytes_after;
         unsigned char* data = nullptr;
 
+        // 🔹 Read WITHOUT deleting (delete=False)
         if (XGetWindowProperty(dpy, incr->requestor, incr->property,
-                               0, (~0L), True, AnyPropertyType,
+                               0, (~0L), False, AnyPropertyType,
                                &type, &format, &nitems, &bytes_after, &data) != Success) {
             return false;
                                }
 
         if (nitems == 0) {
-            // End of INCR
+            // End-of-stream marker (zero-length write by owner)
             incr->active = false;
 
             if (incr->first_chunk_type != None) {
@@ -622,10 +705,7 @@ namespace NewAge {
                 current_data->selected_format = final_fmt;
 
                 DataInterchange_SelectionSet(
-                    current_data,
-                    final_fmt,
-                    incr->buffer.data(),
-                    incr->buffer.size()
+                    current_data, final_fmt, incr->buffer.data(), incr->buffer.size()
                 );
             }
 
@@ -640,19 +720,22 @@ namespace NewAge {
             }
 
             if (data) XFree(data);
+
+            // Optional tidy: clear the property after the terminator
+            XDeleteProperty(dpy, incr->requestor, incr->property);
             return true;
         }
 
         // First non-empty chunk decides final type
         if (incr->first_chunk_type == None) incr->first_chunk_type = type;
 
-        // Append chunk (format is 8/16/32 bits per item)
+        // Append payload
         size_t bytes = nitems * (size_t)(format / 8);
         incr->buffer.insert(incr->buffer.end(), data, data + bytes);
 
         if (data) XFree(data);
 
-        // Ask for the next chunk
+        // 🔹 Now signal “ready for next chunk”
         XDeleteProperty(dpy, incr->requestor, incr->property);
         return true;
     }

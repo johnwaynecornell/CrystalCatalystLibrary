@@ -22,6 +22,7 @@ namespace NewAge {
             Atom xdnd_selection;
             Atom targets;
             Atom selection_data;
+            Atom utf8_string;
 
             struct {
                 struct {
@@ -59,6 +60,7 @@ namespace NewAge {
             atoms.primary = GetAtom("PRIMARY");
             atoms.xdnd_selection = GetAtom("XdndSelection");
             atoms.targets = GetAtom("TARGETS");
+            atoms.utf8_string = GetAtom("UTF8_STRING");
             // at app init
             atoms.selection_data = GetAtom("CRYSTAL_SELECTION");
 
