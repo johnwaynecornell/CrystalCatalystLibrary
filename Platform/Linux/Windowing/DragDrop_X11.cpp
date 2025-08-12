@@ -362,9 +362,9 @@ namespace NewAge {
         if (event->xselection.property) {
 
             Atom actual_type;
-            int32_t actual_format;
-            uint64_t nitems, bytes_after;
-            P_ELEMENTS(uint8_t) prop;
+            int actual_format;
+            unsigned long nitems, bytes_after;
+            unsigned char* prop;
 
             bool isClipboard = false;
 
@@ -418,10 +418,11 @@ namespace NewAge {
                     incr->buffer.clear();
                     incr->started = CurrentTime; // or X server time if you prefer
 
+                    XWindowAttributes attr;
+                    XGetWindowAttributes(event->xselection.display, incr->requestor, &attr);
+                    long new_mask = attr.your_event_mask | PropertyChangeMask;
+                    XSelectInput(event->xselection.display, incr->requestor, new_mask);
 
-                    // 3) We must select for PropertyChange events on the requestor window
-                    XSelectInput(event->xselection.display, event->xselection.requestor,
-                                 PropertyChangeMask | /* keep existing masks */ StructureNotifyMask);
 
                     // 4) Delete the property to signal "ready for first chunk"
                     XDeleteProperty(event->xselection.display,
@@ -456,7 +457,7 @@ namespace NewAge {
                         std::u16string utf16_data(reinterpret_cast<P_ELEMENTS(const char16_t)>(prop + 2), (nitems - 2) / 2);
                         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
                         text_data = convert.to_bytes(utf16_data);
-                    } else if ((prop[0] >= ' ' && prop[2] >= ' ') && (prop[1] == 0 && prop[3] == 0)) {
+                    } else if (nitems >= 4 && (prop[0] >= ' ' && prop[2] >= ' ') && (prop[1] == 0 && prop[3] == 0)) {
                         std::u16string utf16_data(reinterpret_cast<P_ELEMENTS(const char16_t)>(prop), (nitems) / 2);
                         std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
                         text_data = convert.to_bytes(utf16_data);
@@ -517,6 +518,7 @@ namespace NewAge {
             if (callbacks.on_drag_receive_drop) {
                 callbacks.on_drag_receive_drop(myHandle, nullptr);
             }
+
             send_xdnd_finished(event->xselection.display, window, event->xselection.requestor, false);
 
             if (current_drag_receive_data) {
