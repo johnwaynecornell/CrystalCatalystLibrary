@@ -161,18 +161,46 @@ namespace NewAge {
 
 
     bool CrystalWindow_X11::handle_xevent(P_INSTANCE(XEvent)  event) {
+
         if (drag_provide && drag_provide->dragging && drag_provide->handle_message(event)) return true;
         if (handle_drop_xevents(event)) return true;
         if (handle_selection_request(event)) return true;
 
+        Atom NET_ACTIVE = XInternAtom(display, "_NET_ACTIVE_WINDOW", False);
+
+        auto name = [&](Atom a){ if (a==None) return std::string("<None>");
+            char* n = XGetAtomName(event->xproperty.display, a);
+            std::string s = n ? n : "<null>"; if (n) XFree(n); return s; };
+
         int32_t unicodeChar;
         switch (event->type) {
+            /*case PropertyNotify:
+                std::cerr << mod_header() << "PropertyNotify, window = " << event->xproperty.window << ", atom = " << name(event->xproperty.atom) << std::endl;
+
+
+                if (event->xproperty.window == DefaultRootWindow(display) &&
+                    event->xproperty.atom   == NET_ACTIVE) {
+                    // read active window
+                    Atom actual; int fmt; unsigned long n, extra; unsigned char* data=nullptr;
+                    if (Success == XGetWindowProperty(display, DefaultRootWindow(display), NET_ACTIVE,
+                                                      0, 1, False, XA_WINDOW,
+                                                      &actual, &fmt, &n, &extra, &data)) {
+                        if (n == 1) {
+                            Window active = *(Window*)data;
+                            ready = true; //(active == visible_win);
+                        }
+                        if (data) XFree(data);
+                                                      }
+                    return true;
+                    }
+                return false;*/
             case Expose:
                 if (callbacks.on_draw) {
                     callbacks.on_draw(myHandle);
                 }
-                ready = true;
+
                 draw_queued = false;
+                ready = true;
                 return true;
             case KeyPress:
                 if (callbacks.on_key_down) {

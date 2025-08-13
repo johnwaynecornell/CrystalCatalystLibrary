@@ -696,6 +696,7 @@ namespace NewAge {
            }
            return false;
        };
+
        if (!pick(this->current_clipboard_receive_data) &&
            !pick(this->current_drag_receive_data)) return false;
 
@@ -765,7 +766,8 @@ namespace NewAge {
        if (data) XFree(data);
 
        if (INCR_STYLE_A) {
-           if (XDeleteProperty(dpy, in->requestor, in->property) != Success) {
+           if (nitems != 0)
+               if (XDeleteProperty(dpy, in->requestor, in->property) != Success) {
                callbacks.on_data_interchange_error(myHandle, di, ((std::string) mod_header() + "XDeleteProperty failed.").c_str());
                return true;
                                   }

@@ -269,7 +269,7 @@ void on_drag_receive_drop(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(Dra
     receive("Drag and drop", window_handle, data);
 }
 
-bool dropped = false;
+int drop_delay = 4;
 
 bool paste;
 
@@ -289,7 +289,9 @@ void on_idle(P_INSTANCE(WindowHandle) window_handle) {
 
     //if (!window_up) return;
 
-    if (!dropped)
+    //if (drop_delay >0) usleep(1000000);
+
+    //if (drop_delay--<=0)
     {
         if (paste) {
             DataInterchange *data = CrystalWindow_ClipboardPaste(window_handle);
@@ -341,7 +343,7 @@ void on_idle(P_INSTANCE(WindowHandle) window_handle) {
             //close_next_idle = true;
         }
 
-        dropped = true;
+        //dropped = true;
     }
 }
 

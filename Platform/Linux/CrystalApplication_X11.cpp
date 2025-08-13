@@ -114,9 +114,7 @@ namespace NewAge {
         //XSetWindowAttributes swa;
         //swa.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | StructureNotifyMask;
 
-        Window win = XCreateSimpleWindow(globalDisplay, root,0,0,width,height,0,0,0);
-
-
+        Window win = XCreateSimpleWindow(globalDisplay, root,-10000,-10000,width,height,0,0,0);
 
         if (!win) {
             std::cerr << "Failed to create window" << std::endl;
