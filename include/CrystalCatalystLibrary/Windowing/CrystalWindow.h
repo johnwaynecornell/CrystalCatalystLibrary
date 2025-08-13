@@ -44,6 +44,8 @@ namespace NewAge {
         void (*on_clipboard_provide_chosen)(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DataInterchange)  data, utf8_string_struct format);
         void (*on_clipboard_receive_data)(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DataInterchange)  data);
 
+        void (*on_data_interchange_error)(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DataInterchange)  data, utf8_string_struct error);
+
         void (*on_idle)(P_INSTANCE(WindowHandle) window_handle);
     } WindowCallbacks;
 
@@ -81,6 +83,8 @@ namespace NewAge {
 
         int width = 0;
         int height = 0;
+
+        bool ready = false;
 
         virtual void PresentImage(utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height) =0;
         virtual void QueueRedraw() = 0;

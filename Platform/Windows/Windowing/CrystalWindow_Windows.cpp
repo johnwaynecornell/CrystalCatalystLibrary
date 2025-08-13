@@ -138,7 +138,8 @@ LRESULT CALLBACK CrystalWindow_Windows_WindowProc(HWND hwnd, uint32_t  uMsg, WPA
                     wnd->callbacks.
                             on_draw(handle);
                 }
-
+                /* TODO */ //test for finalized CreateWindowSimple
+                wnd->ready = true;
                 EndPaint(hwnd, &ps);
             }
             break;

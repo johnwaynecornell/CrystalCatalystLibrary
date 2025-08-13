@@ -33,12 +33,15 @@ utf8_string_struct Pix_format = "RABG:float64";
 
 int32_t window_width =0;
 int32_t window_height =0;
+bool window_up = false;
 
 double frac(double v) {
     return v - trunc(v);
 }
 
 void on_draw(P_INSTANCE(WindowHandle) window_handle) {
+    window_up = true;
+
     if (window_width == 0 || window_height == 0) return;
 
     size_t sqr = window_width*window_height;
@@ -272,62 +275,74 @@ bool paste;
 
 bool close_next_idle=false;
 
+void on_data_interchange_error(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DataInterchange)  data, utf8_string_struct error)
+{
+    std::cerr << "Data Interchange Error: " << error << std::endl;
+    CrystalWindow_PostClose(window_handle);
+}
+
 void on_idle(P_INSTANCE(WindowHandle) window_handle) {
     if (close_next_idle) {
         std::cerr << "closing" << std::endl;
         CrystalWindow_PostClose(window_handle);
     }
 
+    //if (!window_up) return;
 
-  if (!dropped)
-  {
-      if (paste) {
-          DataInterchange *data = CrystalWindow_ClipboardPaste(window_handle);
+    if (!dropped)
+    {
+        if (paste) {
+            DataInterchange *data = CrystalWindow_ClipboardPaste(window_handle);
 
-          // Process the pasted data
-          utf8_string_struct type;
-          P_INSTANCE(void)data_ptr;
-          size_t size;
+            // Process the pasted data
+            utf8_string_struct type;
+            P_INSTANCE(void)data_ptr;
+            size_t size;
 
-          int32_t i = 0;
-          while (format_prec[i] != nullptr) i++;
+            int32_t i = 0;
+            while (format_prec[i] != nullptr) i++;
 
-          utf8_string_struct format = nullptr;
+            utf8_string_struct format = nullptr;
 
-          for (P_INSTANCE(DragDropData::Node)node = DataInterchange_FormatEnum(data);
-               i != 0 && node != nullptr; node = DataInterchange_FormatEnumNext(node)) {
-              utf8_string_struct drop_format = nullptr;
+            for (P_INSTANCE(DragDropData::Node)node = DataInterchange_FormatEnum(data);
+                 i != 0 && node != nullptr; node = DataInterchange_FormatEnumNext(node)) {
+                utf8_string_struct drop_format = nullptr;
 
-              DataInterchange_FormatEnumText(node, &drop_format);
+                DataInterchange_FormatEnumText(node, &drop_format);
 
-              for (int32_t i2 = 0; i2 < i; i2++) {
-                  if (strcmp(format_prec[i2], drop_format) == 0) {
-                      i = i2;
-                      format = format_prec[i];
-                      break;
-                  }
-              }
-              if (format != nullptr) break;
-          }
+                for (int32_t i2 = 0; i2 < i; i2++) {
+                    if (strcmp(format_prec[i2], drop_format) == 0) {
+                        i = i2;
+                        format = format_prec[i];
+                        break;
+                    }
+                }
+                    if (format != nullptr) break;
+                 }
+            if (format == nullptr) {
+                std::cerr << mod_header() << "No supported format found" << std::endl;
+                CrystalWindow_PostClose(window_handle);
+            }
+            else
+                DataInterchange_Select(data, format);
 
-          DataInterchange_Select(data, format);
-      } else //copy
-      {
-          std::cout << "awaiting paste" << std::endl;
-          P_INSTANCE(DataInterchange)data = DataInterchange_Create();
+        } else //copy
+        {
+            std::cout << "awaiting paste" << std::endl;
+            P_INSTANCE(DataInterchange)data = DataInterchange_Create();
 
-          data->m_handle = window_handle;
-          data->provide_chosen = DataInterchange::provide_for_clipboard;
-          data->selection_type = DataInterchange::E_CLIPBOARD;
+            data->m_handle = window_handle;
+            data->provide_chosen = DataInterchange::provide_for_clipboard;
+            data->selection_type = DataInterchange::E_CLIPBOARD;
 
-          DataInterchange_FormatAdd(data, "text/html");
-          CrystalWindow_ClipboardCopy(window_handle, data);
+            DataInterchange_FormatAdd(data, "text/html");
+            CrystalWindow_ClipboardCopy(window_handle, data);
 
-          //close_next_idle = true;
-      }
+            //close_next_idle = true;
+        }
 
-    dropped = true;
-  }
+        dropped = true;
+    }
 }
 
 int32_t main(int32_t argc, P_ELEMENTS(char *)  argv) {
@@ -370,6 +385,7 @@ int32_t main(int32_t argc, P_ELEMENTS(char *)  argv) {
     CrystalWindow_SetMessaqeHandler(window_handle, "on_drag_provide_finished", (P_INSTANCE(void))on_drag_provide_finished);
     CrystalWindow_SetMessaqeHandler(window_handle, "on_clipboard_provide_chosen", (P_INSTANCE(void))on_clipboard_provide_chosen);
     CrystalWindow_SetMessaqeHandler(window_handle, "on_clipboard_receive_data", (P_INSTANCE(void))on_clipboard_receive_data);
+    CrystalWindow_SetMessaqeHandler(window_handle, "on_data_interchange_error", (P_INSTANCE(void))on_data_interchange_error);
     CrystalWindow_SetMessaqeHandler(window_handle, "on_idle", (P_INSTANCE(void))on_idle);
 
     CrystalWindow_Show(window_handle, true);

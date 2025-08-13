@@ -65,12 +65,7 @@ namespace NewAge {
     void DataImterchange_AtomArrayFromFormats(P_INSTANCE(DataInterchange) dataInterchange, P_INSTANCE(P_ELEMENTS(Atom)) types, P_INSTANCE(int) num_types);
 
     // Issue XConvertSelection with either property=None (first try) or property=target (retry).
-    static void request_selection(Display* dpy, Window win, Atom selection, Atom target, bool with_property_atom) {
-        Atom property = with_property_atom ? target : None; // fallback uses target as property
-
-        XConvertSelection(dpy, selection, target, property, win, CurrentTime);
-        XFlush(dpy);
-    }
+    void request_selection(Display* dpy, Window win, Atom selection, Atom target, bool with_property_atom);
 
 }
 #endif //CRYSTALCATALYST_CRYSTALWINDOW_H

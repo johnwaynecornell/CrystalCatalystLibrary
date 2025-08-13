@@ -125,12 +125,13 @@ namespace NewAge {
 
             DispatchCycle();
 
-            for (P_INSTANCE(HandleNode)  node = window_head.next; node != nullptr; node = node->next) {
+            for (P_INSTANCE(HandleNode)  node = window_head.next; !CloseSignalled && node != nullptr; node = node->next) {
                 auto* callbacks = &node->handle->crystal_window->callbacks;
 
-                if (callbacks->on_idle) {
-                    callbacks->on_idle(node->handle);
-                }
+                if (node->handle->crystal_window->ready)
+                    if (callbacks->on_idle) {
+                        callbacks->on_idle(node->handle);
+                    }
             }
 
             HasMessage();

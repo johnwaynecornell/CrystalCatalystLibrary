@@ -86,6 +86,10 @@ namespace NewAge {
         return I->next;
     }
 
+    bool DataInterchange_isClipboard(P_INSTANCE(DataInterchange) data) {
+        return data->selection_type == DataInterchange::E_CLIPBOARD;
+    }
+
     void DataInterchange_SelectionReveal(P_INSTANCE(DataInterchange) drag, P_OUT(utf8_string_struct) format, P_OUT(P_INSTANCE(void)) data, P_OUT(size_t) size)
     {
         if (format) *format = drag->selected_format;

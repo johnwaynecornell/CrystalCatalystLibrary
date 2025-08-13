@@ -171,8 +171,9 @@ namespace NewAge {
                 if (callbacks.on_draw) {
                     callbacks.on_draw(myHandle);
                 }
-            draw_queued = false;
-            return true;
+                ready = true;
+                draw_queued = false;
+                return true;
             case KeyPress:
                 if (callbacks.on_key_down) {
                     unicodeChar = ConvertKeyCodeToUnicode(event);
@@ -382,5 +383,16 @@ namespace NewAge {
         y = tmp_y;
 
         return true;
+    }
+
+    void request_selection(Display* dpy, Window win, Atom selection, Atom target, bool with_property_atom)
+    {
+        with_property_atom=true;
+        Atom property = with_property_atom ? AppX11->atoms.selection_data : None; // fallback uses target as property
+
+        // Always use our dedicated receiving property rather than target or None
+        //Atom property = NewAge::AppX11->atoms.selection_data; // e.g., "CRYSTAL_SELECTION"
+        XConvertSelection(dpy, selection, target, property, win, CurrentTime);
+        XFlush(dpy);
     }
 }

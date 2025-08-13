@@ -133,7 +133,7 @@ namespace NewAge {
         Atom selection = AppX11->atoms.clipboard;
         Atom target    = AppX11->atoms.targets;
 
-        XConvertSelection(xwin->display, selection, target, None, xwin->window, CurrentTime);
+        XConvertSelection(xwin->display, selection, target, AppX11->atoms.selection_data, xwin->window, CurrentTime);
         XFlush(xwin->display);
 
         // Pump until handlers mark done (or timeout)

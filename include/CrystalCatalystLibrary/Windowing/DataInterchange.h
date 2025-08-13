@@ -58,6 +58,7 @@ namespace NewAge {
 
     _EXPORT_ P_INSTANCE(DataInterchange::Node) DataInterchange_ItemsFormatRemove(P_INSTANCE(DataInterchange) drop, P_INSTANCE(DataInterchange::Node) node);
 
+    _EXPORT_ bool DataInterchange_isClipboard(P_INSTANCE(DataInterchange) data);
     _EXPORT_ void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_struct format);
     _EXPORT_ void DataInterchange_SelectionReveal(P_INSTANCE(DataInterchange) drag, P_OUT(utf8_string_struct) format, P_OUT(P_INSTANCE(void)) data, P_OUT(size_t) size);
     _EXPORT_ void DataInterchange_SelectionSet(P_INSTANCE(DataInterchange) drag, utf8_string_struct format, P_INSTANCE(void) data, size_t size);

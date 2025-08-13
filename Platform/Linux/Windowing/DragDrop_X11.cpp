@@ -353,6 +353,12 @@ namespace NewAge {
         return false;
     }
 
+    // Compile-time toggle to test both INCR styles.
+    // true  -> Style A: XGetWindowProperty(delete=false) + XDeleteProperty() after each chunk
+    // false -> Style B: XGetWindowProperty(delete=true)  + NO XDeleteProperty()
+    static constexpr bool INCR_STYLE_A = true; // start with A; if stuck, flip to false and test B
+
+
     // Function to handle SelectionNotify events
     bool CrystalWindow_X11::handle_selection_notify(P_INSTANCE(XEvent)  event) {
         if (event->type != SelectionNotify) return false;
@@ -391,44 +397,49 @@ namespace NewAge {
 
         if (!have_selection) {
             // Unknown selection: don’t run DnD tail; just stop here.
+            callbacks.on_data_interchange_error(myHandle, current_data, ((std::string) mod_header() + "Unknown selection").c_str());
+
             return true;
         }
 
         if (event->xselection.property == None) {
-            std::cerr << mod_header() << "Selection conversion failed (property=None)\n";
 
-            // First refusal on CLIPBOARD? Retry same selection/target with property=target
-            if (sel == AppX11->atoms.clipboard && !this->retry_with_property) {
-                this->retry_with_property = true;
-                request_selection(event->xselection.display,
-                                  window,
-                                  AppX11->atoms.clipboard,
-                                  event->xselection.target,   // same target as request (TARGETS here)
-                                  /*with_property_atom=*/true);
-                return true;
-            }
+            callbacks.on_data_interchange_error(myHandle, current_data, ((std::string) mod_header() + "Selection conversion failed (property=None)").c_str());
 
-            // Still refused? Now try PRIMARY with UTF8_STRING (property=None first)
-            if (!this->tried_primary) {
-                this->tried_primary = true;
-                this->retry_with_property = false; // reset for the new selection
-                request_selection(event->xselection.display,
-                                  window,
-                                  AppX11->atoms.primary,
-                                  AppX11->atoms.utf8_string,  // make sure you intern UTF8_STRING at init
-                                  /*with_property_atom=*/false);
-                return true;
-            }
+            if (false) {
+                // First refusal on CLIPBOARD? Retry same selection/target with property=target
+                if (sel == AppX11->atoms.clipboard && !this->retry_with_property) {
+                    this->retry_with_property = true;
+                    request_selection(event->xselection.display,
+                                      window,
+                                      AppX11->atoms.clipboard,
+                                      event->xselection.target,   // same target as request (TARGETS here)
+                                      /*with_property_atom=*/true);
+                    return true;
+                }
 
-            // PRIMARY refused with property=None? final retry using property=target
-            if (this->tried_primary && !this->retry_with_property) {
-                this->retry_with_property = true;
-                request_selection(event->xselection.display,
-                                  window,
-                                  AppX11->atoms.primary,
-                                  AppX11->atoms.utf8_string,
-                                  /*with_property_atom=*/true);
-                return true;
+                // Still refused? Now try PRIMARY with UTF8_STRING (property=None first)
+                if (!this->tried_primary) {
+                    this->tried_primary = true;
+                    this->retry_with_property = false; // reset for the new selection
+                    request_selection(event->xselection.display,
+                                      window,
+                                      AppX11->atoms.primary,
+                                      AppX11->atoms.utf8_string,  // make sure you intern UTF8_STRING at init
+                                      /*with_property_atom=*/false);
+                    return true;
+                }
+
+                // PRIMARY refused with property=None? final retry using property=target
+                if (this->tried_primary && !this->retry_with_property) {
+                    this->retry_with_property = true;
+                    request_selection(event->xselection.display,
+                                      window,
+                                      AppX11->atoms.primary,
+                                      AppX11->atoms.utf8_string,
+                                      /*with_property_atom=*/true);
+                    return true;
+                }
             }
 
             // All attempts refused. Quietly give up; do NOT call callbacks with nullptr.
@@ -490,7 +501,7 @@ namespace NewAge {
             std::cerr << mod_header() << "SelectionNotify marker 'has prop'  " << XGetAtomName_struct(display, event->xselection.property) << std::endl;
 
 
-            if (XGetWindowProperty(event->xselection.display, event->xselection.requestor, event->xselection.property, 0, (~0L), False, AnyPropertyType,
+            if (XGetWindowProperty(event->xselection.display, event->xselection.requestor, event->xselection.property, 0, 0L , False, AnyPropertyType,
                 &actual_type, &actual_format, &nitems, &bytes_after, &prop) == Success) {
 
                 Atom INCR = XInternAtom(event->xselection.display, "INCR", False);
@@ -499,46 +510,63 @@ namespace NewAge {
                 if (actual_type == INCR) {
                     if (prop) XFree(prop);  // free the first peek buffer
 
+                    auto* incr = DI_X11_get_incr(current_data);
+                    incr->active           = true;
+                    incr->requestor        = event->xselection.requestor;
+                    incr->property         = event->xselection.property;
+                    incr->first_chunk_type = None;
+                    incr->size_hint        = 0; // unknown in style A
+                    incr->is_clipboard     = is_clipboard;
+                    incr->buffer.clear();
+
+
                     XWindowAttributes attr;
                     XGetWindowAttributes(this->display, this->window, &attr);
                     XSelectInput(this->display,
                                  this->window,
                                  attr.your_event_mask | PropertyChangeMask);
 
-                    //XGetWindowAttributes(event->xselection.display, incr->requestor, &attr);
-                    //long new_mask = attr.your_event_mask | PropertyChangeMask;
-                    //XSelectInput(event->xselection.display, incr->requestor, new_mask);
+                    /*
+                    XGetWindowAttributes(event->xselection.display, incr->requestor, &attr);
+                    long new_mask = attr.your_event_mask | PropertyChangeMask;
+                    XSelectInput(event->xselection.display, incr->requestor, new_mask);
+                    */
 
-
-                    // Re-read the INCR header with delete=True to ack readiness
-                    Atom t; int f; unsigned long n, ba; unsigned char* d = nullptr;
-                    if (XGetWindowProperty(event->xselection.display,
-                                           event->xselection.requestor,
-                                           event->xselection.property,
-                                           0, (~0L), True, AnyPropertyType,  // <-- True here
-                                           &t, &f, &n, &ba, &d) == Success) {
-                        uint32_t hint = (d && f == 32 && n == 1) ? *(uint32_t*)d : 0;
-                        if (d) XFree(d);
-
-                        auto* incr = DI_X11_get_incr(current_data);
-                        incr->active           = true;
-                        incr->requestor        = event->xselection.requestor;
-                        incr->property         = event->xselection.property; // e.g., text/html
-                        incr->first_chunk_type = None;
-                        incr->size_hint        = hint;
-                        incr->is_clipboard     = is_clipboard;
-                        incr->buffer.clear();
-
-                        // Ensure we are subscribed before chunks start
-
-
-                        // Style B: ack was the delete=True read; just flush to be safe
-                        XFlush(event->xselection.display);    // nudge the server; cheap and safe
+                    // INCR handshake
+                    if (INCR_STYLE_A) {
+                        // Style A: explicit delete as readiness signal
+                        XDeleteProperty(event->xselection.display,
+                                        event->xselection.requestor,
+                                        event->xselection.property);
+                        XFlush(event->xselection.display);
                         return true;
+                    } else {
+                        // Style B: re-read header with delete=True (ack)
+                        Atom t; int f; unsigned long n, ba; unsigned char* d = nullptr;
+                        if (XGetWindowProperty(event->xselection.display,
+                                               event->xselection.requestor,
+                                               event->xselection.property,
+                                               0, (~0L), True, AnyPropertyType,
+                                               &t, &f, &n, &ba, &d) == Success) {
+                            uint32_t hint = (d && f == 32 && n == 1) ? *(uint32_t*)d : 0;
+                            if (d) XFree(d);
+
+                            XFlush(event->xselection.display);
+                            return true;
+                                               } else {
+                                                   callbacks.on_data_interchange_error(myHandle, current_data, ((std::string) mod_header() + "Property read error").c_str());
+                                               }
                     }
                 }
 
+                if (prop) XFree(prop);  // free the first peek buffer
 
+                if (XGetWindowProperty(event->xselection.display, event->xselection.requestor, event->xselection.property, 0, (~0L) , False, AnyPropertyType,
+                                &actual_type, &actual_format, &nitems, &bytes_after, &prop) != Success) {
+                    callbacks.on_data_interchange_error(myHandle, current_data, ((std::string) mod_header() + "Property data read error").c_str());
+                    //std::cerr << mod_header() << "Property data read error"  << std::endl;
+                    return true;
+                }
 
 
                 /*
@@ -608,8 +636,7 @@ namespace NewAge {
 
                 //XDeleteProperty(event->xselection.display, event->xselection.requestor, event->xselection.property);
             } else {
-                std::cerr << mod_header() << "Selection conversion failed." << std::endl;
-
+                callbacks.on_data_interchange_error(myHandle, current_data, ((std::string) mod_header() + "Selection conversion failed.").c_str());
                 if (is_dnd) {
                     if (callbacks.on_drag_receive_drop)
                         callbacks.on_drag_receive_drop(myHandle, nullptr);
@@ -634,7 +661,9 @@ namespace NewAge {
             }
 
         } else {
-            std::cerr << mod_header() << "Selection conversion failed." << std::endl;
+
+            callbacks.on_data_interchange_error(myHandle, current_data, ((std::string) mod_header() + "Selection conversion failed.").c_str());
+
             if (callbacks.on_drag_receive_drop) {
                 callbacks.on_drag_receive_drop(myHandle, nullptr);
             }
@@ -651,11 +680,6 @@ namespace NewAge {
 
         return false;
     }
-
-    // Compile-time toggle to test both INCR styles.
-    // true  -> Style A: XGetWindowProperty(delete=false) + XDeleteProperty() after each chunk
-    // false -> Style B: XGetWindowProperty(delete=true)  + NO XDeleteProperty()
-    static constexpr bool INCR_STYLE_A = true; // start with A; if stuck, flip to false and test B
 
 
    bool CrystalWindow_X11::handle_property_notify(XEvent* ev) {
@@ -692,13 +716,23 @@ namespace NewAge {
        Display* dpy = ev->xproperty.display;
        Atom type; int format; unsigned long nitems, bytes_after; unsigned char* data = nullptr;
 
-       // STYLE B: delete=True
-       if (XGetWindowProperty(dpy, in->requestor, in->property,
-                              0, (~0L), True, AnyPropertyType,   // <-- True here
-                              &type, &format, &nitems, &bytes_after, &data) != Success) {
-           return true;
-       }
+       // INCR pacing read
+       if (INCR_STYLE_A) {
+           if (XGetWindowProperty(dpy, in->requestor, in->property,
+                                  0, (~0L), False, AnyPropertyType,
+                                  &type, &format, &nitems, &bytes_after, &data) != Success) {
+               callbacks.on_data_interchange_error(myHandle, di, ((std::string) mod_header() + "Property read failed.").c_str());
 
+               return true;
+                                  }
+       } else {
+           if (XGetWindowProperty(dpy, in->requestor, in->property,
+                                  0, (~0L), True, AnyPropertyType,
+                                  &type, &format, &nitems, &bytes_after, &data) != Success) {
+               callbacks.on_data_interchange_error(myHandle, di, ((std::string) mod_header() + "Property read failed.").c_str());
+               return true;
+                                  }
+       }
 
 
        if (nitems == 0) {
@@ -730,7 +764,13 @@ namespace NewAge {
        in->buffer.insert(in->buffer.end(), data, data + bytes);
        if (data) XFree(data);
 
-       // STYLE B: no XDeleteProperty here
+       if (INCR_STYLE_A) {
+           if (XDeleteProperty(dpy, in->requestor, in->property) != Success) {
+               callbacks.on_data_interchange_error(myHandle, di, ((std::string) mod_header() + "XDeleteProperty failed.").c_str());
+               return true;
+                                  }
+       }
+
        return true;
    }
 

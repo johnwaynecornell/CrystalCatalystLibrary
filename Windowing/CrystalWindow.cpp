@@ -130,6 +130,8 @@ namespace NewAge {
             handler_ptr = (P_OUT(P_INSTANCE(void)) )&callbacks->on_clipboard_provide_chosen;
         else if (strcmp(handler_name, "on_clipboard_receive_data") == 0)
             handler_ptr = (P_OUT(P_INSTANCE(void)) )&callbacks->on_clipboard_receive_data;
+        else if (strcmp(handler_name, "on_data_interchange_error") == 0)
+            handler_ptr = (P_OUT(P_INSTANCE(void)) )&callbacks->on_data_interchange_error;
         else if (strcmp(handler_name, "on_idle") == 0)
             handler_ptr = (P_OUT(P_INSTANCE(void)) )&callbacks->on_idle;
         else
