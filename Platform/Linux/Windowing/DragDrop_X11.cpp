@@ -498,12 +498,24 @@ namespace NewAge {
                 //
                 if (actual_type == INCR) {
                     if (prop) XFree(prop);  // free the first peek buffer
+
+                    XWindowAttributes attr;
+                    XGetWindowAttributes(this->display, this->window, &attr);
+                    XSelectInput(this->display,
+                                 this->window,
+                                 attr.your_event_mask | PropertyChangeMask);
+
+                    //XGetWindowAttributes(event->xselection.display, incr->requestor, &attr);
+                    //long new_mask = attr.your_event_mask | PropertyChangeMask;
+                    //XSelectInput(event->xselection.display, incr->requestor, new_mask);
+
+
                     // Re-read the INCR header with delete=True to ack readiness
                     Atom t; int f; unsigned long n, ba; unsigned char* d = nullptr;
                     if (XGetWindowProperty(event->xselection.display,
                                            event->xselection.requestor,
                                            event->xselection.property,
-                                           0, (~0L), False, AnyPropertyType,  // <-- True here
+                                           0, (~0L), True, AnyPropertyType,  // <-- True here
                                            &t, &f, &n, &ba, &d) == Success) {
                         uint32_t hint = (d && f == 32 && n == 1) ? *(uint32_t*)d : 0;
                         if (d) XFree(d);
@@ -519,14 +531,8 @@ namespace NewAge {
 
                         // Ensure we are subscribed before chunks start
 
-                        XWindowAttributes attr;
-                        XGetWindowAttributes(display, window, &attr);
-                        XSelectInput(display,
-                                     window,
-                                     attr.your_event_mask | PropertyChangeMask);
 
-                        // No XDeleteProperty here in Style B
-                        XDeleteProperty(this->display, incr->requestor, incr->property);
+                        // Style B: ack was the delete=True read; just flush to be safe
                         XFlush(event->xselection.display);    // nudge the server; cheap and safe
                         return true;
                     }
@@ -688,7 +694,7 @@ namespace NewAge {
 
        // STYLE B: delete=True
        if (XGetWindowProperty(dpy, in->requestor, in->property,
-                              0, (~0L), False, AnyPropertyType,   // <-- True here
+                              0, (~0L), True, AnyPropertyType,   // <-- True here
                               &type, &format, &nitems, &bytes_after, &data) != Success) {
            return true;
        }
@@ -698,6 +704,8 @@ namespace NewAge {
        if (nitems == 0) {
            // End-of-stream
            in->active = false;
+
+           this->clipboard_pending = false;
 
            if (in->first_chunk_type != None) {
                utf8_string_struct final_fmt = XGetAtomName_struct(dpy, in->first_chunk_type);
@@ -723,7 +731,6 @@ namespace NewAge {
        if (data) XFree(data);
 
        // STYLE B: no XDeleteProperty here
-       XDeleteProperty(this->display, in->requestor, in->property);
        return true;
    }
 
