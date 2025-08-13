@@ -14,7 +14,10 @@ namespace NewAge {
     {
         char errorText[256];
         XGetErrorText(display, error->error_code, errorText, sizeof errorText);
-        fprintf(stderr, "Received X error: %s\n", errorText);
+
+        fprintf(stderr, "XError: %s (req=%u, res=0x%lx, minor=%u)\n",
+                errorText, error->request_code, error->resourceid, error->minor_code);
+
         return 0; // Return 0 to continue execution, non-zero will cause the program to exit
     }
 
@@ -70,7 +73,7 @@ namespace NewAge {
         XStoreName(globalDisplay, win, title);
         XMapWindow(globalDisplay, win);
 
-        XSelectInput(globalDisplay, win, ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | StructureNotifyMask);
+        XSelectInput(globalDisplay, win, ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | StructureNotifyMask | PropertyChangeMask);
         XFlush(globalDisplay);  // Ensure commands are sent to the X server
 
         auto* window_structure = new CrystalWindow_X11();
@@ -96,6 +99,7 @@ namespace NewAge {
 
         Application_WindowAdd(window_handle);
 
+        XSynchronize(globalDisplay, win);
         return window_handle;
     }
 
@@ -122,7 +126,7 @@ namespace NewAge {
         XStoreName(globalDisplay, win, title);
         XMapWindow(globalDisplay, win);
 
-        XSelectInput(globalDisplay, win, ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | StructureNotifyMask);
+        XSelectInput(globalDisplay, win, ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | StructureNotifyMask | PropertyChangeMask);
         XFlush(globalDisplay);  // Ensure commands are sent to the X server
 
         auto* window_structure = new CrystalWindow_X11();

@@ -67,6 +67,7 @@ namespace NewAge {
     // Issue XConvertSelection with either property=None (first try) or property=target (retry).
     static void request_selection(Display* dpy, Window win, Atom selection, Atom target, bool with_property_atom) {
         Atom property = with_property_atom ? target : None; // fallback uses target as property
+
         XConvertSelection(dpy, selection, target, property, win, CurrentTime);
         XFlush(dpy);
     }

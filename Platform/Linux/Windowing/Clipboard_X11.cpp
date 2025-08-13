@@ -317,19 +317,34 @@ namespace NewAge {
         xwin->expected_selection = selection; // optional: track which selection we asked for
 
         if (XGetSelectionOwner(xwin->display, selection) == None) {
-            selection = AppX11->atoms.primary;           // if you want automatic fallback here
-            xwin->expected_selection = selection;        // keep in sync
+            //selection = AppX11->atoms.primary;           // if you want automatic fallback here
+            //xwin->expected_selection = selection;        // keep in sync
         }
-
         // Start by asking for TARGETS on CLIPBOARD with property=None
-        request_selection(xwin->display, xwin->window, AppX11->atoms.clipboard, target, /*with_property_atom=*/false);
         xwin->clipboard_pending = true;
         xwin->retry_with_property = false;   // add this bool in your window state
         xwin->tried_primary = false;         // add this too
+        request_selection(xwin->display, xwin->window, AppX11->atoms.clipboard, target, /*with_property_atom=*/false);
 
 
         //XConvertSelection(xwin->display, selection, target, None, xwin->window, CurrentTime);
         XFlush(xwin->display);
+
+        // Pump until handlers mark done (or timeout)
+        XEvent ev;
+        auto t0 = std::chrono::steady_clock::now();
+        for (;;) {
+            XNextEvent(xwin->display, &ev);
+            static_cast<CrystalApplication_X11*>(TheApplication)->DispatchEvent(ev);
+
+            if (!xwin->clipboard_pending) break;
+
+            // safety timeout (e.g., 5s)
+            if (std::chrono::steady_clock::now() - t0 > std::chrono::seconds(5)) {
+                std::cerr << "Clipboard paste timed out\n";
+                break;
+            }
+        }
     }
 
 }

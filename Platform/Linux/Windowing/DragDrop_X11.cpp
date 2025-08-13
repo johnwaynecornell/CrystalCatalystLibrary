@@ -353,7 +353,6 @@ namespace NewAge {
         return false;
     }
 
-    static void request_selection(Display* dpy, Window win, Atom selection, Atom target, bool with_property_atom);
     // Function to handle SelectionNotify events
     bool CrystalWindow_X11::handle_selection_notify(P_INSTANCE(XEvent)  event) {
         if (event->type != SelectionNotify) return false;
@@ -480,12 +479,15 @@ namespace NewAge {
 */
         if (event->xselection.property != None)  {
 
+            retry_with_property = false;   // add this bool in your window state
+            tried_primary = false;         // add this too
+
             Atom actual_type;
             int actual_format;
             unsigned long nitems, bytes_after;
             unsigned char* prop;
 
-            std::cerr << mod_header() << "SelectionNotify marker 'is sel' " << std::endl;
+            std::cerr << mod_header() << "SelectionNotify marker 'has prop'  " << XGetAtomName_struct(display, event->xselection.property) << std::endl;
 
 
             if (XGetWindowProperty(event->xselection.display, event->xselection.requestor, event->xselection.property, 0, (~0L), False, AnyPropertyType,
@@ -493,55 +495,44 @@ namespace NewAge {
 
                 Atom INCR = XInternAtom(event->xselection.display, "INCR", False);
 
+                //
                 if (actual_type == INCR) {
-                    // 1) Read the size hint (optional)
-                    //    actual_format should be 32, nitems == 1
-                    //    uint32_t size_hint = prop ? *(uint32_t*)prop : 0;
+                    if (prop) XFree(prop);  // free the first peek buffer
+                    // Re-read the INCR header with delete=True to ack readiness
+                    Atom t; int f; unsigned long n, ba; unsigned char* d = nullptr;
+                    if (XGetWindowProperty(event->xselection.display,
+                                           event->xselection.requestor,
+                                           event->xselection.property,
+                                           0, (~0L), False, AnyPropertyType,  // <-- True here
+                                           &t, &f, &n, &ba, &d) == Success) {
+                        uint32_t hint = (d && f == 32 && n == 1) ? *(uint32_t*)d : 0;
+                        if (d) XFree(d);
 
-                    std::cerr << mod_header() << "SelectionNotify style INCR " << std::endl;
+                        auto* incr = DI_X11_get_incr(current_data);
+                        incr->active           = true;
+                        incr->requestor        = event->xselection.requestor;
+                        incr->property         = event->xselection.property; // e.g., text/html
+                        incr->first_chunk_type = None;
+                        incr->size_hint        = hint;
+                        incr->is_clipboard     = is_clipboard;
+                        incr->buffer.clear();
 
+                        // Ensure we are subscribed before chunks start
 
-                    uint32_t hint = 0;
-                    if (prop && actual_format == 32 && nitems == 1) {
-                        hint = *(uint32_t*)prop;
+                        XWindowAttributes attr;
+                        XGetWindowAttributes(display, window, &attr);
+                        XSelectInput(display,
+                                     window,
+                                     attr.your_event_mask | PropertyChangeMask);
+
+                        // No XDeleteProperty here in Style B
+                        XDeleteProperty(this->display, incr->requestor, incr->property);
+                        XFlush(event->xselection.display);    // nudge the server; cheap and safe
+                        return true;
                     }
-                    if (prop) XFree(prop);
-
-                    // 2) Mark that we’re in an incremental transfer
-                    // Set up state on the correct DI object
-                    DataInterchange* di = current_data;
-                    auto* incr = DI_X11_get_incr(di);
-                    incr->active = true;
-                    incr->requestor = event->xselection.requestor;
-                    incr->property  = event->xselection.property;
-                    incr->first_chunk_type = None;
-                    incr->size_hint = hint;
-                    incr->is_clipboard = is_clipboard;
-                    incr->buffer.clear();
-                    incr->started = CurrentTime; // or X server time if you prefer
-
-                    XWindowAttributes attr;
-                    XGetWindowAttributes(event->xselection.display, incr->requestor, &attr);
-                    long new_mask = attr.your_event_mask | PropertyChangeMask;
-                    XSelectInput(event->xselection.display, incr->requestor, new_mask);
-
-
-                    // 4) Delete the property to signal "ready for first chunk"
-                    XDeleteProperty(event->xselection.display,
-                                    event->xselection.requestor,
-                                    event->xselection.property);
-
-                    XSynchronize(display, True);
-                    XSetErrorHandler([](Display* d, XErrorEvent* e){
-                        char buf[256]; XGetErrorText(d, e->error_code, buf, sizeof buf);
-                        fprintf(stderr, "XError: %s (req=%u, res=0x%lx, minor=%u)\n",
-                                buf, e->request_code, e->resourceid, e->minor_code);
-                        return 0;
-                    });
-
-                    // Don’t call callbacks yet; we’ll finish in PropertyNotify
-                    return true;
                 }
+
+
 
 
                 /*
@@ -655,90 +646,88 @@ namespace NewAge {
         return false;
     }
 
-    bool CrystalWindow_X11::handle_property_notify(XEvent* event) {
-        if (event->type != PropertyNotify) return false;
+    // Compile-time toggle to test both INCR styles.
+    // true  -> Style A: XGetWindowProperty(delete=false) + XDeleteProperty() after each chunk
+    // false -> Style B: XGetWindowProperty(delete=true)  + NO XDeleteProperty()
+    static constexpr bool INCR_STYLE_A = true; // start with A; if stuck, flip to false and test B
 
-        DataInterchange* current_data = nullptr;
-        X11IncrState* incr = nullptr;
 
-        auto pick = [&](DataInterchange* cand) {
-            if (!cand || !cand->os_specific) return false;
-            auto* s = static_cast<X11IncrState*>(cand->os_specific);
-            if (!s->active) return false;
-            if (event->xproperty.window == s->requestor &&
-                event->xproperty.atom   == s->property) {
-                current_data = cand; incr = s; return true;
-                }
-            return false;
-        };
+   bool CrystalWindow_X11::handle_property_notify(XEvent* ev) {
+       if (ev->type != PropertyNotify) return false;
 
-        if (!pick(this->current_clipboard_receive_data) &&
-            !pick(this->current_drag_receive_data)) {
-            return false; // not our stream
-            }
+       DataInterchange* di = nullptr;
+       X11IncrState* in = nullptr;
+       auto pick = [&](DataInterchange* cand){
+           if (!cand || !cand->os_specific) return false;
+           auto* s = static_cast<X11IncrState*>(cand->os_specific);
+           if (!s->active) return false;
+           if (ev->xproperty.window == s->requestor && ev->xproperty.atom == s->property) {
+               di = cand; in = s; return true;
+           }
+           return false;
+       };
+       if (!pick(this->current_clipboard_receive_data) &&
+           !pick(this->current_drag_receive_data)) return false;
 
-        // 🔹 Ignore PropertyDelete notifications (they’re from our own deletes)
-        if (event->xproperty.state == PropertyDelete) return true;
+       // Debug: see what we’re getting
+       auto state_str = [&](int st){ return st==PropertyNewValue ? "NewValue" :
+                                            st==PropertyDelete   ? "Delete" : "Other"; };
+       auto name = [&](Atom a){ if (a==None) return std::string("<None>");
+           char* n = XGetAtomName(ev->xproperty.display, a);
+           std::string s = n ? n : "<null>"; if (n) XFree(n); return s; };
 
-        if (event->xproperty.state != PropertyNewValue) return false;
+       std::cerr << mod_header() << "[PropNotify] state=" << state_str(ev->xproperty.state)
+                 << " atom=" << name(ev->xproperty.atom)
+                 << " win=0x" << std::hex << ev->xproperty.window << std::dec << "\n";
 
-        Display* dpy = event->xproperty.display;
+       if (ev->xproperty.state == PropertyDelete) return true;          // ignore
+       if (ev->xproperty.state != PropertyNewValue) return false;
 
-        Atom type;
-        int format;
-        unsigned long nitems, bytes_after;
-        unsigned char* data = nullptr;
+       Display* dpy = ev->xproperty.display;
+       Atom type; int format; unsigned long nitems, bytes_after; unsigned char* data = nullptr;
 
-        // 🔹 Read WITHOUT deleting (delete=False)
-        if (XGetWindowProperty(dpy, incr->requestor, incr->property,
-                               0, (~0L), False, AnyPropertyType,
-                               &type, &format, &nitems, &bytes_after, &data) != Success) {
-            return false;
-                               }
+       // STYLE B: delete=True
+       if (XGetWindowProperty(dpy, in->requestor, in->property,
+                              0, (~0L), False, AnyPropertyType,   // <-- True here
+                              &type, &format, &nitems, &bytes_after, &data) != Success) {
+           return true;
+       }
 
-        if (nitems == 0) {
-            // End-of-stream marker (zero-length write by owner)
-            incr->active = false;
 
-            if (incr->first_chunk_type != None) {
-                utf8_string_struct final_fmt = XGetAtomName_struct(dpy, incr->first_chunk_type);
-                current_data->selected_format = final_fmt;
 
-                DataInterchange_SelectionSet(
-                    current_data, final_fmt, incr->buffer.data(), incr->buffer.size()
-                );
-            }
+       if (nitems == 0) {
+           // End-of-stream
+           in->active = false;
 
-            if (incr->is_clipboard) {
-                if (callbacks.on_clipboard_receive_data)
-                    callbacks.on_clipboard_receive_data(myHandle, current_data);
-            } else {
-                if (callbacks.on_drag_receive_drop)
-                    callbacks.on_drag_receive_drop(myHandle, (DragDropData*)current_data);
-                send_xdnd_finished(dpy, window, incr->requestor,
-                                   ((DragDropData*)current_data)->status.accept);
-            }
+           if (in->first_chunk_type != None) {
+               utf8_string_struct final_fmt = XGetAtomName_struct(dpy, in->first_chunk_type);
+               di->selected_format = final_fmt;
+               DataInterchange_SelectionSet(di, final_fmt, in->buffer.data(), in->buffer.size());
+           }
 
-            if (data) XFree(data);
+           if (in->is_clipboard) {
+               if (callbacks.on_clipboard_receive_data) callbacks.on_clipboard_receive_data(myHandle, di);
+           } else {
+               if (callbacks.on_drag_receive_drop) callbacks.on_drag_receive_drop(myHandle, (DragDropData*)di);
+               send_xdnd_finished(dpy, window, in->requestor, ((DragDropData*)di)->status.accept);
+           }
 
-            // Optional tidy: clear the property after the terminator
-            XDeleteProperty(dpy, incr->requestor, incr->property);
-            return true;
-        }
+           if (data) XFree(data);
+           return true;
+       }
 
-        // First non-empty chunk decides final type
-        if (incr->first_chunk_type == None) incr->first_chunk_type = type;
+       if (in->first_chunk_type == None) in->first_chunk_type = type;
 
-        // Append payload
-        size_t bytes = nitems * (size_t)(format / 8);
-        incr->buffer.insert(incr->buffer.end(), data, data + bytes);
+       size_t bytes = nitems * (size_t)(format / 8);
+       in->buffer.insert(in->buffer.end(), data, data + bytes);
+       if (data) XFree(data);
 
-        if (data) XFree(data);
+       // STYLE B: no XDeleteProperty here
+       XDeleteProperty(this->display, in->requestor, in->property);
+       return true;
+   }
 
-        // 🔹 Now signal “ready for next chunk”
-        XDeleteProperty(dpy, incr->requestor, incr->property);
-        return true;
-    }
+
 
 
     bool CrystalWindow_X11::handle_selection_request(P_INSTANCE(XEvent) event) {

@@ -6,6 +6,7 @@
 #include <fstream>
 #include <string>
 #include <filesystem>
+#include <X11/Xlib.h>
 namespace fs = std::filesystem;
 
 #include "CrystalCatalystLibrary/CrystalCatalystLibrary.h"
