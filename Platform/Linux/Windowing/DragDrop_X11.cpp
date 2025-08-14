@@ -11,6 +11,7 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include <unistd.h>
 
 #include "../CrystalApplication_X11.h"
 #include "DragProvide_X11.h"
@@ -500,6 +501,7 @@ namespace NewAge {
 
             std::cerr << mod_header() << "SelectionNotify marker 'has prop'  " << XGetAtomName_struct(display, event->xselection.property) << std::endl;
 
+            XFlush(event->xselection.display);
 
             if (XGetWindowProperty(event->xselection.display, event->xselection.requestor, event->xselection.property, 0, 0L , False, AnyPropertyType,
                 &actual_type, &actual_format, &nitems, &bytes_after, &prop) == Success) {
@@ -717,6 +719,8 @@ namespace NewAge {
        Display* dpy = ev->xproperty.display;
        Atom type; int format; unsigned long nitems, bytes_after; unsigned char* data = nullptr;
 
+        XFlush(dpy);
+
        // INCR pacing read
        if (INCR_STYLE_A) {
            if (XGetWindowProperty(dpy, in->requestor, in->property,
@@ -766,11 +770,12 @@ namespace NewAge {
        if (data) XFree(data);
 
        if (INCR_STYLE_A) {
-           if (nitems != 0)
-               if (XDeleteProperty(dpy, in->requestor, in->property) != Success) {
+           if (XDeleteProperty(dpy, in->requestor, in->property) != Success) {
                callbacks.on_data_interchange_error(myHandle, di, ((std::string) mod_header() + "XDeleteProperty failed.").c_str());
                return true;
                                   }
+           usleep(5000);
+           XFlush(dpy);
        }
 
        return true;

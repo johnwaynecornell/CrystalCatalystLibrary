@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <iostream>
 #include <unistd.h>
+#include <X11/Xatom.h>
 
 using namespace JWCEssentials;
 
@@ -99,7 +100,6 @@ namespace NewAge {
 
         Application_WindowAdd(window_handle);
 
-        XSynchronize(globalDisplay, win);
         return window_handle;
     }
 
@@ -127,6 +127,15 @@ namespace NewAge {
         XSelectInput(globalDisplay, win, ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | StructureNotifyMask | PropertyChangeMask);
         XFlush(globalDisplay);  // Ensure commands are sent to the X server
 
+        Atom net_wm_state = XInternAtom(globalDisplay, "_NET_WM_STATE", False);
+        Atom skip_taskbar = XInternAtom(globalDisplay, "_NET_WM_STATE_SKIP_TASKBAR", False);
+        Atom skip_pager   = XInternAtom(globalDisplay, "_NET_WM_STATE_SKIP_PAGER", False);
+        XChangeProperty(globalDisplay, win, net_wm_state, XA_ATOM, 32, PropModeReplace,
+                        reinterpret_cast<unsigned char const*>(&skip_taskbar), 1);
+        XChangeProperty(globalDisplay, win, net_wm_state, XA_ATOM, 32, PropModeAppend,
+                        reinterpret_cast<unsigned char const*>(&skip_pager), 1);
+
+
         auto* window_structure = new CrystalWindow_X11();
         if (!window_structure) {
             std::cerr << "Failed to allocate memory for window_structure" << std::endl;
@@ -149,7 +158,8 @@ namespace NewAge {
         XSaveContext(globalDisplay, win, windowContext, (XPointer)window_handle);
 
         Application_WindowAdd(window_handle);
-
+        XSynchronize(globalDisplay, True);
+        XFlush(globalDisplay);  // Ensure commands are sent to the X server
         return window_handle;
     }
 

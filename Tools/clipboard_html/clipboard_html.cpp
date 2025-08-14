@@ -6,6 +6,7 @@
 #include <fstream>
 #include <string>
 #include <filesystem>
+#include <unistd.h>
 #include <X11/Xlib.h>
 namespace fs = std::filesystem;
 
@@ -289,9 +290,9 @@ void on_idle(P_INSTANCE(WindowHandle) window_handle) {
 
     //if (!window_up) return;
 
-    //if (drop_delay >0) usleep(1000000);
+    if (drop_delay >0) usleep(5000);
 
-    //if (drop_delay--<=0)
+    if (drop_delay--<=0)
     {
         if (paste) {
             DataInterchange *data = CrystalWindow_ClipboardPaste(window_handle);
