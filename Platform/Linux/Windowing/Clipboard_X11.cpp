@@ -133,7 +133,7 @@ namespace NewAge {
         Atom selection = AppX11->atoms.clipboard;
         Atom target    = AppX11->atoms.targets;
 
-        XConvertSelection(xwin->display, selection, target, AppX11->atoms.selection_data, xwin->window, CurrentTime);
+        XConvertSelection(xwin->display, selection, target, AppX11->atoms.selection_data, xwin->window, xwin->last_user_time);
         XFlush(xwin->display);
 
         // Pump until handlers mark done (or timeout)
@@ -162,7 +162,7 @@ namespace NewAge {
 
         xwin->current_clipboard_provide_data = data;
 
-        XSetSelectionOwner(xwin->display, AppX11->atoms.clipboard, xwin->window, CurrentTime);
+        XSetSelectionOwner(xwin->display, AppX11->atoms.clipboard, xwin->window, xwin->last_user_time);
         if (XGetSelectionOwner(xwin->display, AppX11->atoms.clipboard) != xwin->window) {
             std::cerr << "Failed to set clipboard owner." << std::endl;
         }
@@ -324,7 +324,7 @@ namespace NewAge {
         xwin->clipboard_pending = true;
         xwin->retry_with_property = false;   // add this bool in your window state
         xwin->tried_primary = false;         // add this too
-        request_selection(xwin->display, xwin->window, AppX11->atoms.clipboard, target, /*with_property_atom=*/false);
+        request_selection(xwin->display, xwin, AppX11->atoms.clipboard, target);
 
 
         //XConvertSelection(xwin->display, selection, target, None, xwin->window, CurrentTime);

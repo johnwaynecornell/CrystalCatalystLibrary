@@ -4,6 +4,8 @@
 #ifndef CRYSTALCATALYST_CRYSTALWINDOW_H
 #define CRYSTALCATALYST_CRYSTALWINDOW_H
 
+#include <chrono>
+
 #include "DragDrop.h"
 #include "Clipboard.h"
 #include "Pixels.h"
@@ -49,6 +51,7 @@ namespace NewAge {
         void (*on_idle)(P_INSTANCE(WindowHandle) window_handle);
     } WindowCallbacks;
 
+
     //##### end DUMP REGION ##### callbacks
 
     _EXPORT_ P_INSTANCE(WindowHandle) CrystalWindow_Create(int32_t width, int32_t height, utf8_string_struct title);
@@ -68,6 +71,12 @@ namespace NewAge {
 
     _EXPORT_ bool CrystalWindow_SetMessaqeHandler(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct handler_name, P_INSTANCE(void) handler);
 
+    _EXPORT_ double CrystalWindow_uptimeSeconds(P_INSTANCE(WindowHandle) window_handle);
+    _EXPORT_ void   CrystalWindow_uptimeReset(P_INSTANCE(WindowHandle) window_handle);
+
+
+
+
     class CrystalWindow {
     public:
         virtual ~CrystalWindow() = default;
@@ -85,6 +94,22 @@ namespace NewAge {
         int height = 0;
 
         bool ready = false;
+        bool received_first_message = false;
+
+    private:
+        struct MonotonicTimer {
+            std::chrono::steady_clock::time_point start{std::chrono::steady_clock::now()};
+            void   reset()   { start = std::chrono::steady_clock::now(); }
+            double elapsed() const {
+                using dsec = std::chrono::duration<double>;
+                return std::chrono::duration_cast<dsec>(std::chrono::steady_clock::now() - start).count();
+            }
+        };
+        MonotonicTimer uptime_;
+    public:
+
+        double uptime_seconds() const { return uptime_.elapsed(); }
+        void   reset_uptime()         { uptime_.reset(); }
 
         virtual void PresentImage(utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height) =0;
         virtual void QueueRedraw() = 0;

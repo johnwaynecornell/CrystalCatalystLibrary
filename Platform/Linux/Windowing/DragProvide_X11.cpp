@@ -39,7 +39,7 @@ namespace NewAge {
 
         Atom XA_XdndSelection = AppX11->atoms.xdnd.selection;
 
-        XSetSelectionOwner(source_window->display, XA_XdndSelection, source_window->window, CurrentTime);
+        XSetSelectionOwner(source_window->display, XA_XdndSelection, source_window->window, source_window->last_user_time);
 
         if (XGetSelectionOwner(source_window->display, XA_XdndSelection) != source_window->window) {
             std::cerr << mod_header() << "Failed to acquire selection" << std::endl;
@@ -310,9 +310,9 @@ namespace NewAge {
         event.xclient.message_type = AppX11->atoms.xdnd.msg.position;
         event.xclient.format = 32;
         event.xclient.data.l[0] = (long) source_window->window;
-        event.xclient.data.l[1] = 0; // Use CurrentTime as suggested
+        event.xclient.data.l[1] = source_window->last_user_time;
         event.xclient.data.l[2] = (x << 16) | y; // Pack the coordinates into l[2]
-        event.xclient.data.l[3] = CurrentTime;
+        event.xclient.data.l[3] = source_window->last_user_time;
         event.xclient.data.l[4] = drag_actions_to_xint64_t(drag_data->action_selections, source_window->display);
 
         XSendEvent(source_window->display, target_window, False, NoEventMask, &event);
@@ -353,7 +353,7 @@ namespace NewAge {
         event.xclient.message_type = AppX11->atoms.xdnd.msg.drop;
         event.xclient.format = 32;
         event.xclient.data.l[0] = (long) source_window->window;
-        event.xclient.data.l[1] = CurrentTime;
+        event.xclient.data.l[1] = source_window->last_user_time;
 
         XSendEvent(source_window->display, target_window, False, NoEventMask, &event);
         XFlush(source_window->display);

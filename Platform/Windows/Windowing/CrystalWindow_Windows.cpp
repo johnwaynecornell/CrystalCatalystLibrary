@@ -98,6 +98,8 @@ LRESULT CALLBACK CrystalWindow_Windows_WindowProc(HWND hwnd, uint32_t  uMsg, WPA
     
     P_INSTANCE(CrystalWindow_Windows) wnd;
 
+    if (!wnd->received_first_message) { wnd->reset_uptime(); wnd->received_first_message = true; }
+
     if (uMsg == WM_CREATE)
     {
         CREATESTRUCT* pCreate = (CREATESTRUCT*)lParam;

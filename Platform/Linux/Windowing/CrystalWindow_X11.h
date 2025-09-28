@@ -27,9 +27,12 @@ namespace NewAge {
         bool retry_with_property = false;   // add this bool in your window state
         bool tried_primary = false;         // add this too
 
+        Time last_user_time = CurrentTime;
+
         bool draw_queued=true;
 
         ~CrystalWindow_X11() override;
+        Time get_user_time(XEvent* ev);
 
         void PresentImage(utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height) override;
         void QueueRedraw() override;
@@ -65,7 +68,7 @@ namespace NewAge {
     void DataImterchange_AtomArrayFromFormats(P_INSTANCE(DataInterchange) dataInterchange, P_INSTANCE(P_ELEMENTS(Atom)) types, P_INSTANCE(int) num_types);
 
     // Issue XConvertSelection with either property=None (first try) or property=target (retry).
-    void request_selection(Display* dpy, Window win, Atom selection, Atom target, bool with_property_atom);
+    void request_selection(Display* dpy, P_INSTANCE(CrystalWindow_X11) win, Atom selection, Atom target);
 
 }
 #endif //CRYSTALCATALYST_CRYSTALWINDOW_H

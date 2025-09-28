@@ -48,7 +48,9 @@ namespace NewAge {
             } xdnd;
 
             struct {
-                Atom _delete;
+                Atom protocols;     // "WM_PROTOCOLS"
+                Atom _delete;       // "WM_DELETE_WINDOW"
+                Atom take_focus;    // "WM_TAKE_FOCUS"
             } window;
 
         } atoms;
@@ -81,7 +83,11 @@ namespace NewAge {
             atoms.xdnd.supported_actions = GetAtom("XdndSupportedActions");
             atoms.xdnd.selection = GetAtom("XdndSelection");
 
-            atoms.window._delete = GetAtom("WM_DELETE_WINDOW");
+            // Window protocol atoms
+            atoms.window.protocols   = XInternAtom(globalDisplay, "WM_PROTOCOLS",    False);
+            atoms.window._delete     = XInternAtom(globalDisplay, "WM_DELETE_WINDOW",False);
+            atoms.window.take_focus  = XInternAtom(globalDisplay, "WM_TAKE_FOCUS",  False);
+
         }
 
         Atom GetAtom(const char* name) {

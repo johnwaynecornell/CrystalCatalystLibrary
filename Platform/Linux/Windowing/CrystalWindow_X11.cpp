@@ -159,8 +159,84 @@ namespace NewAge {
         }
     }*/
 
+// CrystalWindow_X11.cpp
+#include "CrystalWindow_X11.h"
+// #include whatever defines AppX11->atoms.window.take_focus / .protocols
+
+Time CrystalWindow_X11::get_user_time(XEvent* ev) {
+    if (!ev) return last_user_time;
+
+    switch (ev->type) {
+        // Keyboard
+        case KeyPress:
+        case KeyRelease:
+            return (last_user_time = ev->xkey.time);
+
+        // Pointer
+        case ButtonPress:
+        case ButtonRelease:
+            return (last_user_time = ev->xbutton.time);
+        case MotionNotify:
+            return (last_user_time = ev->xmotion.time);
+        case EnterNotify:
+        case LeaveNotify:
+            return (last_user_time = ev->xcrossing.time);
+
+            /*
+        // Focus (XFocusChangeEvent has time)
+        case FocusIn:
+        case FocusOut:
+            return (last_user_time = ev->xfocus.);
+        */
+        // Property/Selection (have time fields)
+        case PropertyNotify:
+            return (last_user_time = ev->xproperty.time);
+        case SelectionRequest:
+            return (last_user_time = ev->xselectionrequest.time);
+        case SelectionNotify:
+            return (last_user_time = ev->xselection.time);
+
+        // Client messages: handle WM_TAKE_FOCUS (timestamp in data.l[1])
+        case ClientMessage: {
+            // Guard if you don’t keep these atoms:
+            // if (!AppX11) break;
+            Atom msg = ev->xclient.message_type;
+            long a0  = ev->xclient.data.l[0];
+            // Replace these with your actual atom references:
+            //   AppX11->atoms.window.protocols
+            //   AppX11->atoms.window.take_focus
+
+            if (AppX11 && msg == AppX11->atoms.window.protocols) {
+                if ((Atom)a0 == AppX11->atoms.window.take_focus) {
+                    Time t = static_cast<Time>(ev->xclient.data.l[1]);
+                    if (t != CurrentTime) last_user_time = t;
+                    return last_user_time;
+                }
+            }
+            break;
+        }
+
+        // No timestamps in these; fall through to return last known
+        case Expose:
+        case ConfigureNotify:
+        case MapNotify:
+        case UnmapNotify:
+        case VisibilityNotify:
+        case CreateNotify:
+        case DestroyNotify:
+        default:
+            break;
+    }
+    return last_user_time;
+}
+
+
 
     bool CrystalWindow_X11::handle_xevent(P_INSTANCE(XEvent)  event) {
+        if (!received_first_message) { reset_uptime(); received_first_message = true; }
+
+        get_user_time(event);
+
 
         if (drag_provide && drag_provide->dragging && drag_provide->handle_message(event)) return true;
         if (handle_drop_xevents(event)) return true;
@@ -174,26 +250,6 @@ namespace NewAge {
 
         int32_t unicodeChar;
         switch (event->type) {
-            /*case PropertyNotify:
-                std::cerr << mod_header() << "PropertyNotify, window = " << event->xproperty.window << ", atom = " << name(event->xproperty.atom) << std::endl;
-
-
-                if (event->xproperty.window == DefaultRootWindow(display) &&
-                    event->xproperty.atom   == NET_ACTIVE) {
-                    // read active window
-                    Atom actual; int fmt; unsigned long n, extra; unsigned char* data=nullptr;
-                    if (Success == XGetWindowProperty(display, DefaultRootWindow(display), NET_ACTIVE,
-                                                      0, 1, False, XA_WINDOW,
-                                                      &actual, &fmt, &n, &extra, &data)) {
-                        if (n == 1) {
-                            Window active = *(Window*)data;
-                            ready = true; //(active == visible_win);
-                        }
-                        if (data) XFree(data);
-                                                      }
-                    return true;
-                    }
-                return false;*/
             case Expose:
                 if (callbacks.on_draw) {
                     callbacks.on_draw(myHandle);
@@ -327,7 +383,7 @@ namespace NewAge {
         // Capture the pointer
         int32_t result = XGrabPointer(
             display, window, True, ButtonPressMask | ButtonReleaseMask | PointerMotionMask,
-            GrabModeAsync, GrabModeAsync, None, None, CurrentTime
+            GrabModeAsync, GrabModeAsync, None, None, last_user_time
         );
 
         if (result != GrabSuccess) {
@@ -339,7 +395,7 @@ namespace NewAge {
 
     void CrystalWindow_X11::MouseRelease() {
         // Release the pointer
-        XUngrabPointer(display, CurrentTime);
+        XUngrabPointer(display, last_user_time);
         std::cerr << mod_header() << "Mouse pointer released" << std::endl;
     }
 
@@ -413,14 +469,15 @@ namespace NewAge {
         return true;
     }
 
-    void request_selection(Display* dpy, Window win, Atom selection, Atom target, bool with_property_atom)
+    void request_selection(Display* dpy, CrystalWindow_X11 *win, Atom selection, Atom target)
     {
-        with_property_atom=true;
-        Atom property = with_property_atom ? AppX11->atoms.selection_data : None; // fallback uses target as property
+
+        Atom property = NewAge::AppX11->atoms.selection_data; // fallback uses target as property
 
         // Always use our dedicated receiving property rather than target or None
         //Atom property = NewAge::AppX11->atoms.selection_data; // e.g., "CRYSTAL_SELECTION"
-        XConvertSelection(dpy, selection, target, property, win, CurrentTime);
+        XConvertSelection(dpy, selection, target, property, win->window, win->last_user_time);
         XFlush(dpy);
     }
 }
+

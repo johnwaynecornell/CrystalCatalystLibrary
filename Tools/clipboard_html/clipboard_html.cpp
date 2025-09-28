@@ -270,7 +270,6 @@ void on_drag_receive_drop(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(Dra
     receive("Drag and drop", window_handle, data);
 }
 
-int drop_delay = 4;
 
 bool paste;
 
@@ -282,6 +281,9 @@ void on_data_interchange_error(P_INSTANCE(WindowHandle) window_handle, P_INSTANC
     CrystalWindow_PostClose(window_handle);
 }
 
+
+int drop_delay = 4;
+
 void on_idle(P_INSTANCE(WindowHandle) window_handle) {
     if (close_next_idle) {
         std::cerr << "closing" << std::endl;
@@ -290,10 +292,14 @@ void on_idle(P_INSTANCE(WindowHandle) window_handle) {
 
     //if (!window_up) return;
 
-    if (drop_delay >0) usleep(5000);
+    if (CrystalWindow_uptimeSeconds(window_handle) < .1) return;
 
-    if (drop_delay--<=0)
+    //if (drop_delay >0) usleep(5000);
+
+    //if (drop_delay--==0)
     {
+        std::cerr << mod_header() <<  " : paste" << CrystalWindow_uptimeSeconds(window_handle) << std::endl;
+
         if (paste) {
             DataInterchange *data = CrystalWindow_ClipboardPaste(window_handle);
 

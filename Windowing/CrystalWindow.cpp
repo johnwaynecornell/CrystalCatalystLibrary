@@ -41,6 +41,15 @@ namespace NewAge {
         return TheApplication->WindowCreate_Simple(width, height, title);
     }
 
+    double CrystalWindow_uptimeSeconds(P_INSTANCE(WindowHandle) window_handle) {
+        return window_handle->crystal_window->uptime_seconds();
+    }
+
+    void   CrystalWindow_uptimeReset(P_INSTANCE(WindowHandle) window_handle) {
+        window_handle->crystal_window->reset_uptime();
+    }
+
+
     void CrystalWindow_PresentImage(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height) {
         window_handle->crystal_window->PresentImage(pixformat, pixdata, pixdata_length, width, height);
     }

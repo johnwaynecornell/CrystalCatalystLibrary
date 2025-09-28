@@ -69,7 +69,11 @@ namespace NewAge {
             return nullptr;
         }
 
-        XSetWMProtocols(globalDisplay, win, &((CrystalApplication_X11 *) TheApplication)->atoms.window._delete, 1);
+        Atom protos[2] = {
+            ((CrystalApplication_X11*)TheApplication)->atoms.window._delete,
+            ((CrystalApplication_X11*)TheApplication)->atoms.window.take_focus
+        };
+        XSetWMProtocols(globalDisplay, win, protos, 2);
 
         XStoreName(globalDisplay, win, title);
         XMapWindow(globalDisplay, win);
@@ -120,6 +124,13 @@ namespace NewAge {
             std::cerr << "Failed to create window" << std::endl;
             return nullptr;
         }
+
+        Atom protos[2] = {
+            ((CrystalApplication_X11*)TheApplication)->atoms.window._delete,
+            ((CrystalApplication_X11*)TheApplication)->atoms.window.take_focus
+        };
+        XSetWMProtocols(globalDisplay, win, protos, 2);
+
 
         XStoreName(globalDisplay, win, title);
         XMapWindow(globalDisplay, win);

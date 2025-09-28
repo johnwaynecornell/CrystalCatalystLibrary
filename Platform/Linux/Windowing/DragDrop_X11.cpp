@@ -346,7 +346,7 @@ namespace NewAge {
             Atom XdndSelection = AppX11->atoms.xdnd.selection;
             Atom target = XInternAtom(display, xformat, False);
 
-            XConvertSelection(display, XdndSelection, target, XdndSelection, window, CurrentTime);
+            XConvertSelection(display, XdndSelection, target, XdndSelection, window, last_user_time);
             std::cerr << mod_header() << "XConvertSelection called with target: " << xformat << std::endl;
             return true;
         }
@@ -412,10 +412,10 @@ namespace NewAge {
                 if (sel == AppX11->atoms.clipboard && !this->retry_with_property) {
                     this->retry_with_property = true;
                     request_selection(event->xselection.display,
-                                      window,
+                                      this,
                                       AppX11->atoms.clipboard,
-                                      event->xselection.target,   // same target as request (TARGETS here)
-                                      /*with_property_atom=*/true);
+                                      event->xselection.target  // same target as request (TARGETS here)
+                                      );
                     return true;
                 }
 
@@ -424,10 +424,10 @@ namespace NewAge {
                     this->tried_primary = true;
                     this->retry_with_property = false; // reset for the new selection
                     request_selection(event->xselection.display,
-                                      window,
+                                      this,
                                       AppX11->atoms.primary,
-                                      AppX11->atoms.utf8_string,  // make sure you intern UTF8_STRING at init
-                                      /*with_property_atom=*/false);
+                                      AppX11->atoms.utf8_string  // make sure you intern UTF8_STRING at init
+                                      );
                     return true;
                 }
 
@@ -435,10 +435,10 @@ namespace NewAge {
                 if (this->tried_primary && !this->retry_with_property) {
                     this->retry_with_property = true;
                     request_selection(event->xselection.display,
-                                      window,
+                                      this,
                                       AppX11->atoms.primary,
-                                      AppX11->atoms.utf8_string,
-                                      /*with_property_atom=*/true);
+                                      AppX11->atoms.utf8_string
+                                      );
                     return true;
                 }
             }
