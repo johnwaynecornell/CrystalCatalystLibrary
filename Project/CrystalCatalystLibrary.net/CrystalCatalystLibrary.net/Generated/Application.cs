@@ -7,7 +7,7 @@ public class Application
 {
     public static void Init(struct_array_struct<utf8_string_struct> args)
     {
-        Imports.Application_Init(args);
+        Imports.Application_Init(ref args);
     }
 
     public static int Run()
@@ -49,7 +49,7 @@ public class Application
     {
         // void Application_Init(struct_array_struct<utf8_string_struct> args)
         [DllImport("CrystalCatalystLibrary")]
-        public static extern void Application_Init(struct_array_struct<utf8_string_struct> args);
+        public static extern void Application_Init(ref struct_array_struct<utf8_string_struct> args);
 
         // int32_t Application_Run()
         [DllImport("CrystalCatalystLibrary")]
