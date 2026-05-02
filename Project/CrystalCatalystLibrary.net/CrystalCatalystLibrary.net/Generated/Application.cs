@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using JWCEssentials.net;
 
-namespace CrystalCatalystLibrary;
+namespace CrystalCatalystLibrary.net;
 public partial class Application
 {
     public class Imports
@@ -39,7 +39,6 @@ public partial class Application
         public static extern void  Application_WindowRemove(IntPtr window_handle);
 
     }
-
     public static void Init(string[] args)
     {
         utf8_string_struct[] tmp = (from s in args select (utf8_string_struct)s).ToArray();
@@ -47,25 +46,33 @@ public partial class Application
             (struct_array_struct<utf8_string_struct>)tmp;
 
         Imports.Application_Init(ref _args);
-    }public static int Run()
+    }
+    public static int Run()
     {
         return (int) Imports.Application_Run();
-    }public static void SignalClose()
+    }
+    public static void SignalClose()
     {
         Imports.Application_SignalClose();
-    }public static int ArgumentCount()
+    }
+    public static int ArgumentCount()
     {
         return (int) Imports.Application_ArgumentCount();
-    }public static string Argument(int  index)
+    }
+    public static string Argument(int  index)
     {
         return (string) Imports.Application_Argument((int)index);
-    }public static void ArgumentRemove(int  index)
+    }
+    public static void ArgumentRemove(int  index)
     {
         Imports.Application_ArgumentRemove((int)index);
-    }public static void WindowAdd(CrystalWindow  window_handle)
+    }
+    public static void WindowAdd(CrystalWindow  window_handle)
     {
         Imports.Application_WindowAdd(window_handle.Handle);
-    }public static void WindowRemove(CrystalWindow  window_handle)
+    }
+    public static void WindowRemove(CrystalWindow  window_handle)
     {
         Imports.Application_WindowRemove(window_handle.Handle);
-    }}
+    }
+}

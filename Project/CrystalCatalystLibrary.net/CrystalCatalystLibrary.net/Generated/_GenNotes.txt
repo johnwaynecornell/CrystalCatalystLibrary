@@ -1,0 +1,13 @@
+Application:
+
+    fix import,
+    Imports.Application_Init(ref _args);
+
+    public static void Init(string[] args)
+    {
+        utf8_string_struct[] tmp = (from s in args select (utf8_string_struct)s).ToArray();
+        struct_array_struct<utf8_string_struct> _args =
+            (struct_array_struct<utf8_string_struct>)tmp;
+
+        Imports.Application_Init(ref _args);
+    }

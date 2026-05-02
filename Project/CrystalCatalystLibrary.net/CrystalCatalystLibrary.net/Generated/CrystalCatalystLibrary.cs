@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using JWCEssentials.net;
 
-namespace CrystalCatalystLibrary;
+namespace CrystalCatalystLibrary.net;
 public partial class CrystalCatalystLibrary
 {
     public class Imports
@@ -14,10 +14,13 @@ public partial class CrystalCatalystLibrary
         [DllImport("CrystalCatalystLibrary")]
         public static extern bool  CrystalCatalystLibrary_Close();
 
-    }public static bool Initialize()
+    }
+    public static bool Initialize()
     {
         return (bool) Imports.CrystalCatalystLibrary_Initialize();
-    }public static bool Close()
+    }
+    public static bool Close()
     {
         return (bool) Imports.CrystalCatalystLibrary_Close();
-    }}
+    }
+}

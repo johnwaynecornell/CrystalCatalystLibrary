@@ -1,7 +1,7 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
 using System.Runtime.InteropServices;
-using CrystalCatalystLibrary;
+using CrystalCatalystLibrary.net;
 using JWCEssentials.net;
 
 Console.WriteLine(JWCEssentials.net.Essentials.feffect("fg_red(\"Hello\")"));

@@ -19,6 +19,7 @@
         "utf8_string_struct": "ref utf8_string_struct",
         "WindowHandle": "IntPtr",
         "int32_t": "int",
+        "uint32_t": "uint",
         "size_t": "IntPtr",
         "DataInterchange::Node": "IntPtr"
     ];
@@ -27,8 +28,16 @@
         "utf8_string_struct" : "string",
         "WindowHandle": "CrystalWindow",
         "int32_t": "int",
+        "uint32_t": "uint",
         "size_t": "IntPtr",
         "DataInterchange::Node": "IntPtr"
+    ];
+
+    HandleFreeMap : [
+        "CrystalWindow" : "Close",
+        "DataInterchange" : "Free",
+        "DragDropData" :"Free",
+        "SubMutex" : "Close"
     ];
 
     Directives : {
