@@ -52,7 +52,7 @@ P_INSTANCE(WindowHandle) CrystalApplication_Windows::WindowCreate(int32_t width,
     window->gl_context = nullptr; // Set GL context later
 
     auto* window_handle = (P_INSTANCE(WindowHandle))malloc(sizeof(WindowHandle));
-    window_handle->crystal_window = window;
+    window_handle->crystal_window = (CrystalWindow_Window *)window;
 
     window->myHandle = window_handle;
 
@@ -82,7 +82,7 @@ P_INSTANCE(WindowHandle) CrystalApplication_Windows::WindowCreate_Simple(int32_t
     window->gl_context = nullptr; // Set GL context later
 
     auto* window_handle = (P_INSTANCE(WindowHandle))malloc(sizeof(WindowHandle));
-    window_handle->crystal_window = window;
+    window_handle->crystal_window = (CrystalWindow_Window *)window;
 
     window->myHandle = window_handle;
 
