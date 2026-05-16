@@ -140,8 +140,19 @@ namespace NewAge
     void CrystalWindow_Windows::MouseRelease() {
         ReleaseCapture();
     }
+    
+    
 
 #define WM_USER_POSTCREATE WM_USER + 1
+
+    static POINT ScreenPointFromLParam(HWND hwnd, LPARAM lParam)
+    {
+        POINT pt;
+        pt.x = GET_X_LPARAM(lParam);
+        pt.y = GET_Y_LPARAM(lParam);
+        ScreenToClient(hwnd, &pt);
+        return pt;
+    }
 
     LRESULT CALLBACK CrystalWindow_Windows_WindowProc(HWND hwnd, uint32_t  uMsg, WPARAM wParam, LPARAM lParam) {
         P_INSTANCE(WindowHandle) handle;
