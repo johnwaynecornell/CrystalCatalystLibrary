@@ -32,7 +32,7 @@ namespace NewAge {
 
         P->pixformat = pixformat;
 
-        std::string pix = (std::string) pixformat;
+        std::string pix = (std::string) pixformat.c_str;
 
         size_t colon = pix.find(':');
         std::string _width;
