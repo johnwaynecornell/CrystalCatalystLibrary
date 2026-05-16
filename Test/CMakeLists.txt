@@ -23,4 +23,4 @@
  find_library(LIBJWCEssentials JWCEssentials)
  target_link_libraries(CrystalCatalystLibrary PUBLIC ${LIBJWCEssentials})
 
- target_link_libraries(test_client PUBLIC CrystalCatalystLibrary.0.0.1 ${LIBJWCEssentials})
+ target_link_libraries(test_client PUBLIC CrystalCatalystLibrary ${LIBJWCEssentials})
