@@ -45,14 +45,14 @@ void CrystalApplication_Windows::Init() {
 
 P_INSTANCE(WindowHandle) CrystalApplication_Windows::WindowCreate(int32_t width, int32_t height, utf8_string_struct title) {
 
-    auto* window = new CrystalWindow_Windows();
+    CrystalWindow_Windows* window = new CrystalWindow_Windows();
     memset(&window->callbacks, 0, sizeof(WindowCallbacks));  // Initialize callbacks to null
 
     window->hInstance = hInstance;
     window->gl_context = nullptr; // Set GL context later
 
     auto* window_handle = (P_INSTANCE(WindowHandle))malloc(sizeof(WindowHandle));
-    window_handle->crystal_window = (CrystalWindow_Window *)window;
+    window_handle->crystal_window = window;
 
     window->myHandle = window_handle;
 
@@ -75,14 +75,14 @@ P_INSTANCE(WindowHandle) CrystalApplication_Windows::WindowCreate(int32_t width,
 
 P_INSTANCE(WindowHandle) CrystalApplication_Windows::WindowCreate_Simple(int32_t width, int32_t height, utf8_string_struct title) {
 
-    auto* window = new CrystalWindow_Windows();
+    CrystalWindow_Windows* window = new CrystalWindow_Windows();
     memset(&window->callbacks, 0, sizeof(WindowCallbacks));  // Initialize callbacks to null
 
     window->hInstance = hInstance;
     window->gl_context = nullptr; // Set GL context later
 
     auto* window_handle = (P_INSTANCE(WindowHandle))malloc(sizeof(WindowHandle));
-    window_handle->crystal_window = (CrystalWindow_Window *)window;
+    window_handle->crystal_window = window;
 
     window->myHandle = window_handle;
 
