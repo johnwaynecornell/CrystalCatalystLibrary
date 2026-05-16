@@ -10,19 +10,11 @@
 
  isDebug($target_name ISDEBUG)
 
- if (ISDEBUG)
-  set(PTH "bin/Debug")
- else()
-  set(PTH "bin/Release")
- endif()
-
- set(PTH "${PTH}/${CMAKE_SYSTEM_NAME}/${CMAKE_SYSTEM_PROCESSOR}")
-
- target_link_directories(clipboard_html BEFORE PRIVATE $ENV{NewAge}/C/Libs/${PTH})
+ newage_configure_native_paths(clipboard_html)
 
  find_library(LIBJWCEssentials JWCEssentials)
  target_link_libraries(CrystalCatalystLibrary PUBLIC ${LIBJWCEssentials})
 
- target_link_libraries(clipboard_html PUBLIC CrystalCatalystLibrary.0.0.1 ${LIBJWCEssentials})
+ target_link_libraries(clipboard_html PUBLIC CrystalCatalystLibrary ${LIBJWCEssentials})
 
  shuttle(clipboard_html bin)

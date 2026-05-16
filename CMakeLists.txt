@@ -46,16 +46,16 @@ initPlatformConfig()
 
  add_definitions(-DBUILD_CRYSTALCATALYSTLIBRARY)
 
-set_target_output(CrystalCatalystLibrary ${CRYSTAL_FUNDAMENTALS_VERSION_MAJOR} ${CRYSTAL_FUNDAMENTALS_VERSION_MINOR} ${CRYSTAL_FUNDAMENTALS_VERSION_BUILD})
+#set_target_output(CrystalCatalystLibrary ${CRYSTAL_FUNDAMENTALS_VERSION_MAJOR} ${CRYSTAL_FUNDAMENTALS_VERSION_MINOR} ${CRYSTAL_FUNDAMENTALS_VERSION_BUILD})
 
-find_library(LIBJWCEssentials JWCEssentials)
+ newage_configure_native_paths(CrystalCatalystLibrary)
+
+ find_library(LIBJWCEssentials JWCEssentials)
 target_link_libraries(CrystalCatalystLibrary PUBLIC ${LIBJWCEssentials})
 
 add_subdirectory(Test)
 add_subdirectory(Tools/clipboard_html)
 add_subdirectory(Tools/htmlify_clipboard)
 
-target_compile_options(CrystalCatalystLibrary PUBLIC "-Wno-return-type-c-linkage")
-
- shuttle(CrystalCatalystLibrary lib)
+shuttle(CrystalCatalystLibrary lib)
  
