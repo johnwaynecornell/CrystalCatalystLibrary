@@ -25,6 +25,7 @@ public:
     virtual void Init();
 
     virtual P_INSTANCE(WindowHandle) WindowCreate(int32_t width, int32_t height, utf8_string_struct title);
+    virtual P_INSTANCE(WindowHandle) WindowCreate_Simple(int32_t width, int32_t height, utf8_string_struct title);
 
     virtual void DispatchCycle();
     virtual bool HasMessage();

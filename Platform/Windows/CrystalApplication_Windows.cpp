@@ -73,6 +73,36 @@ P_INSTANCE(WindowHandle) CrystalApplication_Windows::WindowCreate(int32_t width,
     return window_handle;
 }
 
+P_INSTANCE(WindowHandle) CrystalApplication_Windows::WindowCreate_Simple(int32_t width, int32_t height, utf8_string_struct title) {
+
+    auto* window = new CrystalWindow_Windows();
+    memset(&window->callbacks, 0, sizeof(WindowCallbacks));  // Initialize callbacks to null
+
+    window->hInstance = hInstance;
+    window->gl_context = nullptr; // Set GL context later
+
+    auto* window_handle = (P_INSTANCE(WindowHandle))malloc(sizeof(WindowHandle));
+    window_handle->crystal_window = window;
+
+    window->myHandle = window_handle;
+
+    HWND hwnd = CreateWindowEx(
+            WS_EX_TOOLWINDOW,
+            wc.lpszClassName,
+            title,
+            WS_POPUP,
+            -10000, -10000, width, height,
+            nullptr,
+            nullptr,
+            hInstance,
+            window_handle
+    );
+
+    Application_WindowAdd(window_handle);
+
+    return window_handle;
+}
+
 void CrystalApplication_Windows::DispatchCycle()
 {
     MSG msg;
