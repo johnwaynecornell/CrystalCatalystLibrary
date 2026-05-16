@@ -1,7 +1,7 @@
  cmake_minimum_required(VERSION 3.25)
 
  set(CMAKE_CXX_STANDARD 17)
- 
+
  include($ENV{NewAge}/include/JWCEssentials/JWCEssentials.cmake)
 
  add_executable(htmlify_clipboard
@@ -15,6 +15,6 @@
  find_library(LIBJWCEssentials JWCEssentials)
  find_library(LIBJWCCommandSpawn JWCCommandSpawn)
 
- target_link_libraries(htmlify_clipboard PUBLIC CrystalCatalystLibrary.0.0.1 ${LIBJWCEssentials} ${LIBJWCCommandSpawn})
+ target_link_libraries(htmlify_clipboard PUBLIC CrystalCatalystLibrary ${LIBJWCEssentials} ${LIBJWCCommandSpawn})
 
  shuttle(htmlify_clipboard bin)
