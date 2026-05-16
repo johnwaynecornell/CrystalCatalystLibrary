@@ -827,6 +827,14 @@ namespace NewAge {
             if (req->target == XInternAtom(req->display, "text/plain", False)) format = "text/plain";
             else if (req->target == XInternAtom(req->display, "text/html", False)) format = "text/html";
             else if (req->target == XInternAtom(req->display, "text/uri-list", False)) format = "text/file-uri";
+            else
+            {
+                format = XGetAtomName(req->display, req->target);
+                if (format == nullptr) {
+                    std::cerr << mod_header() << "Unknown target format: " << XGetAtomName(req->display, req->target) << std::endl;
+                    return false;
+                }
+            }
 
             std::cerr << mod_header() << "Chosen format: " << format << std::endl;
 

@@ -33,6 +33,10 @@ public:
     virtual void GLInit();
     virtual void Show(bool restore);
 
+    void Close() override;
+    void PostClose() override;
+
+
     virtual void RegisterDragTarget();
     virtual void DragStart(P_INSTANCE(DragDropData) data, int32_t x, int32_t y);
 

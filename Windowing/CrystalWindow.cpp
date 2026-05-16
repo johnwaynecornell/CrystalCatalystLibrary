@@ -149,7 +149,7 @@ namespace NewAge {
         return (handler_ptr != nullptr);
     }
 
-    bool CrystalWindow_SetMessaqeHandler(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct handler_name, P_INSTANCE(void) handler) {
+    bool CrystalWindow_SetMessageHandler(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct handler_name, P_INSTANCE(void) handler) {
         P_INSTANCE(void) *addr;
         if (!lookup_message_handler(window_handle, handler_name, addr)) return false;
         *addr = handler;

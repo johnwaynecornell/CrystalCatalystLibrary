@@ -22,33 +22,44 @@
 
 using namespace JWCEssentials;
 
-namespace NewAge {
+namespace NewAge
+{
+    wchar_t ConvertKeyCodeToUnicode(uint32_t  keyCode) {
+        BYTE keyboardState[256];
+        GetKeyboardState(keyboardState);
 
+        wchar_t unicodeChar[2];
+        int32_t result = ToUnicode(keyCode, 0, keyboardState, unicodeChar, 2, 0);
 
-wchar_t ConvertKeyCodeToUnicode(uint32_t  keyCode) {
-    BYTE keyboardState[256];
-    GetKeyboardState(keyboardState);
-
-    wchar_t unicodeChar[2];
-    int32_t result = ToUnicode(keyCode, 0, keyboardState, unicodeChar, 2, 0);
-
-    if (result > 0) {
-        return unicodeChar[0];
+        if (result > 0) {
+            return unicodeChar[0];
+        }
+        return 0;
     }
-    return 0;
-}
 
-/*
-    [LeftShift]    CrystalWindow_X11:KeyPress, unicodeChar = 65505
-    [LeftCtrl]    CrystalWindow_X11:KeyPress, unicodeChar = 65507
-    [LeftAlt]    CrystalWindow_X11:KeyPress, unicodeChar = 65513
- */
+    static void DispatchMouseButtonDown(P_INSTANCE(WindowHandle) handle, P_INSTANCE(CrystalWindow_Windows) wnd, int32_t button, int32_t x, int32_t y) {
+        if (wnd->callbacks.on_mouse_down) {
+            wnd->callbacks.on_mouse_down(handle, button, x, y);
+        }
+    }
+
+    static void DispatchMouseButtonUp(P_INSTANCE(WindowHandle) handle, P_INSTANCE(CrystalWindow_Windows) wnd, int32_t button, int32_t x, int32_t y) {
+        if (wnd->callbacks.on_mouse_up) {
+            wnd->callbacks.on_mouse_up(handle, button, x, y);
+        }
+    }
+
+    /*
+        [LeftShift]    CrystalWindow_X11:KeyPress, unicodeChar = 65505
+        [LeftCtrl]    CrystalWindow_X11:KeyPress, unicodeChar = 65507
+        [LeftAlt]    CrystalWindow_X11:KeyPress, unicodeChar = 65513
+     */
 
 
-LRESULT CALLBACK WindowProc(HWND hwnd, uint32_t  uMsg, WPARAM wParam, LPARAM lParam);
+    LRESULT CALLBACK WindowProc(HWND hwnd, uint32_t  uMsg, WPARAM wParam, LPARAM lParam);
 
-void CrystalWindow_Windows::GLInit() {
-    PIXELFORMATDESCRIPTOR pfd = {
+    void CrystalWindow_Windows::GLInit() {
+        PIXELFORMATDESCRIPTOR pfd = {
             sizeof(PIXELFORMATDESCRIPTOR),   // size of this pfd
             1,                               // version number
             PFD_DRAW_TO_WINDOW |             // support window
@@ -69,66 +80,103 @@ void CrystalWindow_Windows::GLInit() {
             0, 0, 0                          // layer masks ignored
     };
 
-    HDC hdc = GetDC(hwnd);
-    int32_t iPixelFormat = ChoosePixelFormat(hdc, &pfd);
-    SetPixelFormat(hdc, iPixelFormat, &pfd);
+        HDC hdc = GetDC(hwnd);
+        int32_t iPixelFormat = ChoosePixelFormat(hdc, &pfd);
+        SetPixelFormat(hdc, iPixelFormat, &pfd);
 
-    gl_context = wglCreateContext(hdc);
-    wglMakeCurrent(hdc, gl_context);
-}
+        gl_context = wglCreateContext(hdc);
+        wglMakeCurrent(hdc, gl_context);
+    }
 
-void CrystalWindow_Windows::Show(bool restore)
-{
-    ShowWindow(hwnd, restore ? SW_SHOWNORMAL : SW_SHOW);
-}
+    void CrystalWindow_Windows::Show(bool restore)
+    {
+        ShowWindow(hwnd, restore ? SW_SHOWNORMAL : SW_SHOW);
+    }
+
+    void CrystalWindow_Windows::Close()
+    {
+        if (is_closed) { return; }
+        is_closed = true;
+
+        if (!hwnd) {return; }
+
+        HWND closing_hwnd = hwnd;
+
+        if (callbacks.on_close) {
+            callbacks.on_close(myHandle);
+        }
+
+        RevokeDragDrop(closing_hwnd);
+
+        if (GetCapture() == closing_hwnd) {
+            ReleaseCapture();
+        }
+
+        if (gl_context) {
+            wglMakeCurrent(nullptr, nullptr);
+            wglDeleteContext(gl_context);
+            gl_context = nullptr;
+        }
+
+        SetWindowLongPtr(closing_hwnd, GWLP_USERDATA, 0);
+
+        hwnd = nullptr;
+        ready = false;
+
+        DestroyWindow(closing_hwnd);
+    }
+
+    void CrystalWindow_Windows::PostClose()
+    {
+        if (!hwnd) return;
+        PostMessage(hwnd, WM_CLOSE, 0, 0);
+    }
 
 
-void CrystalWindow_Windows::MouseCapture() {
-    SetCapture(hwnd);
-}
+    void CrystalWindow_Windows::MouseCapture() {
+        SetCapture(hwnd);
+    }
 
-void CrystalWindow_Windows::MouseRelease() {
-    ReleaseCapture();
-}
+    void CrystalWindow_Windows::MouseRelease() {
+        ReleaseCapture();
+    }
 
 #define WM_USER_POSTCREATE WM_USER + 1
 
-LRESULT CALLBACK CrystalWindow_Windows_WindowProc(HWND hwnd, uint32_t  uMsg, WPARAM wParam, LPARAM lParam) {
-    P_INSTANCE(WindowHandle) handle;
-    
-    P_INSTANCE(CrystalWindow_Windows) wnd;
+    LRESULT CALLBACK CrystalWindow_Windows_WindowProc(HWND hwnd, uint32_t  uMsg, WPARAM wParam, LPARAM lParam) {
+        P_INSTANCE(WindowHandle) handle;
 
-    if (!wnd->received_first_message) { wnd->reset_uptime(); wnd->received_first_message = true; }
+        P_INSTANCE(CrystalWindow_Windows) wnd;
 
-    if (uMsg == WM_CREATE)
-    {
-        CREATESTRUCT* pCreate = (CREATESTRUCT*)lParam;
-        handle = (P_INSTANCE(WindowHandle) ) pCreate->lpCreateParams;
+        wnd = (P_INSTANCE(CrystalWindow_Windows) ) handle->crystal_window;
 
-        ((P_INSTANCE(CrystalWindow_Windows) ) handle->crystal_window)->hwnd = hwnd;
-        SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)handle);
-    } else  handle = (P_INSTANCE(WindowHandle) ) GetWindowLongPtr(hwnd, GWLP_USERDATA);
+        if (!wnd->received_first_message) { wnd->reset_uptime(); wnd->received_first_message = true; }
 
-    if (!handle) {
-        return
-                DefWindowProc(hwnd, uMsg, wParam, lParam
-                );
-    }
-    
-    wnd = (P_INSTANCE(CrystalWindow_Windows) ) handle->crystal_window;
-    
-    switch (uMsg) {
+        if (uMsg == WM_CREATE)
+        {
+            CREATESTRUCT* pCreate = (CREATESTRUCT*)lParam;
+            handle = (P_INSTANCE(WindowHandle) ) pCreate->lpCreateParams;
+
+            ((P_INSTANCE(CrystalWindow_Windows) ) handle->crystal_window)->hwnd = hwnd;
+            SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)handle);
+        } else  handle = (P_INSTANCE(WindowHandle) ) GetWindowLongPtr(hwnd, GWLP_USERDATA);
+
+        if (!handle) {
+            return DefWindowProc(hwnd, uMsg, wParam, lParam);
+        }
+
+        switch (uMsg) {
         case WM_CREATE: {
-            int32_t rc = DefWindowProc(hwnd, uMsg, wParam, lParam);
-            if (rc == 0)
-                PostMessage(hwnd, WM_USER_POSTCREATE, 0, 0);
-            return rc;
+                int32_t rc = DefWindowProc(hwnd, uMsg, wParam, lParam);
+                if (rc == 0)
+                    PostMessage(hwnd, WM_USER_POSTCREATE, 0, 0);
+                return rc;
         }
         case WM_USER_POSTCREATE: {
-            //if (HRESULT_IsError(RegisterDragDrop(hwnd, reinterpret_cast<IDropTarget *>(handle->crystal_window)),
-            //    "RegisterDragDrop")) return 1;
+                //if (HRESULT_IsError(RegisterDragDrop(hwnd, reinterpret_cast<IDropTarget *>(handle->crystal_window)),
+                //    "RegisterDragDrop")) return 1;
 
-            return 0;
+                return 0;
         }
         case WM_PAINT: {
                 PAINTSTRUCT ps;
@@ -143,7 +191,7 @@ LRESULT CALLBACK CrystalWindow_Windows_WindowProc(HWND hwnd, uint32_t  uMsg, WPA
                 /* TODO */ //test for finalized CreateWindowSimple
                 wnd->ready = true;
                 EndPaint(hwnd, &ps);
-            }
+        }
             break;
         case WM_KEYDOWN:
             if (wnd->callbacks.on_key_down) {
@@ -167,19 +215,59 @@ LRESULT CALLBACK CrystalWindow_Windows_WindowProc(HWND hwnd, uint32_t  uMsg, WPA
             }
             break;
         case WM_LBUTTONDOWN:
-            if (wnd->callbacks.on_mouse_down) {
-                wnd->callbacks.
-                        on_mouse_down(handle, MK_LBUTTON, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)
-                );
-            }
+            DispatchMouseButtonDown(handle, wnd, CRYSTAL_MOUSE_BUTTON_LEFT, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             break;
         case WM_LBUTTONUP:
-            if (wnd->callbacks.on_mouse_up) {
-                wnd->callbacks.
-                        on_mouse_up(handle, MK_LBUTTON, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)
-                );
-            }
+            DispatchMouseButtonUp(handle, wnd, CRYSTAL_MOUSE_BUTTON_LEFT, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             break;
+        case WM_MBUTTONDOWN:
+            DispatchMouseButtonDown(handle, wnd, CRYSTAL_MOUSE_BUTTON_MIDDLE, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            break;
+        case WM_MBUTTONUP:
+            DispatchMouseButtonUp(handle, wnd, CRYSTAL_MOUSE_BUTTON_MIDDLE, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            break;
+        case WM_RBUTTONDOWN:
+            DispatchMouseButtonDown(handle, wnd, CRYSTAL_MOUSE_BUTTON_RIGHT, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            break;
+        case WM_RBUTTONUP:
+            DispatchMouseButtonUp(handle, wnd, CRYSTAL_MOUSE_BUTTON_RIGHT, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            break;
+        case WM_MOUSEWHEEL: {
+                POINT pt = ScreenPointFromLParam(hwnd, lParam);
+                int32_t button = GET_WHEEL_DELTA_WPARAM(wParam) > 0
+                    ? CRYSTAL_MOUSE_BUTTON_WHEEL_UP
+                    : CRYSTAL_MOUSE_BUTTON_WHEEL_DOWN;
+
+                DispatchMouseButtonDown(handle, wnd, button, pt.x, pt.y);
+                DispatchMouseButtonUp(handle, wnd, button, pt.x, pt.y);
+                break;
+        }
+        case WM_MOUSEHWHEEL: {
+                POINT pt = ScreenPointFromLParam(hwnd, lParam);
+                int32_t button = GET_WHEEL_DELTA_WPARAM(wParam) < 0
+                    ? CRYSTAL_MOUSE_BUTTON_WHEEL_LEFT
+                    : CRYSTAL_MOUSE_BUTTON_WHEEL_RIGHT;
+
+                DispatchMouseButtonDown(handle, wnd, button, pt.x, pt.y);
+                DispatchMouseButtonUp(handle, wnd, button, pt.x, pt.y);
+                break;
+        }
+        case WM_XBUTTONDOWN: {
+                int32_t button = GET_XBUTTON_WPARAM(wParam) == XBUTTON1
+                    ? CRYSTAL_MOUSE_BUTTON_X1
+                    : CRYSTAL_MOUSE_BUTTON_X2;
+
+                DispatchMouseButtonDown(handle, wnd, button, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+                return TRUE;
+        }
+        case WM_XBUTTONUP: {
+                int32_t button = GET_XBUTTON_WPARAM(wParam) == XBUTTON1
+                    ? CRYSTAL_MOUSE_BUTTON_X1
+                    : CRYSTAL_MOUSE_BUTTON_X2;
+
+                DispatchMouseButtonUp(handle, wnd, button, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+                return TRUE;
+        }
         case WM_SIZE:
             if (wnd->callbacks.on_resize) {
                 wnd->callbacks.
@@ -199,100 +287,102 @@ LRESULT CALLBACK CrystalWindow_Windows_WindowProc(HWND hwnd, uint32_t  uMsg, WPA
                         on_focus_out(handle);
             }
             break;
+        case WM_CLOSE:
+            wnd->Close();
+            return 0;
+
         case WM_DESTROY:
-            if (wnd->callbacks.on_close) {
-                wnd->callbacks.
-                        on_close(handle);
-            }
-            break;
+            wnd->hwnd = nullptr;
+            return 0;
+
         case WM_QUIT:
             break;
         default:
             //std::cout << "MESSAGE:" << uMsg << std::endl;
             return DefWindowProc(hwnd, uMsg, wParam, lParam);
-    }
-    return 0;
-}
-
-void CrystalWindow_Windows::PresentImage(utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height)
-{
-    if (!pixdata || !pixformat) return;
-
-    PixData proxy= Pixels_ConvertPixels(pixformat, "bgra:int8", pixdata, pixdata_length, width, height);
-    /* TODO */ //Check error condition
-
-    P_ELEMENTS(void) m = proxy ? proxy.pix_data : pixdata;
-
-    HDC hdc = GetDC(hwnd);
-
-
-    BITMAPINFO bmi;
-    memset(&bmi, 0, sizeof(bmi));
-    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    bmi.bmiHeader.biWidth = width;
-    bmi.bmiHeader.biHeight = -height; // Top-down image
-    bmi.bmiHeader.biPlanes = 1;
-    bmi.bmiHeader.biBitCount = 32; // 32 bits per pixel
-    bmi.bmiHeader.biCompression = BI_RGB;
-
-    StretchDIBits(hdc, 0, 0, width, height, 0, 0, width, height, m, &bmi, DIB_RGB_COLORS, SRCCOPY);
-
-    if (proxy) proxy.pix_data_free(proxy.pix_data);
-    
-    ReleaseDC(hwnd, hdc);
-}
-
-void CrystalWindow_Windows::QueueRedraw()
-{
-    // Invalidate the window rectangle to force a redraw
-    InvalidateRect(hwnd, nullptr, TRUE);
-    UpdateWindow(hwnd);
-}
-
-
-CrystalWindow_Windows::CrystalWindow_Windows() : m_cRef(1)
-{
-
-}
-
-HRESULT __stdcall CrystalWindow_Windows::QueryInterface(REFIID iid, P_ELEMENTS(void) * ppvObject)
-{
-    if(iid == IID_IUnknown)
-    {
-        AddRef();
-        *ppvObject = static_cast<IDropTarget *>(this);
-        return S_OK;
-    } else if (iid == IID_IDropTarget)
-    {
-        AddRef();
-        *ppvObject = static_cast<IDropTarget *>(this);
-        return S_OK;
-
-    }
-    else if (iid == IID_IDropSource) {
-        AddRef();
-        *ppvObject = static_cast<IDropSource *>(this);
-        return S_OK;
-    } else
-    {
-        *ppvObject = 0;
-        return E_NOINTERFACE;
-    }
-}
-
-ULONG __stdcall CrystalWindow_Windows::AddRef()
-{
-    return InterlockedIncrement(&m_cRef);
-}
-
-ULONG __stdcall CrystalWindow_Windows::Release()
-{
-    if(InterlockedDecrement(&m_cRef) == 0)
-    {
-        delete this;
+        }
         return 0;
     }
 
-    return m_cRef;
-}
+    void CrystalWindow_Windows::PresentImage(utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height)
+    {
+        if (!pixdata || !pixformat) return;
+
+        PixData proxy= Pixels_ConvertPixels(pixformat, "bgra:int8", pixdata, pixdata_length, width, height);
+        /* TODO */ //Check error condition
+
+        P_ELEMENTS(void) m = proxy ? proxy.pix_data : pixdata;
+
+        HDC hdc = GetDC(hwnd);
+
+
+        BITMAPINFO bmi;
+        memset(&bmi, 0, sizeof(bmi));
+        bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+        bmi.bmiHeader.biWidth = width;
+        bmi.bmiHeader.biHeight = -height; // Top-down image
+        bmi.bmiHeader.biPlanes = 1;
+        bmi.bmiHeader.biBitCount = 32; // 32 bits per pixel
+        bmi.bmiHeader.biCompression = BI_RGB;
+
+        StretchDIBits(hdc, 0, 0, width, height, 0, 0, width, height, m, &bmi, DIB_RGB_COLORS, SRCCOPY);
+
+        if (proxy) proxy.pix_data_free(proxy.pix_data);
+
+        ReleaseDC(hwnd, hdc);
+    }
+
+    void CrystalWindow_Windows::QueueRedraw()
+    {
+        // Invalidate the window rectangle to force a redraw
+        InvalidateRect(hwnd, nullptr, TRUE);
+        UpdateWindow(hwnd);
+    }
+
+
+    CrystalWindow_Windows::CrystalWindow_Windows() : m_cRef(1)
+    {
+
+    }
+
+    HRESULT __stdcall CrystalWindow_Windows::QueryInterface(REFIID iid, P_ELEMENTS(void) * ppvObject)
+    {
+        if(iid == IID_IUnknown)
+        {
+            AddRef();
+            *ppvObject = static_cast<IDropTarget *>(this);
+            return S_OK;
+        } else if (iid == IID_IDropTarget)
+        {
+            AddRef();
+            *ppvObject = static_cast<IDropTarget *>(this);
+            return S_OK;
+
+        }
+        else if (iid == IID_IDropSource) {
+            AddRef();
+            *ppvObject = static_cast<IDropSource *>(this);
+            return S_OK;
+        } else
+        {
+            *ppvObject = 0;
+            return E_NOINTERFACE;
+        }
+    }
+
+    ULONG __stdcall CrystalWindow_Windows::AddRef()
+    {
+        return InterlockedIncrement(&m_cRef);
+    }
+
+    ULONG __stdcall CrystalWindow_Windows::Release()
+    {
+        if(InterlockedDecrement(&m_cRef) == 0)
+        {
+            delete this;
+            return 0;
+        }
+
+        return m_cRef;
+    }
 }

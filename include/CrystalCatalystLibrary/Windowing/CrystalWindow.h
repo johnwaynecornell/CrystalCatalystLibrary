@@ -14,6 +14,21 @@ using namespace JWCEssentials;
 
 namespace NewAge {
     //##### DUMP REGION ##### callbacks
+    enum CrystalMouseButton : int32_t {
+        CRYSTAL_MOUSE_BUTTON_NONE = 0,
+
+        CRYSTAL_MOUSE_BUTTON_LEFT = 1,
+        CRYSTAL_MOUSE_BUTTON_MIDDLE = 2,
+        CRYSTAL_MOUSE_BUTTON_RIGHT = 3,
+
+        CRYSTAL_MOUSE_BUTTON_WHEEL_UP = 4,
+        CRYSTAL_MOUSE_BUTTON_WHEEL_DOWN = 5,
+        CRYSTAL_MOUSE_BUTTON_WHEEL_LEFT = 6,
+        CRYSTAL_MOUSE_BUTTON_WHEEL_RIGHT = 7,
+
+        CRYSTAL_MOUSE_BUTTON_X1 = 8,
+        CRYSTAL_MOUSE_BUTTON_X2 = 9
+    };
     typedef struct {
         void (*on_draw)(P_INSTANCE(WindowHandle) window_handle);
 
@@ -69,7 +84,7 @@ namespace NewAge {
     _EXPORT_ void CrystalWindow_Close(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ void CrystalWindow_PostClose(P_INSTANCE(WindowHandle) window_handle);
 
-    _EXPORT_ bool CrystalWindow_SetMessaqeHandler(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct handler_name, P_INSTANCE(void) handler);
+    _EXPORT_ bool CrystalWindow_SetMessageHandler(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct handler_name, P_INSTANCE(void) handler);
 
     _EXPORT_ double CrystalWindow_uptimeSeconds(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ void   CrystalWindow_uptimeReset(P_INSTANCE(WindowHandle) window_handle);
@@ -95,6 +110,8 @@ namespace NewAge {
 
         bool ready = false;
         bool received_first_message = false;
+
+        bool is_closed = false;
 
     private:
         struct MonotonicTimer {

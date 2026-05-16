@@ -31,6 +31,13 @@ namespace NewAge {
     }
 
     void CrystalWindow_X11::Close(){
+        if (is_closed) return;
+        is_closed = true;
+
+        if (callbacks.on_close) {
+            callbacks.on_close(myHandle);
+        }
+
         XDestroyWindow(display, window);
     }
 
@@ -312,9 +319,7 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
             return true;
             case ClientMessage:
                 if (event->xclient.data.l[0] == AppX11->atoms.window._delete) {
-                    if (callbacks.on_close) {
-                        callbacks.on_close(myHandle);
-                    } else Close();
+                    Close();
 
                     return true;
                 }
