@@ -362,9 +362,7 @@ int32_t main(int32_t argc, P_ELEMENTS(char *)  argv) {
 
     Application_Init(args);
 
-    paste = ((std::string)  args[1]) == "paste";
-
-
+    paste = ((std::string)  args[1].c_str) == "paste";
 
     P_INSTANCE(WindowHandle) window_handle = CrystalWindow_CreateSimple(1, 1, "paste_html Window");
 

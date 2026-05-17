@@ -8,12 +8,10 @@
          clipboard_html.cpp
  )
 
- isDebug($target_name ISDEBUG)
 
  newage_configure_native_paths(clipboard_html)
 
  find_library(LIBJWCEssentials JWCEssentials)
- target_link_libraries(CrystalCatalystLibrary PUBLIC ${LIBJWCEssentials})
 
  target_link_libraries(clipboard_html PUBLIC CrystalCatalystLibrary ${LIBJWCEssentials})
 

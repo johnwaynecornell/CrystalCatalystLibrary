@@ -8,11 +8,8 @@
          test_client.cpp
  )
 
- isDebug($target_name ISDEBUG)
-
- newage_configure_native_paths(clipboard_html)
+ newage_configure_native_paths(test_client)
 
  find_library(LIBJWCEssentials JWCEssentials)
- target_link_libraries(CrystalCatalystLibrary PUBLIC ${LIBJWCEssentials})
 
  target_link_libraries(test_client PUBLIC CrystalCatalystLibrary ${LIBJWCEssentials})
