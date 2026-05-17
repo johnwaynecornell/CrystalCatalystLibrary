@@ -38,7 +38,12 @@ void CrystalApplication_Windows::Init() {
 
     this->wc = wc;
 
-    RegisterClass(&this->wc);
+    if (RegisterClass(&this->wc) == 0) {
+        DWORD err = GetLastError();
+        if (err != ERROR_CLASS_ALREADY_EXISTS) {
+            HRESULT_IsError(HRESULT_FROM_WIN32(err), "RegisterClass");
+        }
+    }
 
 
 }
@@ -67,6 +72,10 @@ P_INSTANCE(WindowHandle) CrystalApplication_Windows::WindowCreate(int32_t width,
             hInstance,
             window_handle
     );
+
+    if (!hwnd) {
+        HRESULT_IsError(HRESULT_FROM_WIN32(GetLastError()), "CreateWindowEx");
+    }
 
     Application_WindowAdd(window_handle);
 
@@ -97,6 +106,10 @@ P_INSTANCE(WindowHandle) CrystalApplication_Windows::WindowCreate_Simple(int32_t
             hInstance,
             window_handle
     );
+
+    if (!hwnd) {
+        HRESULT_IsError(HRESULT_FROM_WIN32(GetLastError()), "CreateWindowEx");
+    }
 
     Application_WindowAdd(window_handle);
 

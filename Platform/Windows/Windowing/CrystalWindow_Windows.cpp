@@ -155,25 +155,26 @@ namespace NewAge
     }
 
     LRESULT CALLBACK CrystalWindow_Windows_WindowProc(HWND hwnd, uint32_t  uMsg, WPARAM wParam, LPARAM lParam) {
-        P_INSTANCE(WindowHandle) handle;
+        P_INSTANCE(WindowHandle) handle = nullptr;
 
-        P_INSTANCE(CrystalWindow_Windows) wnd;
-
-        wnd = (P_INSTANCE(CrystalWindow_Windows) ) handle->crystal_window;
-
-        if (!wnd->received_first_message) { wnd->reset_uptime(); wnd->received_first_message = true; }
-
-        if (uMsg == WM_CREATE)
+        if (uMsg == WM_NCCREATE)
         {
-            CREATESTRUCT* pCreate = (CREATESTRUCT*)lParam;
+            auto* pCreate = (CREATESTRUCT*)lParam;
             handle = (P_INSTANCE(WindowHandle) ) pCreate->lpCreateParams;
-
-            ((P_INSTANCE(CrystalWindow_Windows) ) handle->crystal_window)->hwnd = hwnd;
             SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)handle);
         } else  handle = (P_INSTANCE(WindowHandle) ) GetWindowLongPtr(hwnd, GWLP_USERDATA);
 
         if (!handle) {
             return DefWindowProc(hwnd, uMsg, wParam, lParam);
+        }
+
+        auto* wnd = (P_INSTANCE(CrystalWindow_Windows) ) handle->crystal_window;
+
+        if (!wnd->received_first_message) { wnd->reset_uptime(); wnd->received_first_message = true; }
+
+        if (uMsg == WM_CREATE)
+        {
+            wnd->hwnd = hwnd;
         }
 
         switch (uMsg) {
