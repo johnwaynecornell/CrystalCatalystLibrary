@@ -13,6 +13,10 @@ namespace NewAge {
 
     void Application_Init(struct_array_struct<utf8_string_struct> args)
     {
+        if (TheApplication != nullptr) {
+            std::cerr << "Application already initialized. The app model means only one application can exist at a time." << std::endl;
+            exit(1);
+        }
         TheApplication = platform_initialize();
         TheApplication->SetArguments(args);
         TheApplication->Init();
