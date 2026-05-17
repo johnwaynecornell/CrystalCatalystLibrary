@@ -188,6 +188,7 @@ namespace NewAge
                 //if (HRESULT_IsError(RegisterDragDrop(hwnd, reinterpret_cast<IDropTarget *>(handle->crystal_window)),
                 //    "RegisterDragDrop")) return 1;
 
+                wnd->ready = true;
                 return 0;
         }
         case WM_PAINT: {
@@ -200,8 +201,6 @@ namespace NewAge
                     wnd->callbacks.
                             on_draw(handle);
                 }
-                /* TODO */ //test for finalized CreateWindowSimple
-                wnd->ready = true;
                 EndPaint(hwnd, &ps);
         }
             break;
