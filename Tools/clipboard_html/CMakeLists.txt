@@ -9,8 +9,6 @@
  )
 
 
- newage_configure_native_paths(clipboard_html)
-
  find_library(LIBJWCEssentials JWCEssentials)
 
  target_link_libraries(clipboard_html PUBLIC CrystalCatalystLibrary ${LIBJWCEssentials})

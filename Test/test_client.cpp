@@ -81,7 +81,7 @@ void on_key_down(P_INSTANCE(WindowHandle) window_handle, int32_t keycode) {
     if (keycode == 'c' || keycode == 'C') {
         P_INSTANCE(DataInterchange)data = DataInterchange_Create();
         DataInterchange_FormatAdd(data, "text/file-uri");
-        CrystalWindow_+ClipboardCopy(window_handle, data);
+        CrystalWindow_ClipboardCopy(window_handle, data);
 
     } else if (keycode == 'p' || keycode == 'P') {
         DataInterchange *data = CrystalWindow_ClipboardPaste(window_handle);

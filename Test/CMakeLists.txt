@@ -8,8 +8,6 @@
          test_client.cpp
  )
 
- newage_configure_native_paths(test_client)
-
  find_library(LIBJWCEssentials JWCEssentials)
 
  target_link_libraries(test_client PUBLIC CrystalCatalystLibrary ${LIBJWCEssentials})

@@ -8,8 +8,6 @@
          htmlify_clipboard.cpp
  )
 
- newage_configure_native_paths(htmlify_clipboard)
-
  find_library(LIBJWCEssentials JWCEssentials)
  find_library(LIBJWCCommandSpawn JWCCommandSpawn)
 
