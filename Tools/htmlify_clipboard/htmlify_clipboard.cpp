@@ -299,8 +299,44 @@ void on_drag_receive_drop(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(Dra
 bool dropped = false;
 
 bool close_next_idle=false;
+bool action_done = false;
 
 void on_idle(P_INSTANCE(WindowHandle) window_handle) {
+    if (action_done) return;
+    if (CrystalWindow_uptimeSeconds(window_handle) < 0.5) return;
+
+    DataInterchange *data = CrystalWindow_ClipboardPaste(window_handle);
+
+    // Process the pasted data
+    utf8_string_struct type;
+    P_INSTANCE(void)data_ptr;
+    size_t size;
+
+    int32_t i = 0;
+    while (format_prec[i] != nullptr) i++;
+
+    utf8_string_struct format = nullptr;
+
+    for (P_INSTANCE(DragDropData::Node)node = DataInterchange_FormatEnum(data);
+         i != 0 && node != nullptr; node = DataInterchange_FormatEnumNext(node)) {
+        utf8_string_struct drop_format = nullptr;
+
+        DataInterchange_FormatEnumText(node, &drop_format);
+
+        for (int32_t i2 = 0; i2 < i; i2++) {
+            if (strcmp(format_prec[i2], drop_format) == 0) {
+                i = i2;
+                format = format_prec[i];
+                break;
+            }
+        }
+    }
+
+    if (format != nullptr) {
+        DataInterchange_Select(data, format);
+        action_done = true;
+    }
+
     if (close_next_idle) {
         std::cerr << "closing" << std::endl;
         CrystalWindow_PostClose(window_handle);

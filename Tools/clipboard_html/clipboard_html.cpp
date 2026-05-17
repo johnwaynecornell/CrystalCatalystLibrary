@@ -215,25 +215,23 @@ void on_drag_provide_finished(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE
     DataInterchange_Free(data);
 }
 
+std::string stdin_cache = "";
+bool stdin_read = false;
+
 void on_clipboard_provide_chosen(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DataInterchange)  data, utf8_string_struct format)
 {
     if (strcmp(format, "text/html") == 0) {
-        std::string cum,in;
-
-        std::cout << "accepting input" << std::endl;
-
-        std::string input="";
-
-        std::string line;
-
-        int c;
-        while ((c = fgetc(stdin)) != EOF) {
-         input += (char)c;
+        if (!stdin_read) {
+            std::cerr << "Reading from stdin..." << std::endl;
+            int c;
+            while ((c = fgetc(stdin)) != EOF) {
+                stdin_cache += (char)c;
+            }
+            stdin_read = true;
+            std::cerr << "Read " << stdin_cache.length() << " bytes." << std::endl;
         }
-        std::cout << "setting selection" << std::endl;
 
-        DataInterchange_SelectionSet(data, format, (void *) input.c_str(), input.length());
-        //CrystalWindow_PostClose(window_handle);
+        DataInterchange_SelectionSet(data, format, (void *) stdin_cache.c_str(), stdin_cache.length());
     }
 }
 
@@ -272,6 +270,7 @@ void on_drag_receive_drop(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(Dra
 bool paste;
 
 bool close_next_idle=false;
+bool action_done = false;
 
 void on_data_interchange_error(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DataInterchange)  data, utf8_string_struct error)
 {
@@ -283,6 +282,8 @@ void on_data_interchange_error(P_INSTANCE(WindowHandle) window_handle, P_INSTANC
 int drop_delay = 4;
 
 void on_idle(P_INSTANCE(WindowHandle) window_handle) {
+    if (action_done) return;
+
     if (close_next_idle) {
         std::cerr << "closing" << std::endl;
         CrystalWindow_PostClose(window_handle);
@@ -332,6 +333,8 @@ void on_idle(P_INSTANCE(WindowHandle) window_handle) {
             }
             else
                 DataInterchange_Select(data, format);
+            
+            action_done = true;
 
         } else //copy
         {
@@ -345,6 +348,7 @@ void on_idle(P_INSTANCE(WindowHandle) window_handle) {
             DataInterchange_FormatAdd(data, "text/html");
             CrystalWindow_ClipboardCopy(window_handle, data);
 
+            action_done = true;
             //close_next_idle = true;
         }
 

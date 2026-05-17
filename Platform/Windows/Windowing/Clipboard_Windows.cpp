@@ -39,7 +39,12 @@ void CrystalWindow_ClipboardCopy(P_INSTANCE(WindowHandle) handle, P_INSTANCE(Dat
 
     HRESULT hr = OleSetClipboard(pDataObject);
     if (FAILED(hr)) {
-        std::cerr << "Failed to set clipboard data. HRESULT: " << std::hex << hr << std::endl;
+        if (hr == CO_E_NOTINITIALIZED) {
+            std::cerr << "Failed to set clipboard data. COM/OLE not initialized on this thread. "
+                         "Ensure Application_Init was called and the thread is STA." << std::endl;
+        } else {
+            std::cerr << "Failed to set clipboard data. HRESULT: " << std::hex << hr << std::endl;
+        }
     }
 
     pDataObject->Release();
@@ -56,7 +61,12 @@ void CrystalWindow_ClipboardCopyWithCallback(void (*provide)(P_INSTANCE(DataInte
 
     HRESULT hr = OleSetClipboard(pDataObject);
     if (FAILED(hr)) {
-        std::cerr << "Failed to set clipboard data. HRESULT: " << std::hex << hr << std::endl;
+        if (hr == CO_E_NOTINITIALIZED) {
+            std::cerr << "Failed to set clipboard data. COM/OLE not initialized on this thread. "
+                         "Ensure Application_Init was called and the thread is STA." << std::endl;
+        } else {
+            std::cerr << "Failed to set clipboard data. HRESULT: " << std::hex << hr << std::endl;
+        }
     }
 
     pDataObject->Release();
