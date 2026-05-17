@@ -26,8 +26,15 @@ LRESULT CALLBACK CrystalWindow_Windows_WindowProc(HWND hwnd, uint32_t  uMsg, WPA
 void CrystalApplication_Windows::Init() {
     CrystalApplication::Init();
 
-    HRESULT_IsError(CoInitialize(nullptr), "CoInitialize");
-    HRESULT_IsError(OleInitialize(nullptr), "OleInitialize");
+    HRESULT hr = CoInitialize(nullptr);
+    if (FAILED(hr) && hr != RPC_E_CHANGED_MODE) {
+        HRESULT_IsError(hr, "CoInitialize");
+    }
+
+    hr = OleInitialize(nullptr);
+    if (FAILED(hr) && hr != RPC_E_CHANGED_MODE) {
+        HRESULT_IsError(hr, "OleInitialize");
+    }
 
     hInstance = GetModuleHandle(nullptr);
 

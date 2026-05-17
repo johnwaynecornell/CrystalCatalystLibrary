@@ -8,18 +8,19 @@ namespace NewAge {
 
 P_INSTANCE(DataInterchange)  CrystalWindow_ClipboardPaste(P_INSTANCE(WindowHandle) handle)
 {
-    IDataObject* pDataObject = nullptr;
-    HRESULT hr = OleGetClipboard(&pDataObject);
-    if (FAILED(hr)) {
-        std::cerr << "Failed to get clipboard data. HRESULT: " << std::hex << hr << std::endl;
-    }
-
     P_INSTANCE(DataInterchange) data = DataInterchange_Create();
 	data->selection_type = DataInterchange::E_CLIPBOARD;
 	data->m_handle = handle;
 
+    IDataObject* pDataObject = nullptr;
+    HRESULT hr = OleGetClipboard(&pDataObject);
+    if (FAILED(hr)) {
+        std::cerr << "Failed to get clipboard data. HRESULT: " << std::hex << hr << std::endl;
+        return data;
+    }
+
     data->context = pDataObject;
-    hr= DataInterchange_ReadFormats(data, pDataObject);
+    hr = DataInterchange_ReadFormats(data, pDataObject);
 
     if (FAILED(hr)) {
         std::cerr << "Failed to get clipboard formats. HRESULT: " << std::hex << hr << std::endl;

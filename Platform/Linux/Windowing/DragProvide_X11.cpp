@@ -205,6 +205,10 @@ namespace NewAge {
             return None;
         }
 
+        if (child_return == None) return None;
+
+        target = child_return;
+
         // Loop to find the deepest child window at the coordinates
         while (true) {
             if (!XQueryPointer(display, child_return, &root_return, &child_return, &root_x, &root_y, &win_x, &win_y, &mask_return)) {

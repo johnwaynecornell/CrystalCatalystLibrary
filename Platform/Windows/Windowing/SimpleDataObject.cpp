@@ -122,8 +122,7 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
             *cfFormat = CF_UNICODETEXT;
 
         } else if (f == "text/html") {
-            //*cfFormat = RegisterClipboardFormat(CFSTR_HTML);
-            *cfFormat = RegisterClipboardFormat(CFSTR_MIME_HTML);
+            *cfFormat = RegisterClipboardFormat(CFSTR_HTML);
         } else if (f == "text/file-uri") {
             *cfFormat = CF_HDROP;
         } else {
@@ -138,7 +137,7 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
 
     HGLOBAL hGlobal = nullptr;
 
-    if (strcmp(format, "text/plain") == 0 || strcmp(format, "text/html") == 0) {
+    if (strcmp(format, "text/plain") == 0) {
         std::string utf8_text = std::string((char *) data_ptr, size);
         int32_t len = MultiByteToWideChar(CP_UTF8, 0, utf8_text.c_str(), -1, nullptr, 0);
         hGlobal = GlobalAlloc(GMEM_MOVEABLE, (len + 1) * sizeof(WCHAR));
@@ -146,6 +145,17 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
             LPWSTR lpszText = (LPWSTR) GlobalLock(hGlobal);
             if (lpszText) {
                 MultiByteToWideChar(CP_UTF8, 0, utf8_text.c_str(), -1, lpszText, len);
+                lpszText[len] = 0; // Ensure null terminator
+                GlobalUnlock(hGlobal);
+            }
+        }
+    } else if (strcmp(format, "text/html") == 0) {
+        hGlobal = GlobalAlloc(GMEM_MOVEABLE, size + 1);
+        if (hGlobal) {
+            char* lpszText = (char*)GlobalLock(hGlobal);
+            if (lpszText) {
+                memcpy(lpszText, data_ptr, size);
+                lpszText[size] = 0;
                 GlobalUnlock(hGlobal);
             }
         }
@@ -403,14 +413,24 @@ void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_struct
     HRESULT hr = ((IDataObject *)data->context)->GetData(&fmt, &stg);
 
     if (SUCCEEDED(hr)) {
-        if (f == "text/plain" || f == "text/html") {
+        if (f == "text/plain") {
             LPWSTR lpszText = static_cast<LPWSTR>(GlobalLock(stg.hGlobal));
             if (lpszText != nullptr) {
                 std::wstring ws(lpszText);
-                std::string text_data(ws.begin(), ws.end());
+                int size_needed = WideCharToMultiByte(CP_UTF8, 0, ws.c_str(), (int)ws.length(), NULL, 0, NULL, NULL);
+                std::string text_data(size_needed, 0);
+                WideCharToMultiByte(CP_UTF8, 0, ws.c_str(), (int)ws.length(), &text_data[0], size_needed, NULL, NULL);
                 GlobalUnlock(stg.hGlobal);
 
                 DataInterchange_SelectionSet(data, format, (P_INSTANCE(void))text_data.c_str(), text_data.length() + 1);
+            }
+        } else if (f == "text/html") {
+            char* lpszText = static_cast<char*>(GlobalLock(stg.hGlobal));
+            if (lpszText != nullptr) {
+                size_t data_size = GlobalSize(stg.hGlobal);
+                // HTML Format is usually UTF-8.
+                DataInterchange_SelectionSet(data, format, (P_INSTANCE(void))lpszText, data_size);
+                GlobalUnlock(stg.hGlobal);
             }
         } else if (f == "text/file-uri") {
             HDROP hDrop = static_cast<HDROP>(GlobalLock(stg.hGlobal));
