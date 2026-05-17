@@ -40,8 +40,8 @@ namespace NewAge {
         std::string distro = get_distro_name();
         std::string message = "MS Core fonts not found at '/usr/share/fonts/truetype/msttcorefonts/'\n";
 
-        int32_t i;
-        for (int32_t i; distro_instructions[i].key != nullptr; i++) {
+        int32_t i = 0;
+        for (; distro_instructions[i].key.c_str != nullptr; i++) {
             std::string d = distro_instructions[i].key.c_str;
             if (distro == d) {
                 message += "To perform the install, try:\n";
@@ -50,7 +50,7 @@ namespace NewAge {
             }
         }
 
-        if (distro_instructions[i].key == nullptr) {
+        if (distro_instructions[i].key.c_str == nullptr) {
             message += "no instructions, try a web search for 'install Microsoft's TrueType core fonts' for your distro\n";
 
             if (is_rpm_based()) {

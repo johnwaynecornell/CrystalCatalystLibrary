@@ -19,7 +19,11 @@ namespace NewAge {
         std::string line;
         while (std::getline(file, line)) {
             if (line.find("ID=") == 0) {
-                return line.substr(3);
+                std::string val = line.substr(3);
+                if (val.size() >= 2 && val.front() == '"' && val.back() == '"') {
+                    val = val.substr(1, val.size() - 2);
+                }
+                return val;
             }
         }
         return "Unknown";
