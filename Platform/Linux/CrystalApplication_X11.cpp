@@ -180,10 +180,6 @@ namespace NewAge {
 
         P_INSTANCE(CrystalWindow_X11)win = (P_INSTANCE(CrystalWindow_X11)) window_handle->crystal_window;
 
-        std::cerr << "CrystalApplication_X11::DispatchEvent : win := "
-            << std::hex << std::setw(8) << std::setfill('0') << (unsigned long long) win << std::dec
-            << std::endl;
-
         fflush(stdout);
 
         if (window_handle) {

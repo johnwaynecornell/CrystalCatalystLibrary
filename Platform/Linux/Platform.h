@@ -4,6 +4,12 @@
 
 #ifndef PLATFORM_LINUX_H
 #define PLATFORM_LINUX_H
+/*
+ *  build dependencies on Ubuntu:
+    sudo apt install libx11-dev libgl1-mesa-dev
+*/
+
+
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xresource.h>

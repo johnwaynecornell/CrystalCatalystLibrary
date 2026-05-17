@@ -5,6 +5,10 @@
 #define CRYSTALAPPLICATION_X11_H
 
 #include <vector>
+/*
+ *  build dependencies on Ubuntu:
+    sudo apt install libx11-dev libgl1-mesa-dev
+*/
 #include <X11/Xresource.h>
 
 #include "CrystalCatalystLibrary/CrystalCatalystLibrary.h"
