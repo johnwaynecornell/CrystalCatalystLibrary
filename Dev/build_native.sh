@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ ! -f "Dev/NewAge.dev.sh" ]; then
+if [ ! -f "$NewAge/JWCEssentials/Dev/NewAge.dev.sh" ]; then
   echo "Expected run from NewAge/Repo" >&2
   exit 1
 fi
 
-. Dev/NewAge.dev.sh
+. "$NewAge/JWCEssentials/Dev/NewAge.dev.sh"
 
 if [ ! -f "CMakeLists.txt" ]; then
   echo "Expected run from NewAge workspace root" >&2
