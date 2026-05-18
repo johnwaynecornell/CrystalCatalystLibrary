@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ ! -f "$NewAge/JWCEssentials/Dev/NewAge.dev.sh" ]; then
+if [ ! -f "../JWCEssentials/Dev/NewAge.dev.sh" ]; then
   echo "Expected run from NewAge/Repo" >&2
   exit 1
 fi
@@ -84,4 +84,4 @@ build_directory()
   verbose.sh dotnet build --configuration "$NewAge_Config"
 }
 
-build_directory Project/JWCEssentials.net
+build_directory Project/CrystalCatalystLibrary.net
