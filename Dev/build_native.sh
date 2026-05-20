@@ -96,6 +96,5 @@ build_directory()
 
   verbose.sh cmake --build . --config "$NewAge_Config"
 }
-}
 
 build_directory .
