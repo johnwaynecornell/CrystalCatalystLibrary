@@ -75,26 +75,6 @@ if [ -z "${NewAge_Lane:-}" ]; then
     export NewAge_Lane="$(newage_resolve_platform_lane)"
 fi
 
-build_directory()
-{
-  local source_dir="$REPO_DIR/$1"
-  local build_dir="$source_dir/build/$NewAge_Config/$NewAge_Lane"
-
-  echo "[build_native] Using build directory: $build_dir"
-  mkdir -p "$build_dir"
-  cd "$build_dir"
-
-  if [ "$FRESH" = "1" ]; then
-    verbose.sh cmake -S "$source_dir" -B . -DCMAKE_BUILD_TYPE="$NewAge_Config" --no-warn-unused-cli --fresh
-  else
-    verbose.sh cmake -S "$source_dir" -B . -DCMAKE_BUILD_TYPE="$NewAge_Config" --no-warn-unused-cli
-  fi
-
-  if [ "$CLEAN" = "1" ]; then
-      verbose.sh cmake --build . --config "$NewAge_Config" --target clean
-  fi
-
-  verbose.sh cmake --build . --config "$NewAge_Config"
-}
-
-build_directory .
+NEWAGE_BUILD_FRESH="$FRESH"
+NEWAGE_BUILD_CLEAN="$CLEAN"
+newage_native_build_directory .

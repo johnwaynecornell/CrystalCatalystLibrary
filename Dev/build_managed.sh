@@ -6,6 +6,8 @@ if [ ! -f "../JWCEssentials/Dev/NewAge.dev.sh" ]; then
   exit 1
 fi
 
+. "$NewAge/JWCEssentials/Dev/NewAge.dev.sh"
+
 if [ ! -f "CMakeLists.txt" ]; then
   echo "Expected run from NewAge workspace root" >&2
   exit 1
@@ -69,19 +71,6 @@ fi
 
 export NewAge_Config="$config"
 
-build_directory()
-{
-  cd "$REPO_DIR/$1"
-
-  if [ "$FRESH" = "1" ]; then
-    verbose.sh dotnet build --no-restore
-  fi
-
-  if [ "$CLEAN" = "1" ]; then
-      verbose.sh dotnet clean --configuration "$NewAge_Config"
-  fi
-
-  verbose.sh dotnet build --configuration "$NewAge_Config"
-}
-
-build_directory Project/CrystalCatalystLibrary.net
+NEWAGE_BUILD_FRESH="$FRESH"
+NEWAGE_BUILD_CLEAN="$CLEAN"
+newage_managed_build_directory Project/CrystalCatalystLibrary.net
