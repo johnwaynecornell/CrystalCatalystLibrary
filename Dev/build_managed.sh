@@ -8,11 +8,6 @@ fi
 
 . "$NewAge/JWCEssentials/Dev/NewAge.dev.sh"
 
-if [ ! -f "CMakeLists.txt" ]; then
-  echo "Expected run from NewAge workspace root" >&2
-  exit 1
-fi
-
 config=""
 FRESH="0"
 CLEAN="0"
