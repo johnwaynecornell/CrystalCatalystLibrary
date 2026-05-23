@@ -2,4 +2,14 @@
 bin
 obj
 cmake-build-*
+/build/
+*.kate-swp
+*DotSettings.user
+CMakeCache.txt
+CMakeFiles/
+/Dev/enabled_futures.lst
+*.cmake
+Makefile
+*.bak
+*.tmp
 /Under/
