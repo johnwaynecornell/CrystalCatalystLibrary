@@ -11,4 +11,9 @@
     <ItemGroup>
         <Reference Include="$(MyReferencePath)\JWCEssentials.net.dll"/>
     </ItemGroup>
+
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+        <Exec Command="bash NewAge_stage.sh '$(MSBuildProjectName)' '$(MyReferencePath)' '$(OutputPath)/'" />
+    </Target>
+    
 </Project>
