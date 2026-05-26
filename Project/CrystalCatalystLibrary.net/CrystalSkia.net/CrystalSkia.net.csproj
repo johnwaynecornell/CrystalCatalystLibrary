@@ -1,19 +1,23 @@
-<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
+
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
+
     <PropertyGroup>
         <MyReferencePath>$(NewAge)\DotNet\Libs\lib\$(Configuration)\$(TargetFramework)</MyReferencePath>
     </PropertyGroup>
     <ItemGroup>
         <Reference Include="$(MyReferencePath)\JWCEssentials.net.dll"/>
+        <Reference Include="$(MyReferencePath)\AnsiEffectSniffer.dll"/>
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="SkiaSharp" Version="3.119.2" />
     </ItemGroup>
 
     <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-        <Exec Command="bash NewAge_stage.sh '$(MSBuildProjectName)' '$(MyReferencePath)' '$(OutputPath)/'"/>
+        <Exec Command="bash NewAge_stage.sh '$(MSBuildProjectName)' '$(MyReferencePath)' '$(OutputPath)/'" />
     </Target>
-
 </Project>

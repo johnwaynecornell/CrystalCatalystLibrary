@@ -9,14 +9,13 @@
 
     <ItemGroup>
       <ProjectReference Include="..\CrystalCatalystLibrary.net\CrystalCatalystLibrary.net.csproj" />
+      <ProjectReference Include="..\CrystalSkia.net\CrystalSkia.net.csproj" />
     </ItemGroup>
 
     <PropertyGroup>
         <MyReferencePath>$(NewAge)\DotNet\Libs\lib\$(Configuration)\$(TargetFramework)</MyReferencePath>
     </PropertyGroup>
     <ItemGroup>
-        <Reference Include="$(MyReferencePath)\JWCEssentials.net.dll"/>
-        <Reference Include="$(MyReferencePath)\AnsiEffectSniffer.dll"/>
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="SkiaSharp" Version="3.119.2" />

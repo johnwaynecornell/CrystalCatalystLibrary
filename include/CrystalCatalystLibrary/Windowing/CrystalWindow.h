@@ -84,6 +84,11 @@ namespace NewAge {
     _EXPORT_ void CrystalWindow_Close(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ void CrystalWindow_PostClose(P_INSTANCE(WindowHandle) window_handle);
 
+    _EXPORT_ void CrystalWindow_SetSize(P_INSTANCE(WindowHandle) window_handle, int32_t width, int32_t height);
+    _EXPORT_ void CrystalWindow_GetSize(P_INSTANCE(WindowHandle) window_handle, P_OUT(int32_t) width, P_OUT(int32_t) height);
+    _EXPORT_ void CrystalWindow_SetLocation(P_INSTANCE(WindowHandle) window_handle, int32_t x, int32_t y);
+    _EXPORT_ void CrystalWindow_GetLocation(P_INSTANCE(WindowHandle) window_handle, P_OUT(int32_t) x, P_OUT(int32_t) y);
+
     _EXPORT_ bool CrystalWindow_SetMessageHandler(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct handler_name, P_INSTANCE(void) handler);
 
     _EXPORT_ double CrystalWindow_uptimeSeconds(P_INSTANCE(WindowHandle) window_handle);
@@ -137,6 +142,11 @@ namespace NewAge {
         virtual void Show(bool restore) = 0;
         virtual void Close() = 0;
         virtual void PostClose() = 0;
+
+        virtual void SetSize(int32_t width, int32_t height) = 0;
+        virtual void GetSize(int32_t& width, int32_t& height) = 0;
+        virtual void SetLocation(int32_t x, int32_t y) = 0;
+        virtual void GetLocation(int32_t& x, int32_t& y) = 0;
 
 
         virtual void RegisterDragTarget() = 0;

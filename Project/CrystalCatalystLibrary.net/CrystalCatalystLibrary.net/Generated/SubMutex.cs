@@ -4,10 +4,24 @@ using JWCEssentials.net;
 
 namespace CrystalCatalystLibrary.net;
 
-public partial class SubMutex : IDisposable
+public class SubMutex : IDisposable
 {
+    // Thread-safe tracker mapping the native IntPtr to our managed wrapper.
+    // We use WeakReference so we don't cause memory leaks if the user drops the reference.
+    private static readonly ConcurrentDictionary<IntPtr, WeakReference<SubMutex>> InstanceCache = new();
+
+    // Tracks whether this specific instance has been disposed
+    private bool _disposed;
+    public IntPtr Handle;
+    public bool hasClosed;
+
+    public SubMutex(IntPtr Handle)
+    {
+        this.Handle = Handle;
+    }
+
     /// <summary>
-    /// Cleans up the native resource and removes it from the cache.
+    ///     Cleans up the native resource and removes it from the cache.
     /// </summary>
     public void Dispose()
     {
@@ -35,17 +49,9 @@ public partial class SubMutex : IDisposable
         }
     }
 
-    // Thread-safe tracker mapping the native IntPtr to our managed wrapper.
-    // We use WeakReference so we don't cause memory leaks if the user drops the reference.
-    private static readonly ConcurrentDictionary<IntPtr, WeakReference<SubMutex>> InstanceCache =
-        new ConcurrentDictionary<IntPtr, WeakReference<SubMutex>>();
-
-    // Tracks whether this specific instance has been disposed
-    private bool _disposed = false;
-
     /// <summary>
-    /// This cast method should be called by the generated code right after a native "Create" function 
-    /// returns a new IntPtr, OR when a native callback passes an IntPtr back to C#.
+    ///     This cast method should be called by the generated code right after a native "Create" function
+    ///     returns a new IntPtr, OR when a native callback passes an IntPtr back to C#.
     /// </summary>
     public static explicit operator SubMutex(IntPtr handle)
     {
@@ -53,9 +59,7 @@ public partial class SubMutex : IDisposable
 
         // Try to find an existing alive wrapper
         if (InstanceCache.TryGetValue(handle, out var weakRef) && weakRef.TryGetTarget(out var existingContext))
-        {
             return existingContext;
-        }
 
         // If we didn't find one, or it was garbage collected, create a new one
         var newContext = new SubMutex(handle);
@@ -64,11 +68,39 @@ public partial class SubMutex : IDisposable
         return newContext;
     }
 
+    public static bool Size(out IntPtr sz)
+    {
+        return Imports.SubMutex_Size(out sz);
+    }
+
+    public bool Init(string name)
+    {
+        utf8_string_struct param_name = name;
+        return Imports.SubMutex_Init(Handle, ref param_name);
+    }
+
+    public bool Close()
+    {
+        if (hasClosed) return false;
+        hasClosed = true;
+        return Imports.SubMutex_Close(Handle);
+    }
+
+    public bool Lock()
+    {
+        return Imports.SubMutex_Lock(Handle);
+    }
+
+    public bool Unlock()
+    {
+        return Imports.SubMutex_Unlock(Handle);
+    }
+
     public class Imports
     {
         // bool SubMutex_Size(P_OUT size_t sz)
         [DllImport("CrystalCatalystLibrary")]
-        public static extern bool SubMutex_Size(IntPtr sz);
+        public static extern bool SubMutex_Size(out IntPtr sz);
 
         // bool SubMutex_Init(P_INSTANCE void spiderMutex, utf8_string_struct name)
         [DllImport("CrystalCatalystLibrary")]
@@ -85,43 +117,5 @@ public partial class SubMutex : IDisposable
         // bool SubMutex_Unlock(P_INSTANCE void spiderMutex)
         [DllImport("CrystalCatalystLibrary")]
         public static extern bool SubMutex_Unlock(IntPtr spiderMutex);
-
-    }
-
-    public IntPtr Handle;
-
-    public SubMutex(IntPtr Handle)
-    {
-        this.Handle = Handle;
-    }
-
-    public static bool Size(IntPtr sz)
-    {
-        return (bool)Imports.SubMutex_Size((IntPtr)sz);
-    }
-
-    public bool Init(string name)
-    {
-        utf8_string_struct param_name = name;
-        return (bool)Imports.SubMutex_Init(Handle, ref param_name);
-    }
-
-    public bool hasClosed = false;
-
-    public bool Close()
-    {
-        if (hasClosed) return false;
-        hasClosed = true;
-        return (bool)Imports.SubMutex_Close(Handle);
-    }
-
-    public bool Lock()
-    {
-        return (bool)Imports.SubMutex_Lock(Handle);
-    }
-
-    public bool Unlock()
-    {
-        return (bool)Imports.SubMutex_Unlock(Handle);
     }
 }

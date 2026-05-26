@@ -4,10 +4,24 @@ using JWCEssentials.net;
 
 namespace CrystalCatalystLibrary.net;
 
-public partial class DataInterchange : IDisposable
+public class DataInterchange : IDisposable
 {
+    // Thread-safe tracker mapping the native IntPtr to our managed wrapper.
+    // We use WeakReference so we don't cause memory leaks if the user drops the reference.
+    private static readonly ConcurrentDictionary<IntPtr, WeakReference<DataInterchange>> InstanceCache = new();
+
+    // Tracks whether this specific instance has been disposed
+    private bool _disposed;
+    public IntPtr Handle;
+    public bool hasClosed;
+
+    public DataInterchange(IntPtr Handle)
+    {
+        this.Handle = Handle;
+    }
+
     /// <summary>
-    /// Cleans up the native resource and removes it from the cache.
+    ///     Cleans up the native resource and removes it from the cache.
     /// </summary>
     public void Dispose()
     {
@@ -35,17 +49,9 @@ public partial class DataInterchange : IDisposable
         }
     }
 
-    // Thread-safe tracker mapping the native IntPtr to our managed wrapper.
-    // We use WeakReference so we don't cause memory leaks if the user drops the reference.
-    private static readonly ConcurrentDictionary<IntPtr, WeakReference<DataInterchange>> InstanceCache =
-        new ConcurrentDictionary<IntPtr, WeakReference<DataInterchange>>();
-
-    // Tracks whether this specific instance has been disposed
-    private bool _disposed = false;
-
     /// <summary>
-    /// This cast method should be called by the generated code right after a native "Create" function 
-    /// returns a new IntPtr, OR when a native callback passes an IntPtr back to C#.
+    ///     This cast method should be called by the generated code right after a native "Create" function
+    ///     returns a new IntPtr, OR when a native callback passes an IntPtr back to C#.
     /// </summary>
     public static explicit operator DataInterchange(IntPtr handle)
     {
@@ -53,15 +59,83 @@ public partial class DataInterchange : IDisposable
 
         // Try to find an existing alive wrapper
         if (InstanceCache.TryGetValue(handle, out var weakRef) && weakRef.TryGetTarget(out var existingContext))
-        {
             return existingContext;
-        }
 
         // If we didn't find one, or it was garbage collected, create a new one
         var newContext = new DataInterchange(handle);
         InstanceCache[handle] = new WeakReference<DataInterchange>(newContext);
 
         return newContext;
+    }
+
+    public static DataInterchange Create()
+    {
+        return (DataInterchange)Imports.DataInterchange_Create();
+    }
+
+    public void Free()
+    {
+        if (hasClosed) return;
+        hasClosed = true;
+        Imports.DataInterchange_Free(Handle);
+    }
+
+    public IntPtr FormatAdd(string format)
+    {
+        utf8_string_struct param_format = format;
+        return Imports.DataInterchange_FormatAdd(Handle, ref param_format);
+    }
+
+    public bool FormatExists(string format)
+    {
+        utf8_string_struct param_format = format;
+        return Imports.DataInterchange_FormatExists(Handle, ref param_format);
+    }
+
+    public IntPtr FormatEnum()
+    {
+        return Imports.DataInterchange_FormatEnum(Handle);
+    }
+
+    public static IntPtr FormatEnumNext(IntPtr node)
+    {
+        return Imports.DataInterchange_FormatEnumNext(node);
+    }
+
+    public static void FormatEnumText(IntPtr node, out string text)
+    {
+        utf8_string_struct param_text;
+        Imports.DataInterchange_FormatEnumText(node, out param_text);
+        text = param_text;
+    }
+
+    public IntPtr ItemsFormatRemove(IntPtr node)
+    {
+        return Imports.DataInterchange_ItemsFormatRemove(Handle, node);
+    }
+
+    public bool isClipboard()
+    {
+        return Imports.DataInterchange_isClipboard(Handle);
+    }
+
+    public void Select(string format)
+    {
+        utf8_string_struct param_format = format;
+        Imports.DataInterchange_Select(Handle, ref param_format);
+    }
+
+    public void SelectionReveal(out string format, out IntPtr data, out IntPtr size)
+    {
+        utf8_string_struct param_format;
+        Imports.DataInterchange_SelectionReveal(Handle, out param_format, out data, out size);
+        format = param_format;
+    }
+
+    public void SelectionSet(string format, IntPtr data, IntPtr size)
+    {
+        utf8_string_struct param_format = format;
+        Imports.DataInterchange_SelectionSet(Handle, ref param_format, data, size);
     }
 
     public class Imports
@@ -92,7 +166,7 @@ public partial class DataInterchange : IDisposable
 
         // void DataInterchange_FormatEnumText(P_INSTANCE DataInterchange::Node node, P_OUT utf8_string_struct text)
         [DllImport("CrystalCatalystLibrary")]
-        public static extern void DataInterchange_FormatEnumText(IntPtr node, ref utf8_string_struct text);
+        public static extern void DataInterchange_FormatEnumText(IntPtr node, out utf8_string_struct text);
 
         // P_INSTANCE DataInterchange::Node DataInterchange_ItemsFormatRemove(P_INSTANCE DataInterchange drop, P_INSTANCE DataInterchange::Node node)
         [DllImport("CrystalCatalystLibrary")]
@@ -108,90 +182,12 @@ public partial class DataInterchange : IDisposable
 
         // void DataInterchange_SelectionReveal(P_INSTANCE DataInterchange drag, P_OUT utf8_string_struct format, P_OUT P_INSTANCE void data, P_OUT size_t size)
         [DllImport("CrystalCatalystLibrary")]
-        public static extern void DataInterchange_SelectionReveal(IntPtr drag, ref utf8_string_struct format,
-            IntPtr data, IntPtr size);
+        public static extern void DataInterchange_SelectionReveal(IntPtr drag, out utf8_string_struct format,
+            out IntPtr data, out IntPtr size);
 
         // void DataInterchange_SelectionSet(P_INSTANCE DataInterchange drag, utf8_string_struct format, P_INSTANCE void data, size_t size)
         [DllImport("CrystalCatalystLibrary")]
         public static extern void DataInterchange_SelectionSet(IntPtr drag, ref utf8_string_struct format, IntPtr data,
             IntPtr size);
-
-    }
-
-    public IntPtr Handle;
-
-    public DataInterchange(IntPtr Handle)
-    {
-        this.Handle = Handle;
-    }
-
-    public static DataInterchange Create()
-    {
-        return (DataInterchange)Imports.DataInterchange_Create();
-    }
-
-    public bool hasClosed = false;
-
-    public void Free()
-    {
-        if (hasClosed) return;
-        hasClosed = true;
-        Imports.DataInterchange_Free(Handle);
-    }
-
-    public IntPtr FormatAdd(string format)
-    {
-        utf8_string_struct param_format = format;
-        return (IntPtr)Imports.DataInterchange_FormatAdd(Handle, ref param_format);
-    }
-
-    public bool FormatExists(string format)
-    {
-        utf8_string_struct param_format = format;
-        return (bool)Imports.DataInterchange_FormatExists(Handle, ref param_format);
-    }
-
-    public IntPtr FormatEnum()
-    {
-        return (IntPtr)Imports.DataInterchange_FormatEnum(Handle);
-    }
-
-    public static IntPtr FormatEnumNext(IntPtr node)
-    {
-        return (IntPtr)Imports.DataInterchange_FormatEnumNext((IntPtr)node);
-    }
-
-    public static void FormatEnumText(IntPtr node, string text)
-    {
-        utf8_string_struct param_text = text;
-        Imports.DataInterchange_FormatEnumText((IntPtr)node, ref param_text);
-    }
-
-    public IntPtr ItemsFormatRemove(IntPtr node)
-    {
-        return (IntPtr)Imports.DataInterchange_ItemsFormatRemove(Handle, (IntPtr)node);
-    }
-
-    public bool isClipboard()
-    {
-        return (bool)Imports.DataInterchange_isClipboard(Handle);
-    }
-
-    public void Select(string format)
-    {
-        utf8_string_struct param_format = format;
-        Imports.DataInterchange_Select(Handle, ref param_format);
-    }
-
-    public void SelectionReveal(string format, IntPtr data, IntPtr size)
-    {
-        utf8_string_struct param_format = format;
-        Imports.DataInterchange_SelectionReveal(Handle, ref param_format, (IntPtr)data, (IntPtr)size);
-    }
-
-    public void SelectionSet(string format, IntPtr data, IntPtr size)
-    {
-        utf8_string_struct param_format = format;
-        Imports.DataInterchange_SelectionSet(Handle, ref param_format, (IntPtr)data, (IntPtr)size);
     }
 }

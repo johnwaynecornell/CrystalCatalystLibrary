@@ -4,8 +4,19 @@ using JWCEssentials.net;
 
 namespace CrystalCatalystLibrary.net;
 
-public partial class DragDropData : DataInterchange
+public class DragDropData : DataInterchange
 {
+    // Thread-safe tracker mapping the native IntPtr to our managed wrapper.
+    // We use WeakReference so we don't cause memory leaks if the user drops the reference.
+    private static readonly ConcurrentDictionary<IntPtr, WeakReference<DragDropData>> InstanceCache = new();
+
+    // Tracks whether this specific instance has been disposed
+    private bool _disposed;
+
+    public DragDropData(IntPtr Handle) : base(Handle)
+    {
+    }
+
     protected override void Dispose(bool disposing)
     {
         if (!_disposed)
@@ -25,17 +36,9 @@ public partial class DragDropData : DataInterchange
         }
     }
 
-    // Thread-safe tracker mapping the native IntPtr to our managed wrapper.
-    // We use WeakReference so we don't cause memory leaks if the user drops the reference.
-    private static readonly ConcurrentDictionary<IntPtr, WeakReference<DragDropData>> InstanceCache =
-        new ConcurrentDictionary<IntPtr, WeakReference<DragDropData>>();
-
-    // Tracks whether this specific instance has been disposed
-    private bool _disposed = false;
-
     /// <summary>
-    /// This cast method should be called by the generated code right after a native "Create" function 
-    /// returns a new IntPtr, OR when a native callback passes an IntPtr back to C#.
+    ///     This cast method should be called by the generated code right after a native "Create" function
+    ///     returns a new IntPtr, OR when a native callback passes an IntPtr back to C#.
     /// </summary>
     public static explicit operator DragDropData(IntPtr handle)
     {
@@ -43,15 +46,23 @@ public partial class DragDropData : DataInterchange
 
         // Try to find an existing alive wrapper
         if (InstanceCache.TryGetValue(handle, out var weakRef) && weakRef.TryGetTarget(out var existingContext))
-        {
             return existingContext;
-        }
 
         // If we didn't find one, or it was garbage collected, create a new one
         var newContext = new DragDropData(handle);
         InstanceCache[handle] = new WeakReference<DragDropData>(newContext);
 
         return newContext;
+    }
+
+    public static string DragActionsString(DragActions actions)
+    {
+        return Imports.DragDropData_DragActionsString(actions);
+    }
+
+    public new static DragDropData Create()
+    {
+        return (DragDropData)Imports.DragDropData_Create();
     }
 
     public new class Imports
@@ -63,20 +74,5 @@ public partial class DragDropData : DataInterchange
         // P_INSTANCE DragDropData DragDropData_Create()
         [DllImport("CrystalCatalystLibrary")]
         public static extern IntPtr DragDropData_Create();
-
-    }
-
-    public DragDropData(IntPtr Handle) : base(Handle)
-    {
-    }
-
-    public static string DragActionsString(DragActions actions)
-    {
-        return (string)Imports.DragDropData_DragActionsString((DragActions)actions);
-    }
-
-    public new static DragDropData Create()
-    {
-        return (DragDropData)Imports.DragDropData_Create();
     }
 }

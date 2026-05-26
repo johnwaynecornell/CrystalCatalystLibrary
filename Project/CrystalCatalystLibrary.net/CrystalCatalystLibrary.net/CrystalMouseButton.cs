@@ -1,6 +1,6 @@
 namespace CrystalCatalystLibrary.net;
 
-public enum CrystalMouseButton : int
+public enum CrystalMouseButton
 {
     None = 0,
 

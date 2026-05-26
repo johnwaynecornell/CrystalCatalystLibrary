@@ -59,7 +59,10 @@ class Program
             return;
         }
 
-        var window = new Window(inputData, buttons, outputImage);
+        var renderer = new CrystalSkia.net.AnsiSkiaRenderer();
+        var content = renderer.Parse(inputData);
+
+        var window = new Window(content, buttons, outputImage);
         window.Run();
     }
 }

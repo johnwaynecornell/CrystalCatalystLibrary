@@ -58,18 +58,28 @@ namespace NewAge {
 
         XSendEvent(display, window, False, NoEventMask, &event);
         XFlush(display);
+    }
 
-        /*
-        std::cerr << mod_header() << "XdndPosition message sent from " << source_window->window << ", to " << target_window << " x=" << x << " y=" << y
-        << " l[0]=" << std::hex << std::setw(8) << std::setfill('0') << event.xclient.data.l[0] << std::dec
-        << " l[1]=" << std::hex << std::setw(8) << std::setfill('0') << event.xclient.data.l[1] << std::dec
-        << " l[3]=" << std::hex << std::setw(8) << std::setfill('0') << event.xclient.data.l[3] << std::dec
-        << " l[4]=" << std::hex << std::setw(8) << std::setfill('0') << event.xclient.data.l[4] << std::dec
-        << std::endl;
+    void CrystalWindow_X11::SetSize(int32_t width, int32_t height) {
+        XResizeWindow(display, window, (unsigned int)width, (unsigned int)height);
+        XFlush(display);
+    }
 
-        drag_data->has_status = false;
-        wait_for_status = true;
-        */
+    void CrystalWindow_X11::GetSize(int32_t& width, int32_t& height) {
+        XWindowAttributes gwa;
+        XGetWindowAttributes(display, window, &gwa);
+        width = gwa.width;
+        height = gwa.height;
+    }
+
+    void CrystalWindow_X11::SetLocation(int32_t x, int32_t y) {
+        XMoveWindow(display, window, x, y);
+        XFlush(display);
+    }
+
+    void CrystalWindow_X11::GetLocation(int32_t& x, int32_t& y) {
+        Window child;
+        XTranslateCoordinates(display, window, DefaultRootWindow(display), 0, 0, &x, &y, &child);
     }
 
     // Function to convert X11 keycode to Unicode

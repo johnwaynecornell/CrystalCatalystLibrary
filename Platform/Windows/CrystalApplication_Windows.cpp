@@ -78,12 +78,15 @@ P_INSTANCE(WindowHandle) CrystalApplication_Windows::WindowCreate(int32_t width,
 
     window->myHandle = window_handle;
 
+    RECT rect = { 0, 0, width, height };
+    AdjustWindowRectEx(&rect, WS_OVERLAPPEDWINDOW, FALSE, 0);
+
     HWND hwnd = CreateWindowEx(
             0,
             wc.lpszClassName,
             title,
             WS_OVERLAPPEDWINDOW,
-            CW_USEDEFAULT, CW_USEDEFAULT, width, height,
+            CW_USEDEFAULT, CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top,
             nullptr,
             nullptr,
             hInstance,
@@ -112,12 +115,15 @@ P_INSTANCE(WindowHandle) CrystalApplication_Windows::WindowCreate_Simple(int32_t
 
     window->myHandle = window_handle;
 
+    RECT rect = { 0, 0, width, height };
+    AdjustWindowRectEx(&rect, WS_POPUP, FALSE, WS_EX_TOOLWINDOW);
+
     HWND hwnd = CreateWindowEx(
             WS_EX_TOOLWINDOW,
             wc.lpszClassName,
             title,
             WS_POPUP,
-            -10000, -10000, width, height,
+            -10000, -10000, rect.right - rect.left, rect.bottom - rect.top,
             nullptr,
             nullptr,
             hInstance,

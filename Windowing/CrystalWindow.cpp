@@ -92,6 +92,22 @@ namespace NewAge {
         window_handle->crystal_window->PostClose();
     }
 
+    void CrystalWindow_SetSize(P_INSTANCE(WindowHandle) window_handle, int32_t width, int32_t height) {
+        window_handle->crystal_window->SetSize(width, height);
+    }
+
+    void CrystalWindow_GetSize(P_INSTANCE(WindowHandle) window_handle, P_OUT(int32_t) width, P_OUT(int32_t) height) {
+        window_handle->crystal_window->GetSize(*width, *height);
+    }
+
+    void CrystalWindow_SetLocation(P_INSTANCE(WindowHandle) window_handle, int32_t x, int32_t y) {
+        window_handle->crystal_window->SetLocation(x, y);
+    }
+
+    void CrystalWindow_GetLocation(P_INSTANCE(WindowHandle) window_handle, P_OUT(int32_t) x, P_OUT(int32_t) y) {
+        window_handle->crystal_window->GetLocation(*x, *y);
+    }
+
     P_INSTANCE(WindowCallbacks)  get_callbacks(P_INSTANCE(WindowHandle)  handle);
 
     bool lookup_message_handler(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct handler_name, P_ELEMENTS(void) *&handler_ptr) {

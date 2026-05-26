@@ -43,6 +43,12 @@ namespace NewAge {
         void Show(bool restore) override;
         void Close() override;
         void PostClose() override;
+
+        void SetSize(int32_t width, int32_t height) override;
+        void GetSize(int32_t& width, int32_t& height) override;
+        void SetLocation(int32_t x, int32_t y) override;
+        void GetLocation(int32_t& x, int32_t& y) override;
+
         void RegisterDragTarget() override;
         void DragStart(P_INSTANCE(DragDropData) data, int32_t x, int32_t y) override;
 

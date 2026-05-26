@@ -140,6 +140,40 @@ namespace NewAge
     void CrystalWindow_Windows::MouseRelease() {
         ReleaseCapture();
     }
+
+    void CrystalWindow_Windows::SetSize(int32_t width, int32_t height) {
+        if (!hwnd) return;
+        RECT rect = { 0, 0, width, height };
+        DWORD style = GetWindowLong(hwnd, GWL_STYLE);
+        DWORD exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+        AdjustWindowRectEx(&rect, style, FALSE, exStyle);
+        SetWindowPos(hwnd, nullptr, 0, 0, rect.right - rect.left, rect.bottom - rect.top, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+
+    void CrystalWindow_Windows::GetSize(int32_t& width, int32_t& height) {
+        if (!hwnd) { width = 0; height = 0; return; }
+        RECT rect;
+        GetClientRect(hwnd, &rect);
+        width = rect.right - rect.left;
+        height = rect.bottom - rect.top;
+    }
+
+    void CrystalWindow_Windows::SetLocation(int32_t x, int32_t y) {
+        if (!hwnd) return;
+        RECT rect = { x, y, x, y };
+        DWORD style = GetWindowLong(hwnd, GWL_STYLE);
+        DWORD exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+        AdjustWindowRectEx(&rect, style, FALSE, exStyle);
+        SetWindowPos(hwnd, nullptr, rect.left, rect.top, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+
+    void CrystalWindow_Windows::GetLocation(int32_t& x, int32_t& y) {
+        if (!hwnd) { x = 0; y = 0; return; }
+        POINT pt = { 0, 0 };
+        ClientToScreen(hwnd, &pt);
+        x = pt.x;
+        y = pt.y;
+    }
     
     
 

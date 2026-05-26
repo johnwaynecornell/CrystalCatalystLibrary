@@ -1,11 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Runtime.InteropServices;
 using CrystalCatalystLibrary.net;
-using JWCEssentials;
 using SkiaSharp;
+using CrystalSkia.net;
 
 namespace MessageWindow;
 
@@ -15,34 +12,15 @@ public class Window
     private SKBitmap? bitmap;
     private SKCanvas? canvas;
     private SKImageInfo imageInfo;
-    private byte[] inputData;
     private List<string> buttonConfigs;
     private string? outputImagePath;
 
-    private List<List<StyledChar>> lines = new();
-    private List<StyledChar> currentLine = new();
-    
-    private SKColor currentFg = SKColors.White;
-    private SKColor currentBg = SKColors.Transparent;
-    private Dictionary<string, bool> switches = new();
+    private AnsiSkiaRenderer renderer = new();
+    private AnsiSkiaRenderer.ParsedContent content;
     
     private bool _blinkState = true;
     private long _lastBlinkToggle = 0;
     private const long BlinkIntervalMs = 500;
-
-    private struct StyledChar
-    {
-        public char Char;
-        public SKColor Fg;
-        public SKColor Bg;
-        public bool Bold;
-        public bool Italic;
-        public bool Underline;
-        public bool Blink;
-        public bool Reverse;
-        public bool Crossed;
-        public bool Overline;
-    }
 
     private class Button
     {
@@ -54,17 +32,28 @@ public class Window
 
     private List<Button> buttons = new();
 
-    public Window(byte[] inputData, List<string> buttonConfigs, string? outputImagePath)
+    public Window(AnsiSkiaRenderer.ParsedContent content, List<string> buttonConfigs, string? outputImagePath)
     {
-        this.inputData = inputData;
+        this.content = content;
         this.buttonConfigs = buttonConfigs;
         this.outputImagePath = outputImagePath;
 
         ParseButtons();
-        ParseAnsi();
 
-        int width = 800;
-        int height = 600;
+        int width = (int)Math.Ceiling(content.PixelSize.Width);
+        int height = (int)Math.Ceiling(content.PixelSize.Height);
+
+        // Adjust width if buttons need more space
+        float buttonWidth = 150;
+        float padding = 20;
+        float totalButtonsWidth = buttons.Count * buttonWidth + (buttons.Count + 1) * padding;
+        if (totalButtonsWidth > width) width = (int)Math.Ceiling(totalButtonsWidth);
+
+        // Adjust height for buttons
+        if (buttons.Count > 0)
+        {
+            height += 60; // Extra space for buttons (button height 40 + padding 20)
+        }
 
         wnd = CrystalWindow.Create(width, height, "MessageWindow");
         wnd.ApplicationRetain();
@@ -84,83 +73,11 @@ public class Window
         foreach (var config in buttonConfigs)
         {
             var parts = config.Split('|');
-            if (parts.Length >= 2)
-            {
-                buttons.Add(new Button { Text = parts[0], Action = parts[1] });
-            }
-            else
-            {
-                buttons.Add(new Button { Text = config, Action = config });
-            }
+            buttons.Add(new Button { 
+                Text = parts[0], 
+                Action = parts.Length >= 2 ? parts[1] : parts[0] 
+            });
         }
-    }
-
-    private void ParseAnsi()
-    {
-        var sniffer = new AnsiEffectSniffer();
-        
-        sniffer.Char = c =>
-        {
-            if (c == '\n')
-            {
-                lines.Add(currentLine);
-                currentLine = new List<StyledChar>();
-            }
-            else if (c == '\r')
-            {
-                // Ignore or handle
-            }
-            else
-            {
-                currentLine.Add(new StyledChar
-                {
-                    Char = c,
-                    Fg = currentFg,
-                    Bg = currentBg,
-                    Bold = switches.GetValueOrDefault("bold"),
-                    Italic = switches.GetValueOrDefault("italic"),
-                    Underline = switches.GetValueOrDefault("underline"),
-                    Blink = switches.GetValueOrDefault("blink"),
-                    Reverse = switches.GetValueOrDefault("reverse"),
-                    Crossed = switches.GetValueOrDefault("crossed"),
-                    Overline = switches.GetValueOrDefault("overline")
-                });
-            }
-        };
-
-        sniffer.Fg = (color, brightness) => currentFg = MapColor(true, color, brightness);
-        sniffer.Bg = (color, brightness) => currentBg = MapColor(false, color, brightness);
-        
-        sniffer.Reset = () =>
-        {
-            currentFg = SKColors.White;
-            currentBg = SKColors.Transparent;
-            switches.Clear();
-        };
-        sniffer.Switch = (name, enable) => switches[name] = enable;
-
-        sniffer.Process(inputData);
-        if (currentLine.Count > 0)
-        {
-            lines.Add(currentLine);
-        }
-    }
-
-    private SKColor MapColor(bool is_forground, string name, Brightness brightness)
-    {
-        return name.ToLower() switch
-        {
-            "black" => brightness == Brightness.Normal ? SKColors.Black : SKColors.DarkGray,
-            "red" => brightness == Brightness.Normal ? SKColors.Red : SKColors.LightCoral,
-            "green" => brightness == Brightness.Normal ? SKColors.Green : SKColors.LightGreen,
-            "yellow" => brightness == Brightness.Normal ? SKColors.Yellow : SKColors.LightYellow,
-            "blue" => brightness == Brightness.Normal ? SKColors.Blue : SKColors.LightBlue,
-            "magenta" => brightness == Brightness.Normal ? SKColors.Magenta : SKColors.Pink,
-            "cyan" => brightness == Brightness.Normal ? SKColors.Cyan : SKColors.LightCyan,
-            "white" => brightness == Brightness.Normal ? SKColors.White : SKColors.WhiteSmoke,
-            "default" => is_forground ? SKColors.White : SKColors.Transparent,
-            _ => SKColors.White
-        };
     }
 
     public void Run()
@@ -180,7 +97,7 @@ public class Window
         OnDraw(wnd);
         using var image = SKImage.FromBitmap(bitmap);
         using var data = image.Encode(SKEncodedImageFormat.Png, 100);
-        using var stream = File.OpenWrite(path);
+        using var stream = System.IO.File.OpenWrite(path);
         data.SaveTo(stream);
         Console.WriteLine($"Saved output to {path}");
     }
@@ -268,61 +185,7 @@ public class Window
         
         canvas.Clear(new SKColor(32, 36, 48, 255));
 
-        float x = 20;
-        float y = 40;
-        float fontSize = 20;
-
-        using SKPaint textPaint = new SKPaint { IsAntialias = true };
-        using SKTypeface typeface = SKTypeface.FromFamilyName("Monospace");
-        using SKFont font = new SKFont(typeface, fontSize);
-
-        foreach (var line in lines)
-        {
-            float curX = x;
-            foreach (var sc in line)
-            {
-                if (sc.Blink && !_blinkState)
-                {
-                    // Skip drawing char, but still advance X
-                }
-                else
-                {
-                    SKColor fg = sc.Reverse ? sc.Bg : sc.Fg;
-                    SKColor bg = sc.Reverse ? sc.Fg : sc.Bg;
-
-                    if (fg == SKColors.Transparent) fg = SKColors.White; // Default if reversed transparent
-
-                    textPaint.Color = fg;
-                    font.Embolden = sc.Bold;
-                    font.SkewX = sc.Italic ? -0.25f : 0;
-                    
-                    float charWidth = font.MeasureText(sc.Char.ToString());
-
-                    if (bg != SKColors.Transparent)
-                    {
-                        using SKPaint bgPaint = new SKPaint { Color = bg };
-                        canvas.DrawRect(curX, y - fontSize, charWidth, fontSize + 5, bgPaint);
-                    }
-
-                    canvas.DrawText(sc.Char.ToString(), curX, y, font, textPaint);
-                    
-                    if (sc.Underline)
-                    {
-                        canvas.DrawLine(curX, y + 2, curX + charWidth, y + 2, textPaint);
-                    }
-                    if (sc.Overline)
-                    {
-                        canvas.DrawLine(curX, y - fontSize, curX + charWidth, y - fontSize, textPaint);
-                    }
-                    if (sc.Crossed)
-                    {
-                        canvas.DrawLine(curX, y - fontSize / 2, curX + charWidth, y - fontSize / 2, textPaint);
-                    }
-                }
-                curX += font.MeasureText(sc.Char.ToString());
-            }
-            y += fontSize + 5;
-        }
+        renderer.Render(content, canvas, _blinkState);
 
         DrawButtons();
         canvas.Flush();

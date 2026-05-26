@@ -3,8 +3,52 @@ using JWCEssentials.net;
 
 namespace CrystalCatalystLibrary.net;
 
-public partial class Application
+public class Application
 {
+    public static void Init(string[] args)
+    {
+        var tmp = (from s in args select (utf8_string_struct)s).ToArray();
+        var _args =
+            (struct_array_struct<utf8_string_struct>)tmp;
+
+        Imports.Application_Init(ref _args);
+    }
+
+    public static int Run()
+    {
+        return Imports.Application_Run();
+    }
+
+    public static void SignalClose()
+    {
+        Imports.Application_SignalClose();
+    }
+
+    public static int ArgumentCount()
+    {
+        return Imports.Application_ArgumentCount();
+    }
+
+    public static string Argument(int index)
+    {
+        return Imports.Application_Argument(index);
+    }
+
+    public static void ArgumentRemove(int index)
+    {
+        Imports.Application_ArgumentRemove(index);
+    }
+
+    public static void WindowAdd(CrystalWindow window_handle)
+    {
+        Imports.Application_WindowAdd(window_handle.Handle);
+    }
+
+    public static void WindowRemove(CrystalWindow window_handle)
+    {
+        Imports.Application_WindowRemove(window_handle.Handle);
+    }
+
     public class Imports
     {
         // void Application_Init(struct_array_struct<utf8_string_struct> args)
@@ -38,50 +82,5 @@ public partial class Application
         // void Application_WindowRemove(P_INSTANCE WindowHandle window_handle)
         [DllImport("CrystalCatalystLibrary")]
         public static extern void Application_WindowRemove(IntPtr window_handle);
-
-    }
-
-    public static void Init(string[] args)
-    {
-        utf8_string_struct[] tmp = (from s in args select (utf8_string_struct)s).ToArray();
-        struct_array_struct<utf8_string_struct> _args =
-            (struct_array_struct<utf8_string_struct>)tmp;
-
-        Imports.Application_Init(ref _args);
-    }
-
-    public static int Run()
-    {
-        return (int)Imports.Application_Run();
-    }
-
-    public static void SignalClose()
-    {
-        Imports.Application_SignalClose();
-    }
-
-    public static int ArgumentCount()
-    {
-        return (int)Imports.Application_ArgumentCount();
-    }
-
-    public static string Argument(int index)
-    {
-        return (string)Imports.Application_Argument((int)index);
-    }
-
-    public static void ArgumentRemove(int index)
-    {
-        Imports.Application_ArgumentRemove((int)index);
-    }
-
-    public static void WindowAdd(CrystalWindow window_handle)
-    {
-        Imports.Application_WindowAdd(window_handle.Handle);
-    }
-
-    public static void WindowRemove(CrystalWindow window_handle)
-    {
-        Imports.Application_WindowRemove(window_handle.Handle);
     }
 }
