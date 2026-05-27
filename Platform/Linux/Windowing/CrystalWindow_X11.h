@@ -15,10 +15,11 @@ namespace NewAge {
 
     class CrystalWindow_X11 : public CrystalWindow {
     public:
-        Window window;
-        P_INSTANCE(Display)  display;
-        GLXContext gl_context;
-        DragProvide_X11* drag_provide;
+        CrystalWindow_X11();
+        Window window = None;
+        P_INSTANCE(Display)  display = nullptr;
+        GLXContext gl_context = nullptr;
+        DragProvide_X11* drag_provide = nullptr;
         // In CrystalWindow_X11 members, add:
         Atom target_atom = None;     // the requested "format" (e.g., UTF8_STRING/text/html)
         Atom property_atom = None;   // the property we expect data on (e.g., CRYSTAL_SELECTION)
@@ -48,6 +49,12 @@ namespace NewAge {
         void GetSize(int32_t& width, int32_t& height) override;
         void SetLocation(int32_t x, int32_t y) override;
         void GetLocation(int32_t& x, int32_t& y) override;
+
+        void SetCursor(utf8_string_struct pixformat, P_ELEMENTS(void) pixdata, size_t pixdata_length, int32_t width, int32_t height, int32_t hot_x, int32_t hot_y) override;
+        void SetStandardCursor(CrystalCursor cursor_enum) override;
+        void SetIcon(utf8_string_struct pixformat, P_ELEMENTS(void) pixdata, size_t pixdata_length, int32_t width, int32_t height) override;
+        void SetTitle(utf8_string_struct title) override;
+        void GetTitle(P_OUT(utf8_string_struct) title) override;
 
         void RegisterDragTarget() override;
         void DragStart(P_INSTANCE(DragDropData) data, int32_t x, int32_t y) override;

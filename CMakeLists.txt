@@ -12,34 +12,41 @@ include(PlatformConfig.cmake)
 initPlatformConfig()
  include($ENV{NewAge}/include/JWCEssentials/JWCEssentials.cmake)
 
- add_library(CrystalCatalystLibrary SHARED
- )
+ add_library(CrystalCatalystLibrary SHARED)
 
  include(Platform/${CRYSTAL_PLATFORM}/Platform.cmake)
 
  target_sources(CrystalCatalystLibrary PUBLIC
-     CrystalCatalystLibrary.cpp
+         CrystalCatalystLibrary.cpp
          include/CrystalCatalystLibrary/CrystalCatalystLibrary.h
-     Synchronization/CrystalSync.cpp
-         include/CrystalCatalystLibrary/Synchronization/CrystalSync.h
-     Windowing/CrystalWindow.cpp
-         include/CrystalCatalystLibrary/Windowing/CrystalWindow.h
-     Windowing/Pixels.cpp
-         include/CrystalCatalystLibrary/Windowing/Pixels.h
-     Windowing/DataInterchange.cpp
-         include/CrystalCatalystLibrary/Windowing/DataInterchange.h
-     Windowing/Clipboard.cpp
-         include/CrystalCatalystLibrary/Windowing/Clipboard.h
-     Windowing/DragDrop.cpp
-         include/CrystalCatalystLibrary/Windowing/DragDrop.h
 
-     Fonts/Fonts.cpp
+         Synchronization/CrystalSync.cpp
+         include/CrystalCatalystLibrary/Synchronization/CrystalSync.h
+
+         Windowing/CrystalWindow.cpp
+         include/CrystalCatalystLibrary/Windowing/CrystalWindow.h
+
+         Windowing/Pixels.cpp
+         include/CrystalCatalystLibrary/Windowing/Pixels.h
+
+         Windowing/DataInterchange.cpp
+         include/CrystalCatalystLibrary/Windowing/DataInterchange.h
+
+         Windowing/Clipboard.cpp
+         include/CrystalCatalystLibrary/Windowing/Clipboard.h
+
+         Windowing/DragDrop.cpp
+
+         include/CrystalCatalystLibrary/Windowing/DragDrop.h
+         Windowing/CrystalCatalyst_StockIcon.cpp
+
+         Fonts/Fonts.cpp
          include/CrystalCatalystLibrary/Fonts.h
 
-     Application.cpp
+         Application.cpp
          include/CrystalCatalystLibrary/Application.h
 
-     Platform.cpp
+         Platform.cpp
          include/CrystalCatalystLibrary/Platform.h
 
      ${PLATFORM_SOURCES})

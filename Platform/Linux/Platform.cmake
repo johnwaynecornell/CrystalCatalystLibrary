@@ -36,6 +36,6 @@ set(PLATFORM_SOURCES
         Platform/Linux/Fonts/Fonts.h
 )
 
-target_link_libraries(CrystalCatalystLibrary PUBLIC  pthread X11 GL)
+target_link_libraries(CrystalCatalystLibrary PUBLIC  pthread X11 GL Xcursor)
 
 #include_directories(${CMAKE_CURRENT_LIST_DIR})

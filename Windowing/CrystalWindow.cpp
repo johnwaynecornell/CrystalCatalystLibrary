@@ -10,6 +10,7 @@
 using namespace JWCEssentials;
 
 namespace NewAge {
+
     void CrystalWindow_ApplicationRetain(P_INSTANCE(WindowHandle) window_handle)
     {
         window_handle->crystal_window->ApplicationRetain();
@@ -34,11 +35,42 @@ namespace NewAge {
     }
 
     P_INSTANCE(WindowHandle) CrystalWindow_Create(int32_t width, int32_t height, utf8_string_struct title) {
-        return TheApplication->WindowCreate(width, height, title);
+        auto Ret = TheApplication->WindowCreate(width, height, title);
+        if (Ret != nullptr)
+        {
+            CrystalWindow_SetStandardCursor(Ret, CRYSTAL_CURSOR_ARROW);
+            // Image: CatalystCrystal.png
+            // Width: 51
+            // Height: 61
+            // Format: RGBA8888
+            //unsigned char CrystalCatalystIcon[12444]
+
+            utf8_string_struct pixformat;
+            void *pixdata;
+            size_t  pixdata_length;
+            int width, height;
+
+            CrystalWindow_GetDefaultStockIcon(&pixformat, &pixdata, &pixdata_length, &width, &height);
+            CrystalWindow_SetIcon(Ret, pixformat, pixdata, pixdata_length, width, height);
+
+        }
+        return Ret;
     }
 
     P_INSTANCE(WindowHandle) CrystalWindow_CreateSimple(int32_t width, int32_t height, utf8_string_struct title) {
-        return TheApplication->WindowCreate_Simple(width, height, title);
+        auto Ret = TheApplication->WindowCreate_Simple(width, height, title);
+        if (Ret != nullptr)
+        {
+            CrystalWindow_SetStandardCursor(Ret, CRYSTAL_CURSOR_ARROW);
+            utf8_string_struct pixformat;
+            void *pixdata;
+            size_t pixdata_length;
+            int width, height;
+
+            CrystalWindow_GetDefaultStockIcon(&pixformat, &pixdata, &pixdata_length, &width, &height);
+            CrystalWindow_SetIcon(Ret, pixformat, pixdata, pixdata_length, width, height);
+        }
+        return Ret;
     }
 
     double CrystalWindow_uptimeSeconds(P_INSTANCE(WindowHandle) window_handle) {
@@ -106,6 +138,26 @@ namespace NewAge {
 
     void CrystalWindow_GetLocation(P_INSTANCE(WindowHandle) window_handle, P_OUT(int32_t) x, P_OUT(int32_t) y) {
         window_handle->crystal_window->GetLocation(*x, *y);
+    }
+
+    void CrystalWindow_SetCursor(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height, int32_t hot_x, int32_t hot_y) {
+        window_handle->crystal_window->SetCursor(pixformat, pixdata, pixdata_length, width, height, hot_x, hot_y);
+    }
+
+    void CrystalWindow_SetStandardCursor(P_INSTANCE(WindowHandle) window_handle, CrystalCursor cursor_enum) {
+        window_handle->crystal_window->SetStandardCursor(cursor_enum);
+    }
+
+    void CrystalWindow_SetIcon(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height) {
+        window_handle->crystal_window->SetIcon(pixformat, pixdata, pixdata_length, width, height);
+    }
+
+    void CrystalWindow_SetTitle(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct title) {
+        window_handle->crystal_window->SetTitle(title);
+    }
+
+    void CrystalWindow_GetTitle(P_INSTANCE(WindowHandle) window_handle, P_OUT(utf8_string_struct) title) {
+        window_handle->crystal_window->GetTitle(title);
     }
 
     P_INSTANCE(WindowCallbacks)  get_callbacks(P_INSTANCE(WindowHandle)  handle);

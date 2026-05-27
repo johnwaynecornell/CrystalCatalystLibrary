@@ -29,6 +29,19 @@ namespace NewAge {
         CRYSTAL_MOUSE_BUTTON_X1 = 8,
         CRYSTAL_MOUSE_BUTTON_X2 = 9
     };
+    enum CrystalCursor : int32_t {
+        CRYSTAL_CURSOR_ARROW = 0,
+        CRYSTAL_CURSOR_TEXT = 1,
+        CRYSTAL_CURSOR_WAIT = 2,
+        CRYSTAL_CURSOR_CROSSHAIR = 3,
+        CRYSTAL_CURSOR_MOVE = 4,
+        CRYSTAL_CURSOR_NWSE_RESIZE = 5,
+        CRYSTAL_CURSOR_NESW_RESIZE = 6,
+        CRYSTAL_CURSOR_WE_RESIZE = 7,
+        CRYSTAL_CURSOR_NS_RESIZE = 8,
+        CRYSTAL_CURSOR_HAND = 9,
+        CRYSTAL_CURSOR_NOT_ALLOWED = 10,
+    };
     typedef struct {
         void (*on_draw)(P_INSTANCE(WindowHandle) window_handle);
 
@@ -89,6 +102,14 @@ namespace NewAge {
     _EXPORT_ void CrystalWindow_SetLocation(P_INSTANCE(WindowHandle) window_handle, int32_t x, int32_t y);
     _EXPORT_ void CrystalWindow_GetLocation(P_INSTANCE(WindowHandle) window_handle, P_OUT(int32_t) x, P_OUT(int32_t) y);
 
+    _EXPORT_ void CrystalWindow_SetCursor(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height, int32_t hot_x, int32_t hot_y);
+    _EXPORT_ void CrystalWindow_SetStandardCursor(P_INSTANCE(WindowHandle) window_handle, CrystalCursor cursor_enum);
+    _EXPORT_ void CrystalWindow_SetIcon(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height);
+    _EXPORT_ void CrystalWindow_SetTitle(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct title);
+    _EXPORT_ void CrystalWindow_GetTitle(P_INSTANCE(WindowHandle) window_handle, P_OUT(utf8_string_struct) title);
+
+    _EXPORT_ void CrystalWindow_GetDefaultStockIcon(P_OUT(utf8_string_struct) pixformat, P_OUT(P_ELEMENTS(void)) pixdata, P_OUT(size_t) pixdata_length, P_OUT(int32_t) width, P_OUT(int32_t) height);
+
     _EXPORT_ bool CrystalWindow_SetMessageHandler(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct handler_name, P_INSTANCE(void) handler);
 
     _EXPORT_ double CrystalWindow_uptimeSeconds(P_INSTANCE(WindowHandle) window_handle);
@@ -148,6 +169,11 @@ namespace NewAge {
         virtual void SetLocation(int32_t x, int32_t y) = 0;
         virtual void GetLocation(int32_t& x, int32_t& y) = 0;
 
+        virtual void SetCursor(utf8_string_struct pixformat, P_ELEMENTS(void) pixdata, size_t pixdata_length, int32_t width, int32_t height, int32_t hot_x, int32_t hot_y) = 0;
+        virtual void SetStandardCursor(CrystalCursor cursor_enum) = 0;
+        virtual void SetIcon(utf8_string_struct pixformat, P_ELEMENTS(void) pixdata, size_t pixdata_length, int32_t width, int32_t height) = 0;
+        virtual void SetTitle(utf8_string_struct title) = 0;
+        virtual void GetTitle(P_OUT(utf8_string_struct) title) = 0;
 
         virtual void RegisterDragTarget() = 0;
         virtual void DragStart(P_INSTANCE(DragDropData) data, int32_t x, int32_t y) = 0;

@@ -174,6 +174,135 @@ namespace NewAge
         x = pt.x;
         y = pt.y;
     }
+
+    void CrystalWindow_Windows::SetCursor(utf8_string_struct pixformat, P_ELEMENTS(void) pixdata, size_t pixdata_length, int32_t width, int32_t height, int32_t hot_x, int32_t hot_y) {
+        if (!hwnd || !pixdata || !pixformat) return;
+        PixData proxy = Pixels_ConvertPixels(pixformat, "bgra:int8", pixdata, pixdata_length, width, height);
+
+        BITMAPV5HEADER bi = { 0 };
+        bi.bV5Size = sizeof(BITMAPV5HEADER);
+        bi.bV5Width = width;
+        bi.bV5Height = -height;
+        bi.bV5Planes = 1;
+        bi.bV5BitCount = 32;
+        bi.bV5Compression = BI_BITFIELDS;
+        bi.bV5RedMask = 0x00FF0000;
+        bi.bV5GreenMask = 0x0000FF00;
+        bi.bV5BlueMask = 0x000000FF;
+        bi.bV5AlphaMask = 0xFF000000;
+
+        void* bits = nullptr;
+        HDC hdc = GetDC(nullptr);
+        HBITMAP hBitmap = CreateDIBSection(hdc, (BITMAPINFO*)&bi, DIB_RGB_COLORS, &bits, nullptr, 0);
+        ReleaseDC(nullptr, hdc);
+
+        if (hBitmap && bits) {
+            memcpy(bits, proxy ? proxy.pix_data : pixdata, width * height * 4);
+            HBITMAP hMask = CreateBitmap(width, height, 1, 1, nullptr);
+            ICONINFO ii = { 0 };
+            ii.fIcon = FALSE;
+            ii.xHotspot = hot_x;
+            ii.yHotspot = hot_y;
+            ii.hbmMask = hMask;
+            ii.hbmColor = hBitmap;
+            HCURSOR hCursor = CreateIconIndirect(&ii);
+
+            if (current_hCursor) DestroyCursor(current_hCursor);
+            current_hCursor = hCursor;
+
+            SetClassLongPtr(hwnd, GCLP_HCURSOR, (LONG_PTR)hCursor);
+            ::SetCursor(hCursor);
+            DeleteObject(hMask);
+            DeleteObject(hBitmap);
+        }
+        if (proxy) proxy.pix_data_free(proxy.pix_data);
+    }
+
+    void CrystalWindow_Windows::SetStandardCursor(CrystalCursor cursor_enum) {
+        if (!hwnd) return;
+        LPCSTR idc;
+        switch (cursor_enum) {
+        case CRYSTAL_CURSOR_ARROW: idc = IDC_ARROW; break;
+        case CRYSTAL_CURSOR_TEXT: idc = IDC_IBEAM; break;
+        case CRYSTAL_CURSOR_WAIT: idc = IDC_WAIT; break;
+        case CRYSTAL_CURSOR_CROSSHAIR: idc = IDC_CROSS; break;
+        case CRYSTAL_CURSOR_MOVE: idc = IDC_SIZEALL; break;
+        case CRYSTAL_CURSOR_NWSE_RESIZE: idc = IDC_SIZENWSE; break;
+        case CRYSTAL_CURSOR_NESW_RESIZE: idc = IDC_SIZENESW; break;
+        case CRYSTAL_CURSOR_WE_RESIZE: idc = IDC_SIZEWE; break;
+        case CRYSTAL_CURSOR_NS_RESIZE: idc = IDC_SIZENS; break;
+        case CRYSTAL_CURSOR_HAND: idc = IDC_HAND; break;
+        case CRYSTAL_CURSOR_NOT_ALLOWED: idc = IDC_NO; break;
+        default: idc = IDC_ARROW; break;
+        }
+        HCURSOR hCursor = LoadCursor(nullptr, idc);
+
+        if (current_hCursor) DestroyCursor(current_hCursor);
+        current_hCursor = nullptr;
+
+        SetClassLongPtr(hwnd, GCLP_HCURSOR, (LONG_PTR)hCursor);
+        ::SetCursor(hCursor);
+    }
+
+    void CrystalWindow_Windows::SetIcon(utf8_string_struct pixformat, P_ELEMENTS(void) pixdata, size_t pixdata_length, int32_t width, int32_t height) {
+        if (!hwnd || !pixdata || !pixformat) return;
+        PixData proxy = Pixels_ConvertPixels(pixformat, "bgra:int8", pixdata, pixdata_length, width, height);
+
+        BITMAPV5HEADER bi = { 0 };
+        bi.bV5Size = sizeof(BITMAPV5HEADER);
+        bi.bV5Width = width;
+        bi.bV5Height = -height;
+        bi.bV5Planes = 1;
+        bi.bV5BitCount = 32;
+        bi.bV5Compression = BI_BITFIELDS;
+        bi.bV5RedMask = 0x00FF0000;
+        bi.bV5GreenMask = 0x0000FF00;
+        bi.bV5BlueMask = 0x000000FF;
+        bi.bV5AlphaMask = 0xFF000000;
+
+        void* bits = nullptr;
+        HDC hdc = GetDC(nullptr);
+        HBITMAP hBitmap = CreateDIBSection(hdc, (BITMAPINFO*)&bi, DIB_RGB_COLORS, &bits, nullptr, 0);
+        ReleaseDC(nullptr, hdc);
+
+        if (hBitmap && bits) {
+            memcpy(bits, proxy ? proxy.pix_data : pixdata, width * height * 4);
+            HBITMAP hMask = CreateBitmap(width, height, 1, 1, nullptr);
+            ICONINFO ii = { 0 };
+            ii.fIcon = TRUE;
+            ii.hbmMask = hMask;
+            ii.hbmColor = hBitmap;
+            HICON hIcon = CreateIconIndirect(&ii);
+
+            if (current_hIcon) DestroyIcon(current_hIcon);
+            current_hIcon = hIcon;
+
+            SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+            SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+
+            DeleteObject(hMask);
+            DeleteObject(hBitmap);
+        }
+        if (proxy) proxy.pix_data_free(proxy.pix_data);
+    }
+
+    void CrystalWindow_Windows::SetTitle(utf8_string_struct title) {
+        if (!hwnd) return;
+        SetWindowText(hwnd, title);
+    }
+
+    void CrystalWindow_Windows::GetTitle(P_OUT(utf8_string_struct) title) {
+        if (!hwnd) { *title = ""; return; }
+        int len = GetWindowTextLength(hwnd);
+        if (len > 0) {
+            std::string buffer(len, '\0');
+            GetWindowText(hwnd, &buffer[0], len + 1);
+            *title = buffer.c_str();
+        }
+        else {
+            *title = "";
+        }
+    }
     
     
 
@@ -388,6 +517,11 @@ namespace NewAge
     CrystalWindow_Windows::CrystalWindow_Windows() : m_cRef(1)
     {
 
+    }
+
+    CrystalWindow_Windows::~CrystalWindow_Windows() {
+        if (current_hIcon) DestroyIcon(current_hIcon);
+        if (current_hCursor) DestroyCursor(current_hCursor);
     }
 
     HRESULT __stdcall CrystalWindow_Windows::QueryInterface(REFIID iid, P_ELEMENTS(void) * ppvObject)

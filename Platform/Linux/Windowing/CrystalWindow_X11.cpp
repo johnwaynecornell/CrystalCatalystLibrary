@@ -18,10 +18,15 @@
 #include <iomanip>
 #include <X11/XKBlib.h>
 #include <X11/keysym.h>
+#include <X11/cursorfont.h>
+#include <X11/Xatom.h>
+#include <X11/Xcursor/Xcursor.h>
 
 using namespace JWCEssentials;
 
 namespace NewAge {
+    CrystalWindow_X11::CrystalWindow_X11() {}
+
     CrystalWindow_X11::~CrystalWindow_X11() {
         if (drag_provide) delete drag_provide;
     }
@@ -80,6 +85,97 @@ namespace NewAge {
     void CrystalWindow_X11::GetLocation(int32_t& x, int32_t& y) {
         Window child;
         XTranslateCoordinates(display, window, DefaultRootWindow(display), 0, 0, &x, &y, &child);
+    }
+
+    void CrystalWindow_X11::SetCursor(utf8_string_struct pixformat, P_ELEMENTS(void) pixdata, size_t pixdata_length, int32_t width, int32_t height, int32_t hot_x, int32_t hot_y) {
+        if (!pixdata || !pixformat) return;
+        PixData proxy = Pixels_ConvertPixels(pixformat, "bgra:int8", pixdata, pixdata_length, width, height);
+
+        XcursorImage* image = XcursorImageCreate(width, height);
+        if (!image) {
+            if (proxy) proxy.pix_data_free(proxy.pix_data);
+            return;
+        }
+
+        image->xhot = hot_x;
+        image->yhot = hot_y;
+
+        uint32_t* src = (uint32_t*)(proxy ? proxy.pix_data : pixdata);
+        for (int i = 0; i < width * height; i++) {
+            image->pixels[i] = src[i];
+        }
+
+        Cursor cursor = XcursorImageLoadCursor(display, image);
+        XDefineCursor(display, window, cursor);
+        XFreeCursor(display, cursor);
+        XcursorImageDestroy(image);
+        if (proxy) proxy.pix_data_free(proxy.pix_data);
+        XFlush(display);
+    }
+
+    void CrystalWindow_X11::SetStandardCursor(CrystalCursor cursor_enum) {
+        unsigned int shape;
+        switch (cursor_enum) {
+            case CRYSTAL_CURSOR_ARROW: shape = XC_left_ptr; break;
+            case CRYSTAL_CURSOR_TEXT: shape = XC_xterm; break;
+            case CRYSTAL_CURSOR_WAIT: shape = XC_watch; break;
+            case CRYSTAL_CURSOR_CROSSHAIR: shape = XC_crosshair; break;
+            case CRYSTAL_CURSOR_MOVE: shape = XC_fleur; break;
+            case CRYSTAL_CURSOR_NWSE_RESIZE: shape = XC_bottom_right_corner; break;
+            case CRYSTAL_CURSOR_NESW_RESIZE: shape = XC_bottom_left_corner; break;
+            case CRYSTAL_CURSOR_WE_RESIZE: shape = XC_sb_h_double_arrow; break;
+            case CRYSTAL_CURSOR_NS_RESIZE: shape = XC_sb_v_double_arrow; break;
+            case CRYSTAL_CURSOR_HAND: shape = XC_hand2; break;
+            case CRYSTAL_CURSOR_NOT_ALLOWED: shape = XC_circle; break;
+            default: shape = XC_left_ptr; break;
+        }
+        Cursor cursor = XCreateFontCursor(display, shape);
+        XDefineCursor(display, window, cursor);
+        XFreeCursor(display, cursor);
+        XFlush(display);
+    }
+
+    void CrystalWindow_X11::SetIcon(utf8_string_struct pixformat, P_ELEMENTS(void) pixdata, size_t pixdata_length, int32_t width, int32_t height) {
+        if (!pixdata || !pixformat) return;
+        PixData proxy = Pixels_ConvertPixels(pixformat, "bgra:int8", pixdata, pixdata_length, width, height);
+
+        int num_pixels = width * height;
+        std::vector<unsigned long> icon_data;
+        icon_data.reserve(2 + num_pixels);
+        icon_data.push_back((unsigned long)width);
+        icon_data.push_back((unsigned long)height);
+
+        uint32_t* src = (uint32_t*)(proxy ? proxy.pix_data : pixdata);
+        for (int i = 0; i < num_pixels; i++) {
+            uint32_t bgra = src[i];
+            uint32_t b = (bgra >> 0) & 0xFF;
+            uint32_t g = (bgra >> 8) & 0xFF;
+            uint32_t r = (bgra >> 16) & 0xFF;
+            uint32_t a = (bgra >> 24) & 0xFF;
+            uint32_t argb = (a << 24) | (r << 16) | (g << 8) | b;
+            icon_data.push_back((unsigned long)argb);
+        }
+
+        Atom net_wm_icon = XInternAtom(display, "_NET_WM_ICON", False);
+        XChangeProperty(display, window, net_wm_icon, XA_CARDINAL, 32, PropModeReplace, (unsigned char*)icon_data.data(), icon_data.size());
+
+        if (proxy) proxy.pix_data_free(proxy.pix_data);
+        XFlush(display);
+    }
+
+    void CrystalWindow_X11::SetTitle(utf8_string_struct title) {
+        XStoreName(display, window, title);
+        XFlush(display);
+    }
+
+    void CrystalWindow_X11::GetTitle(P_OUT(utf8_string_struct) title) {
+        char* name = nullptr;
+        if (XFetchName(display, window, &name)) {
+            *title = name;
+            XFree(name);
+        } else {
+            *title = "";
+        }
     }
 
     // Function to convert X11 keycode to Unicode

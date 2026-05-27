@@ -18,12 +18,16 @@ private:
 
 public:
     CrystalWindow_Windows();
+    ~CrystalWindow_Windows() override;
     HWND hwnd;
     HINSTANCE hInstance;
     HGLRC gl_context;
 
     P_INSTANCE(WindowHandle) myHandle;
     P_INSTANCE(DragDropData) current_drag_data = nullptr;
+
+    HICON current_hIcon = nullptr;
+    HCURSOR current_hCursor = nullptr;
 
     virtual void PresentImage(utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height);
     virtual void QueueRedraw();
@@ -40,6 +44,12 @@ public:
     void GetSize(int32_t& width, int32_t& height) override;
     void SetLocation(int32_t x, int32_t y) override;
     void GetLocation(int32_t& x, int32_t& y) override;
+
+    void SetCursor(utf8_string_struct pixformat, P_ELEMENTS(void) pixdata, size_t pixdata_length, int32_t width, int32_t height, int32_t hot_x, int32_t hot_y) override;
+    void SetStandardCursor(CrystalCursor cursor_enum) override;
+    void SetIcon(utf8_string_struct pixformat, P_ELEMENTS(void) pixdata, size_t pixdata_length, int32_t width, int32_t height) override;
+    void SetTitle(utf8_string_struct title) override;
+    void GetTitle(P_OUT(utf8_string_struct) title) override;
 
     virtual void RegisterDragTarget();
     virtual void DragStart(P_INSTANCE(DragDropData) data, int32_t x, int32_t y);
