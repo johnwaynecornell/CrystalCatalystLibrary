@@ -1,0 +1,10 @@
+# Dev/futures.lst
+#
+# Declaration syntax:
+#   RepoA + RepoB |= capability -> prefix
+#
+# Meaning:
+#   If RepoA and RepoB are both present in $NewAge, 
+#   then 'capability' is enabled, using 'prefix' for scripts.
+
+JWCEssentials + JWCCommandSpawn + NewAge |= has_cs_newage -> Dev/build_has_cs_newage

@@ -1,27 +1,31 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ ! -f "../JWCEssentials/Dev/NewAge.dev.sh" ]; then
-  echo "Expected run from NewAge/Repo" >&2
+if [ -z "${NewAge:-}" ]; then
+  echo "ERROR: \$NewAge environment variable is not set." >&2
+  exit 1
+fi
+
+if [ ! -f "$NewAge/JWCEssentials/Dev/NewAge.dev.sh" ]; then
+  echo "ERROR: Expected NewAge dev helpers at \$NewAge/JWCEssentials/Dev/NewAge.dev.sh" >&2
   exit 1
 fi
 
 . "$NewAge/JWCEssentials/Dev/NewAge.dev.sh"
 
 if [ ! -f "CMakeLists.txt" ]; then
-  echo "Expected run from NewAge workspace root" >&2
+  echo "Expected run from repository root" >&2
   exit 1
 fi
 
 config=""
 FRESH="0"
 CLEAN="0"
-REPO_DIR=$(pwd)
 
 usage() {
     cat <<EOF
 Usage:
-  ./Dev/build_native.sh [Debug|Release] [--fresh] [--clean]
+  $(basename "$0") [Debug|Release] [--fresh] [--clean]
 
 Options:
   --fresh
@@ -38,25 +42,18 @@ while [ "$#" -gt 0 ]; do
             usage
             exit 0
             ;;
-
-        --fresh)
-            FRESH="1"
-            ;;
-
-        --clean|--target-clean)
-            CLEAN="1"
-            ;;
+        --fresh) FRESH="1" ;;
+        --clean|--target-clean) CLEAN="1" ;;
         --*)
-            echo "[build_native] ERROR: Unknown option: $1" >&2
+            echo "ERROR: Unknown option: $1" >&2
             usage >&2
             exit 1
             ;;
-
         *)
            if [ -z "$config" ]; then
                 config="$1"
             else
-                echo "[build_native] ERROR: Unexpected argument: $1" >&2
+                echo "ERROR: Unexpected argument: $1" >&2
                 usage >&2
                 exit 1
             fi
@@ -70,11 +67,11 @@ if [ -z "$config" ]; then
 fi
 
 export NewAge_Config="$config"
-
 if [ -z "${NewAge_Lane:-}" ]; then
     export NewAge_Lane="$(newage_resolve_platform_lane)"
 fi
 
-NEWAGE_BUILD_FRESH="$FRESH"
-NEWAGE_BUILD_CLEAN="$CLEAN"
-newage_native_build_directory .
+export NEWAGE_BUILD_FRESH="$FRESH"
+export NEWAGE_BUILD_CLEAN="$CLEAN"
+
+newage_native_build_directory Tools/htmlify_clipboard

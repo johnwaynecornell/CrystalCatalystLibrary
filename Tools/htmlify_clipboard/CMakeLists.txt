@@ -8,9 +8,12 @@
          htmlify_clipboard.cpp
  )
 
+ newage_configure_native_paths(htmlify_clipboard)
+
  find_library(LIBJWCEssentials JWCEssentials)
  find_library(LIBJWCCommandSpawn JWCCommandSpawn)
+ find_library(LIBCrystalCatalystLibrary CrystalCatalystLibrary)
 
- target_link_libraries(htmlify_clipboard PUBLIC CrystalCatalystLibrary ${LIBJWCEssentials} ${LIBJWCCommandSpawn})
+ target_link_libraries(htmlify_clipboard PUBLIC ${LIBCrystalCatalystLibrary} ${LIBJWCEssentials} ${LIBJWCCommandSpawn})
 
  shuttle(htmlify_clipboard bin)
