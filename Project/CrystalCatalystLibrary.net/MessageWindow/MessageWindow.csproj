@@ -23,6 +23,11 @@
         <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.119.2" />
         <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.2" />
     </ItemGroup>
+    <ItemGroup>
+      <None Update="Example.color.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
 
     <Target Name="PostBuild" AfterTargets="PostBuildEvent">
         <Exec Command="bash NewAge_forward.sh '$(MSBuildProjectName)' '$(NewAge)/bin/' '$(OutputPath)/'" />
