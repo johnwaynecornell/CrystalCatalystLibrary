@@ -782,6 +782,47 @@ public class CrystalWindow : IDisposable
         Imports.CrystalWindow_GetLocation(Handle, out x, out y);
     }
 
+    public void SetCursor(string pixformat, IntPtr pixdata, IntPtr pixdata_length, int width, int height, int hot_x,
+        int hot_y)
+    {
+        utf8_string_struct param_pixformat = pixformat;
+        Imports.CrystalWindow_SetCursor(Handle, ref param_pixformat, pixdata, pixdata_length, width, height, hot_x,
+            hot_y);
+    }
+
+    public void SetStandardCursor(CrystalCursor cursor_enum)
+    {
+        Imports.CrystalWindow_SetStandardCursor(Handle, cursor_enum);
+    }
+
+    public void SetIcon(string pixformat, IntPtr pixdata, IntPtr pixdata_length, int width, int height)
+    {
+        utf8_string_struct param_pixformat = pixformat;
+        Imports.CrystalWindow_SetIcon(Handle, ref param_pixformat, pixdata, pixdata_length, width, height);
+    }
+
+    public void SetTitle(string title)
+    {
+        utf8_string_struct param_title = title;
+        Imports.CrystalWindow_SetTitle(Handle, ref param_title);
+    }
+
+    public void GetTitle(out string title)
+    {
+        utf8_string_struct param_title;
+        Imports.CrystalWindow_GetTitle(Handle, out param_title);
+        title = param_title;
+    }
+
+    public static void GetDefaultStockIcon(out string pixformat, out IntPtr pixdata, out IntPtr pixdata_length,
+        out int width, out int height)
+    {
+        utf8_string_struct param_pixformat;
+        Imports.CrystalWindow_GetDefaultStockIcon(out param_pixformat, out pixdata, out pixdata_length, out width,
+            out height);
+        pixformat = param_pixformat;
+    }
+
     public bool SetMessageHandler(string handler_name, IntPtr handler)
     {
         utf8_string_struct param_handler_name = handler_name;
@@ -1126,6 +1167,33 @@ public class CrystalWindow : IDisposable
         // void CrystalWindow_GetLocation(P_INSTANCE WindowHandle window_handle, P_OUT int32_t x, P_OUT int32_t y)
         [DllImport("CrystalCatalystLibrary")]
         public static extern void CrystalWindow_GetLocation(IntPtr window_handle, out int x, out int y);
+
+        // void CrystalWindow_SetCursor(P_INSTANCE WindowHandle window_handle, utf8_string_struct pixformat, P_ELEMENTS void pixdata, size_t pixdata_length, int32_t width, int32_t height, int32_t hot_x, int32_t hot_y)
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern void CrystalWindow_SetCursor(IntPtr window_handle, ref utf8_string_struct pixformat,
+            IntPtr pixdata, IntPtr pixdata_length, int width, int height, int hot_x, int hot_y);
+
+        // void CrystalWindow_SetStandardCursor(P_INSTANCE WindowHandle window_handle, CrystalCursor cursor_enum)
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern void CrystalWindow_SetStandardCursor(IntPtr window_handle, CrystalCursor cursor_enum);
+
+        // void CrystalWindow_SetIcon(P_INSTANCE WindowHandle window_handle, utf8_string_struct pixformat, P_ELEMENTS void pixdata, size_t pixdata_length, int32_t width, int32_t height)
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern void CrystalWindow_SetIcon(IntPtr window_handle, ref utf8_string_struct pixformat,
+            IntPtr pixdata, IntPtr pixdata_length, int width, int height);
+
+        // void CrystalWindow_SetTitle(P_INSTANCE WindowHandle window_handle, utf8_string_struct title)
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern void CrystalWindow_SetTitle(IntPtr window_handle, ref utf8_string_struct title);
+
+        // void CrystalWindow_GetTitle(P_INSTANCE WindowHandle window_handle, P_OUT utf8_string_struct title)
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern void CrystalWindow_GetTitle(IntPtr window_handle, out utf8_string_struct title);
+
+        // void CrystalWindow_GetDefaultStockIcon(P_OUT utf8_string_struct pixformat, P_OUT P_ELEMENTS void pixdata, P_OUT size_t pixdata_length, P_OUT int32_t width, P_OUT int32_t height)
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern void CrystalWindow_GetDefaultStockIcon(out utf8_string_struct pixformat,
+            out IntPtr pixdata, out IntPtr pixdata_length, out int width, out int height);
 
         // bool CrystalWindow_SetMessageHandler(P_INSTANCE WindowHandle window_handle, utf8_string_struct handler_name, P_INSTANCE void handler)
         [DllImport("CrystalCatalystLibrary")]
