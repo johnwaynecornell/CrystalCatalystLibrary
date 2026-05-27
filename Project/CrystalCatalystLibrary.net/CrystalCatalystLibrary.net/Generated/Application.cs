@@ -16,7 +16,8 @@ public class Application
 
     public static int Run()
     {
-        return Imports.Application_Run();
+        var Ret = Imports.Application_Run();
+        return Ret;
     }
 
     public static void SignalClose()
@@ -26,12 +27,14 @@ public class Application
 
     public static int ArgumentCount()
     {
-        return Imports.Application_ArgumentCount();
+        var Ret = Imports.Application_ArgumentCount();
+        return Ret;
     }
 
     public static string Argument(int index)
     {
-        return Imports.Application_Argument(index);
+        var Ret = (string)Imports.Application_Argument(index);
+        return Ret;
     }
 
     public static void ArgumentRemove(int index)

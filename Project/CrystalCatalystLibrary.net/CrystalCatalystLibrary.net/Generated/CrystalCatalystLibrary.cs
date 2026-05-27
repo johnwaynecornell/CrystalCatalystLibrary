@@ -6,12 +6,14 @@ public class CrystalCatalystLibrary
 {
     public static bool Initialize()
     {
-        return Imports.CrystalCatalystLibrary_Initialize();
+        var Ret = Imports.CrystalCatalystLibrary_Initialize();
+        return Ret;
     }
 
     public static bool Close()
     {
-        return Imports.CrystalCatalystLibrary_Close();
+        var Ret = Imports.CrystalCatalystLibrary_Close();
+        return Ret;
     }
 
     public class Imports

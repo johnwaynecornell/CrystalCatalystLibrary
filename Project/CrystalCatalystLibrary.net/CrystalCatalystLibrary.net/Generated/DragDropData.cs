@@ -57,12 +57,14 @@ public class DragDropData : DataInterchange
 
     public static string DragActionsString(DragActions actions)
     {
-        return Imports.DragDropData_DragActionsString(actions);
+        var Ret = (string)Imports.DragDropData_DragActionsString(actions);
+        return Ret;
     }
 
     public new static DragDropData Create()
     {
-        return (DragDropData)Imports.DragDropData_Create();
+        var Ret = (DragDropData)Imports.DragDropData_Create();
+        return Ret;
     }
 
     public new class Imports

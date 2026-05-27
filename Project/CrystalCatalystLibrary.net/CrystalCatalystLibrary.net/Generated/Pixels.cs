@@ -10,8 +10,9 @@ public class Pixels
     {
         utf8_string_struct param_pixformat = pixformat;
         utf8_string_struct param_pixformat_dest = pixformat_dest;
-        return Imports.Pixels_ConvertPixels(ref param_pixformat, ref param_pixformat_dest, pixdata, pixdata_length,
+        var Ret = Imports.Pixels_ConvertPixels(ref param_pixformat, ref param_pixformat_dest, pixdata, pixdata_length,
             width, height);
+        return Ret;
     }
 
     public class Imports

@@ -18,7 +18,8 @@ public partial class CrystalCatalyst
 
         public static bool HasMSCoreFonts(HasMSCoreFonts_callback callback)
         {
-            return Imports.CrystalCatalyst_Fonts_HasMSCoreFonts(TranslateHasMSCoreFonts_callback(callback));
+            var Ret = Imports.CrystalCatalyst_Fonts_HasMSCoreFonts(TranslateHasMSCoreFonts_callback(callback));
+            return Ret;
         }
 
         public class Imports

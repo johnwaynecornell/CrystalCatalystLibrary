@@ -70,7 +70,8 @@ public class DataInterchange : IDisposable
 
     public static DataInterchange Create()
     {
-        return (DataInterchange)Imports.DataInterchange_Create();
+        var Ret = (DataInterchange)Imports.DataInterchange_Create();
+        return Ret;
     }
 
     public void Free()
@@ -83,23 +84,27 @@ public class DataInterchange : IDisposable
     public IntPtr FormatAdd(string format)
     {
         utf8_string_struct param_format = format;
-        return Imports.DataInterchange_FormatAdd(Handle, ref param_format);
+        var Ret = Imports.DataInterchange_FormatAdd(Handle, ref param_format);
+        return Ret;
     }
 
     public bool FormatExists(string format)
     {
         utf8_string_struct param_format = format;
-        return Imports.DataInterchange_FormatExists(Handle, ref param_format);
+        var Ret = Imports.DataInterchange_FormatExists(Handle, ref param_format);
+        return Ret;
     }
 
     public IntPtr FormatEnum()
     {
-        return Imports.DataInterchange_FormatEnum(Handle);
+        var Ret = Imports.DataInterchange_FormatEnum(Handle);
+        return Ret;
     }
 
     public static IntPtr FormatEnumNext(IntPtr node)
     {
-        return Imports.DataInterchange_FormatEnumNext(node);
+        var Ret = Imports.DataInterchange_FormatEnumNext(node);
+        return Ret;
     }
 
     public static void FormatEnumText(IntPtr node, out string text)
@@ -111,12 +116,14 @@ public class DataInterchange : IDisposable
 
     public IntPtr ItemsFormatRemove(IntPtr node)
     {
-        return Imports.DataInterchange_ItemsFormatRemove(Handle, node);
+        var Ret = Imports.DataInterchange_ItemsFormatRemove(Handle, node);
+        return Ret;
     }
 
     public bool isClipboard()
     {
-        return Imports.DataInterchange_isClipboard(Handle);
+        var Ret = Imports.DataInterchange_isClipboard(Handle);
+        return Ret;
     }
 
     public void Select(string format)

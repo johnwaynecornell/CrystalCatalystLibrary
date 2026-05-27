@@ -70,30 +70,35 @@ public class SubMutex : IDisposable
 
     public static bool Size(out IntPtr sz)
     {
-        return Imports.SubMutex_Size(out sz);
+        var Ret = Imports.SubMutex_Size(out sz);
+        return Ret;
     }
 
     public bool Init(string name)
     {
         utf8_string_struct param_name = name;
-        return Imports.SubMutex_Init(Handle, ref param_name);
+        var Ret = Imports.SubMutex_Init(Handle, ref param_name);
+        return Ret;
     }
 
     public bool Close()
     {
         if (hasClosed) return false;
         hasClosed = true;
-        return Imports.SubMutex_Close(Handle);
+        var Ret = Imports.SubMutex_Close(Handle);
+        return Ret;
     }
 
     public bool Lock()
     {
-        return Imports.SubMutex_Lock(Handle);
+        var Ret = Imports.SubMutex_Lock(Handle);
+        return Ret;
     }
 
     public bool Unlock()
     {
-        return Imports.SubMutex_Unlock(Handle);
+        var Ret = Imports.SubMutex_Unlock(Handle);
+        return Ret;
     }
 
     public class Imports

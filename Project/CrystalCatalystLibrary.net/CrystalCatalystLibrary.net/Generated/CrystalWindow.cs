@@ -647,7 +647,8 @@ public class CrystalWindow : IDisposable
 
     public DataInterchange ClipboardPaste()
     {
-        return (DataInterchange)Imports.CrystalWindow_ClipboardPaste(Handle);
+        var Ret = (DataInterchange)Imports.CrystalWindow_ClipboardPaste(Handle);
+        return Ret;
     }
 
     public void ClipboardCopy(DataInterchange data)
@@ -697,13 +698,15 @@ public class CrystalWindow : IDisposable
     public static CrystalWindow Create(int width, int height, string title)
     {
         utf8_string_struct param_title = title;
-        return (CrystalWindow)Imports.CrystalWindow_Create(width, height, ref param_title);
+        var Ret = (CrystalWindow)Imports.CrystalWindow_Create(width, height, ref param_title);
+        return Ret;
     }
 
     public static CrystalWindow CreateSimple(int width, int height, string title)
     {
         utf8_string_struct param_title = title;
-        return (CrystalWindow)Imports.CrystalWindow_CreateSimple(width, height, ref param_title);
+        var Ret = (CrystalWindow)Imports.CrystalWindow_CreateSimple(width, height, ref param_title);
+        return Ret;
     }
 
     public void ApplicationRetain()
@@ -782,12 +785,14 @@ public class CrystalWindow : IDisposable
     public bool SetMessageHandler(string handler_name, IntPtr handler)
     {
         utf8_string_struct param_handler_name = handler_name;
-        return Imports.CrystalWindow_SetMessageHandler(Handle, ref param_handler_name, handler);
+        var Ret = Imports.CrystalWindow_SetMessageHandler(Handle, ref param_handler_name, handler);
+        return Ret;
     }
 
     public double uptimeSeconds()
     {
-        return Imports.CrystalWindow_uptimeSeconds(Handle);
+        var Ret = Imports.CrystalWindow_uptimeSeconds(Handle);
+        return Ret;
     }
 
     public void uptimeReset()
