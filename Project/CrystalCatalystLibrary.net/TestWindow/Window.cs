@@ -111,7 +111,14 @@ public class Window
         canvas.DrawText("Hello World", 205, 325, textPaint);
         canvas.Flush();
 
-        IntPtr pixels = bitmap.GetPixels();
-        wnd.PresentImage("RGBA:int8", pixels, (IntPtr)bitmap.ByteCount, Width, Height);
+        PixData pix = new PixData();
+        pix.pix_format = "RGBA:int8";
+        pix.pix_data = bitmap.GetPixels();
+        pix.pix_data_length = (IntPtr)bitmap.ByteCount;
+        pix.width = Width;
+        pix.height = Height;
+        pix.pix_data_free = (ref pixdata) => true;
+        
+        wnd.PresentPix(ref pix);
     }
 }
