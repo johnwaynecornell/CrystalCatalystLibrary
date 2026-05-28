@@ -77,7 +77,14 @@ namespace NewAge
 
     bool CrystalCatalystMutexGimp::Free()
     {
-        return SubMutex_Close(spiderMutex);
+        bool RC = SubMutex_Close(spiderMutex);
+        if (RC)
+        {
+            free(spiderMutex);
+            spiderMutex = nullptr;
+        }
+
+        return RC;
     }
 
     bool CrystalCatalystMutexGimp::Lock()

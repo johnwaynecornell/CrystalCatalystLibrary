@@ -203,6 +203,9 @@ namespace NewAge {
             }
 
             // Create DragDropData and associate it with the window_handle
+            if (current_drag_receive_data) {
+                DataInterchange_Free(current_drag_receive_data);
+            }
             current_drag_receive_data = DragDropData_Create();
             current_drag_receive_data->selection_type = DataInterchange::E_DND;
 
@@ -278,6 +281,7 @@ namespace NewAge {
         << " l[4]=" << std::hex << std::setw(8) << std::setfill('0') << event->xclient.data.l[4] << std::dec
         << std::endl;
 
+        if (!current_drag_receive_data) return false;
         current_drag_receive_data->status.action = xint64_t_to_drag_actions(event->xclient.data.l[4], display);
 
         if (callbacks.on_drag_receive_motion) {
@@ -324,7 +328,7 @@ namespace NewAge {
         if (event->xclient.message_type != AppX11->atoms.xdnd.msg.drop) return false;
 
         std::cerr << mod_header() << "XdndDrop event received" << std::endl;
-        if (callbacks.on_drag_receive_select) {
+        if (callbacks.on_drag_receive_select && current_drag_receive_data) {
             utf8_string_struct format = nullptr;
             format = callbacks.on_drag_receive_select(myHandle, current_drag_receive_data);
 
@@ -386,7 +390,7 @@ namespace NewAge {
         std::cerr << "Selection is: " << (sel_name ? sel_name : "<null>") << "\n";
         if (sel_name) XFree(sel_name);
 
-        DataInterchange * current_data;
+        DataInterchange * current_data = nullptr;
 
         if (sel == AppX11->atoms.clipboard || sel == AppX11->atoms.primary) {
             is_clipboard = true;  have_selection = true;
@@ -396,7 +400,7 @@ namespace NewAge {
             current_data = this->current_drag_receive_data;
         }
 
-        if (!have_selection) {
+        if (!have_selection || !current_data) {
             // Unknown selection: don’t run DnD tail; just stop here.
             callbacks.on_data_interchange_error(myHandle, current_data, ((std::string) mod_header() + "Unknown selection").c_str());
 
@@ -406,6 +410,10 @@ namespace NewAge {
         if (event->xselection.property == None) {
 
             callbacks.on_data_interchange_error(myHandle, current_data, ((std::string) mod_header() + "Selection conversion failed (property=None)").c_str());
+
+            // Null out pending receive pointers on error
+            if (is_clipboard) this->current_clipboard_receive_data = nullptr;
+            if (is_dnd) this->current_drag_receive_data = nullptr;
 
             if (false) {
                 // First refusal on CLIPBOARD? Retry same selection/target with property=target
@@ -639,6 +647,9 @@ namespace NewAge {
                 //XDeleteProperty(event->xselection.display, event->xselection.requestor, event->xselection.property);
             } else {
                 callbacks.on_data_interchange_error(myHandle, current_data, ((std::string) mod_header() + "Selection conversion failed.").c_str());
+                if (is_clipboard) this->current_clipboard_receive_data = nullptr;
+                if (is_dnd) this->current_drag_receive_data = nullptr;
+
                 if (is_dnd) {
                     if (callbacks.on_drag_receive_drop)
                         callbacks.on_drag_receive_drop(myHandle, nullptr);
@@ -651,12 +662,14 @@ namespace NewAge {
             }
 
             if (is_dnd) {
+                this->current_drag_receive_data = nullptr;
                 if (callbacks.on_drag_receive_drop)
                     callbacks.on_drag_receive_drop(myHandle, (DragDropData*)current_data);
                 send_xdnd_finished(event->xselection.display, window,
                                    event->xselection.requestor,
                                    ((DragDropData*)current_data)->status.accept);
             } else { // clipboard/primary
+                this->current_clipboard_receive_data = nullptr;
                 this->clipboard_pending = false;
                 if (callbacks.on_clipboard_receive_data)
                     callbacks.on_clipboard_receive_data(myHandle, current_data);
@@ -665,6 +678,8 @@ namespace NewAge {
         } else {
 
             callbacks.on_data_interchange_error(myHandle, current_data, ((std::string) mod_header() + "Selection conversion failed.").c_str());
+            if (is_clipboard) this->current_clipboard_receive_data = nullptr;
+            if (is_dnd) this->current_drag_receive_data = nullptr;
 
             if (callbacks.on_drag_receive_drop) {
                 callbacks.on_drag_receive_drop(myHandle, nullptr);
@@ -690,7 +705,7 @@ namespace NewAge {
        DataInterchange* di = nullptr;
        X11IncrState* in = nullptr;
        auto pick = [&](DataInterchange* cand){
-           if (!cand || !cand->os_specific) return false;
+           if ((!cand) || (!cand->os_specific)) return false;
            auto* s = static_cast<X11IncrState*>(cand->os_specific);
            if (!s->active) return false;
            if (ev->xproperty.window == s->requestor && ev->xproperty.atom == s->property) {
@@ -727,6 +742,8 @@ namespace NewAge {
                                   0, (~0L), False, AnyPropertyType,
                                   &type, &format, &nitems, &bytes_after, &data) != Success) {
                callbacks.on_data_interchange_error(myHandle, di, ((std::string) mod_header() + "Property read failed.").c_str());
+               if (in->is_clipboard) this->current_clipboard_receive_data = nullptr;
+               else this->current_drag_receive_data = nullptr;
 
                return true;
                                   }
@@ -735,6 +752,8 @@ namespace NewAge {
                                   0, (~0L), True, AnyPropertyType,
                                   &type, &format, &nitems, &bytes_after, &data) != Success) {
                callbacks.on_data_interchange_error(myHandle, di, ((std::string) mod_header() + "Property read failed.").c_str());
+               if (in->is_clipboard) this->current_clipboard_receive_data = nullptr;
+               else this->current_drag_receive_data = nullptr;
                return true;
                                   }
        }
@@ -753,8 +772,10 @@ namespace NewAge {
            }
 
            if (in->is_clipboard) {
+               this->current_clipboard_receive_data = nullptr;
                if (callbacks.on_clipboard_receive_data) callbacks.on_clipboard_receive_data(myHandle, di);
            } else {
+               this->current_drag_receive_data = nullptr;
                if (callbacks.on_drag_receive_drop) callbacks.on_drag_receive_drop(myHandle, (DragDropData*)di);
                send_xdnd_finished(dpy, window, in->requestor, ((DragDropData*)di)->status.accept);
            }
@@ -772,6 +793,8 @@ namespace NewAge {
        if (INCR_STYLE_A) {
            if (XDeleteProperty(dpy, in->requestor, in->property) != Success) {
                callbacks.on_data_interchange_error(myHandle, di, ((std::string) mod_header() + "XDeleteProperty failed.").c_str());
+               if (in->is_clipboard) this->current_clipboard_receive_data = nullptr;
+               else this->current_drag_receive_data = nullptr;
                return true;
                                   }
            usleep(5000);
@@ -798,7 +821,7 @@ namespace NewAge {
         ev.time = req->time;
         ev.property = req->property;
 
-        DataInterchange *drag_data;
+        DataInterchange *drag_data = nullptr;
 
         if (req->selection == AppX11->atoms.clipboard) {
             std::cerr << "Handling clipboard selection request" << std::endl;
@@ -806,7 +829,7 @@ namespace NewAge {
             // Handle clipboard-specific logic if necessary
         } else if (req->selection == AppX11->atoms.xdnd.selection) {
             std::cerr << "Handling drag-and-drop selection request" << std::endl;
-            drag_data = drag_provide->drag_data;
+            if (drag_provide) drag_data = drag_provide->drag_data;
             // Handle drag-and-drop-specific logic if necessary
         } else throw std::runtime_error("Unknow Selection class ");
 

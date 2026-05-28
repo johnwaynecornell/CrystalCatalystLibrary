@@ -21,6 +21,16 @@ namespace NewAge {
         window_handle->crystal_window->ApplicationRelease();
     }
 
+    CrystalWindow::CrystalWindow()
+    {
+        callbacks = {};
+        myHandle = nullptr;
+
+        current_clipboard_provide_data = nullptr;
+        current_clipboard_receive_data = nullptr;
+        current_drag_receive_data = nullptr;
+    }
+
     void CrystalWindow::ApplicationRetain() {
         TheApplication->RetainerIncrement();
     }

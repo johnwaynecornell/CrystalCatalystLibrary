@@ -46,9 +46,10 @@ namespace NewAge {
             }
         }
 
-        size_t S = str.length() + 1;
-
-        return str.c_str();
+        static thread_local std::string last_drag_actions_str;
+        last_drag_actions_str = str;
+        utf8_string_struct R = (char*)last_drag_actions_str.c_str();
+        return R;
     }
 
     P_INSTANCE(DragDropData)  DragDropData_Create()

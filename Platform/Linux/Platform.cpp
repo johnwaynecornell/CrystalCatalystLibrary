@@ -4,6 +4,8 @@
 #include "CrystalCatalystLibrary/CrystalCatalystLibrary.h"
 
 #include <fstream>
+#include <map>
+#include <mutex>
 
 #include "CrystalApplication_X11.h"
 
@@ -51,11 +53,27 @@ namespace NewAge {
 
     }
 
-    utf8_string_struct XGetAtomName_struct(Display *display, Atom A) {
-        char *val = XGetAtomName(display, A);
-        utf8_string_struct R = val;
-        XFree(val);
+    static std::map<Atom, std::string> atom_cache;
+    static std::mutex atom_cache_mutex;
 
-        return R;
+    utf8_string_struct XGetAtomName_struct(Display *display, Atom A) {
+        if (A == None) return nullptr;
+
+        std::lock_guard<std::mutex> lock(atom_cache_mutex);
+        auto it = atom_cache.find(A);
+        if (it != atom_cache.end()) {
+            utf8_string_struct R = (char*)it->second.c_str();
+            return R;
+        }
+
+        char *val = XGetAtomName(display, A);
+        if (val) {
+            atom_cache[A] = val;
+            XFree(val);
+            utf8_string_struct R = (char*)atom_cache[A].c_str();
+            return R;
+        }
+
+        return nullptr;
     }
 }

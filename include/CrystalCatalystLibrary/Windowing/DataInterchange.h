@@ -17,8 +17,8 @@ namespace NewAge {
 
         class Node {
         public:
-            utf8_string_struct type;
-            Node *next;
+            utf8_string_struct type = nullptr;
+            Node *next = nullptr;
         };
 
         enum ESELECTION {
@@ -26,13 +26,13 @@ namespace NewAge {
             E_DND = 2
         };
 
-        ESELECTION selection_type;
+        ESELECTION selection_type = (ESELECTION)0;
 
-        utf8_string_struct selected_format;
-        P_INSTANCE(void) selected_data;
-        size_t selected_size;
+        utf8_string_struct selected_format = nullptr;
+        P_INSTANCE(void) selected_data = nullptr;
+        size_t selected_size = 0;
 
-        Node data_head;
+        Node data_head = {nullptr, nullptr};
 
         WindowHandle *m_handle = nullptr;
 

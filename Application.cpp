@@ -28,8 +28,6 @@ namespace NewAge {
     }
 
 
-    bool CloseSignalled = false;
-    int64_t RetainCount = 0;
 
     void Application_SignalClose(void)
     {

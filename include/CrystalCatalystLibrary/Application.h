@@ -23,7 +23,7 @@ namespace NewAge {
 
         int64_t retain_count = 0;
 
-        bool CloseSignalled;
+        bool CloseSignalled = false;
 
         virtual void SetArguments(struct_array_struct<utf8_string_struct> args);
         virtual void Init();

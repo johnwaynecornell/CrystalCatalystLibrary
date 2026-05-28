@@ -10,7 +10,7 @@ public struct PixData
     public int width;
     public int height;
 
-    public delegate bool Pix_data_free(ref Pix_data_free pixdata);
+    public delegate bool Pix_data_free(ref PixData pixdata);
 
     public Pix_data_free pix_data_free;
 }

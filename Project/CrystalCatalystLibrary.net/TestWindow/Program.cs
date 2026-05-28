@@ -22,7 +22,7 @@ namespace TestWindow
                 (struct_array_struct<utf8_string_struct>)tmp; */
             Application.Init(args);
             Window wnd = new Window();
-            Application.Run();
+            wnd.Run();
         }
     }
 }

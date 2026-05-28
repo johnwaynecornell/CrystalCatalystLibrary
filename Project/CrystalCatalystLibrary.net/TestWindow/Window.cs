@@ -28,7 +28,12 @@ public class Window
         wnd.OnClipboardProvideChosen = OnClipboardProvideChosen;
 
         OnResize(wnd, width, height);
+    }
+
+    public void Run()
+    {
         wnd.Show(true);
+        Application.Run();
     }
 
     private void OnClipboardProvideChosen(CrystalWindow windowHandle, DataInterchange data, string format)
@@ -84,6 +89,8 @@ public class Window
 
     private void OnDraw(CrystalWindow windowHandle)
     {
+        if (canvas == null || bitmap == null) return;
+        
         canvas.Clear(new SKColor(32, 36, 48, 255));
 
         using SKPaint textPaint = new()

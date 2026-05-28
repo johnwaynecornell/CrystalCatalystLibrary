@@ -20,8 +20,8 @@ namespace NewAge {
     };
 
     struct DragStatus {
-        bool accept;
-        DragActions action;
+        bool accept = false;
+        DragActions action = DRAG_OPERATION_NONE;
     };
 
     class DragDropData : public DataInterchange{

@@ -139,6 +139,8 @@ namespace NewAge {
 
         bool is_closed = false;
 
+        CrystalWindow();
+
     private:
         struct MonotonicTimer {
             std::chrono::steady_clock::time_point start{std::chrono::steady_clock::now()};
@@ -184,7 +186,7 @@ namespace NewAge {
 
     typedef struct WindowHandle
     {
-        P_INSTANCE(CrystalWindow) crystal_window;
+        P_INSTANCE(CrystalWindow) crystal_window = nullptr;
     } WindowHandle;
 
     typedef struct HandleNode

@@ -175,17 +175,14 @@ namespace NewAge {
     }
 
     void CrystalApplication_X11::DispatchEvent(XEvent &event) {
-        P_INSTANCE(WindowHandle) window_handle;
-        XFindContext(event.xany.display, event.xany.window, windowContext, (P_INSTANCE(XPointer)) & window_handle);
+        P_INSTANCE(WindowHandle) window_handle = nullptr;
+        if (XFindContext(event.xany.display, event.xany.window, windowContext, (P_INSTANCE(XPointer)) & window_handle) != 0) {
+            return;
+        }
 
-        P_INSTANCE(CrystalWindow_X11)win = (P_INSTANCE(CrystalWindow_X11)) window_handle->crystal_window;
-
-        fflush(stdout);
-
-        if (window_handle) {
+        if (window_handle && window_handle->crystal_window) {
+            P_INSTANCE(CrystalWindow_X11)win = (P_INSTANCE(CrystalWindow_X11)) window_handle->crystal_window;
             win->handle_xevent(&event);
-        } else {
-            std::cerr << "No window handle found for event" << std::endl;
         }
 
     }
