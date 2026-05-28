@@ -15,14 +15,7 @@
     <PropertyGroup>
         <MyReferencePath>$(NewAge)\DotNet\Libs\lib\$(Configuration)\$(TargetFramework)</MyReferencePath>
     </PropertyGroup>
-    <ItemGroup>
-    </ItemGroup>
-    <ItemGroup>
-        <PackageReference Include="SkiaSharp" Version="3.119.2" />
-        <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.2" />
-        <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.119.2" />
-        <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.2" />
-    </ItemGroup>
+    
     <ItemGroup>
       <None Update="Example.color.txt">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>

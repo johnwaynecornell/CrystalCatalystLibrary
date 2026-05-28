@@ -14,7 +14,7 @@
         <Reference Include="$(MyReferencePath)\AnsiEffectSniffer.dll"/>
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="SkiaSharp" Version="3.119.2" />
+        <PackageReference Include="SkiaSharp" Version="[3.119.2,4.0.0)" />
     </ItemGroup>
 
     <Target Name="PostBuild" AfterTargets="PostBuildEvent">
