@@ -40,6 +40,8 @@
         "SubMutex" : "Close"
     ];
 
+    InstanceStructures : [ "PixData" ];
+
     Directives : {
         WriteCallbacks("CrystalWindow", "
             void (*on_draw)(P_INSTANCE(WindowHandle) window_handle);

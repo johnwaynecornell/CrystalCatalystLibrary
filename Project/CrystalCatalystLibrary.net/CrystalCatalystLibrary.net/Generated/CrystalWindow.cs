@@ -719,10 +719,44 @@ public class CrystalWindow : IDisposable
         Imports.CrystalWindow_ApplicationRelease(Handle);
     }
 
+    public void PresentPix(ref PixData pix)
+    {
+        Imports.CrystalWindow_PresentPix(Handle, ref pix);
+    }
+
     public void PresentImage(string pixformat, IntPtr pixdata, IntPtr pixdata_length, int width, int height)
     {
         utf8_string_struct param_pixformat = pixformat;
         Imports.CrystalWindow_PresentImage(Handle, ref param_pixformat, pixdata, pixdata_length, width, height);
+    }
+
+    public void CursorPix(ref PixData pix, int hot_x, int hot_y)
+    {
+        Imports.CrystalWindow_CursorPix(Handle, ref pix, hot_x, hot_y);
+    }
+
+    public void SetCursor(string pixformat, IntPtr pixdata, IntPtr pixdata_length, int width, int height, int hot_x,
+        int hot_y)
+    {
+        utf8_string_struct param_pixformat = pixformat;
+        Imports.CrystalWindow_SetCursor(Handle, ref param_pixformat, pixdata, pixdata_length, width, height, hot_x,
+            hot_y);
+    }
+
+    public void SetStandardCursor(CrystalCursor cursor_enum)
+    {
+        Imports.CrystalWindow_SetStandardCursor(Handle, cursor_enum);
+    }
+
+    public void IconPix(ref PixData pix)
+    {
+        Imports.CrystalWindow_IconPix(Handle, ref pix);
+    }
+
+    public void SetIcon(string pixformat, IntPtr pixdata, IntPtr pixdata_length, int width, int height)
+    {
+        utf8_string_struct param_pixformat = pixformat;
+        Imports.CrystalWindow_SetIcon(Handle, ref param_pixformat, pixdata, pixdata_length, width, height);
     }
 
     public void QueueRedraw()
@@ -780,25 +814,6 @@ public class CrystalWindow : IDisposable
     public void GetLocation(out int x, out int y)
     {
         Imports.CrystalWindow_GetLocation(Handle, out x, out y);
-    }
-
-    public void SetCursor(string pixformat, IntPtr pixdata, IntPtr pixdata_length, int width, int height, int hot_x,
-        int hot_y)
-    {
-        utf8_string_struct param_pixformat = pixformat;
-        Imports.CrystalWindow_SetCursor(Handle, ref param_pixformat, pixdata, pixdata_length, width, height, hot_x,
-            hot_y);
-    }
-
-    public void SetStandardCursor(CrystalCursor cursor_enum)
-    {
-        Imports.CrystalWindow_SetStandardCursor(Handle, cursor_enum);
-    }
-
-    public void SetIcon(string pixformat, IntPtr pixdata, IntPtr pixdata_length, int width, int height)
-    {
-        utf8_string_struct param_pixformat = pixformat;
-        Imports.CrystalWindow_SetIcon(Handle, ref param_pixformat, pixdata, pixdata_length, width, height);
     }
 
     public void SetTitle(string title)
@@ -1119,9 +1134,35 @@ public class CrystalWindow : IDisposable
         [DllImport("CrystalCatalystLibrary")]
         public static extern void CrystalWindow_ApplicationRelease(IntPtr window_handle);
 
+        // void CrystalWindow_PresentPix(P_INSTANCE WindowHandle window_handle, P_INSTANCE PixData pix)
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern void CrystalWindow_PresentPix(IntPtr window_handle, ref PixData pix);
+
         // void CrystalWindow_PresentImage(P_INSTANCE WindowHandle window_handle, utf8_string_struct pixformat, P_ELEMENTS void pixdata, size_t pixdata_length, int32_t width, int32_t height)
         [DllImport("CrystalCatalystLibrary")]
         public static extern void CrystalWindow_PresentImage(IntPtr window_handle, ref utf8_string_struct pixformat,
+            IntPtr pixdata, IntPtr pixdata_length, int width, int height);
+
+        // void CrystalWindow_CursorPix(P_INSTANCE WindowHandle window_handle, P_INSTANCE PixData pix, int32_t hot_x, int32_t hot_y)
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern void CrystalWindow_CursorPix(IntPtr window_handle, ref PixData pix, int hot_x, int hot_y);
+
+        // void CrystalWindow_SetCursor(P_INSTANCE WindowHandle window_handle, utf8_string_struct pixformat, P_ELEMENTS void pixdata, size_t pixdata_length, int32_t width, int32_t height, int32_t hot_x, int32_t hot_y)
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern void CrystalWindow_SetCursor(IntPtr window_handle, ref utf8_string_struct pixformat,
+            IntPtr pixdata, IntPtr pixdata_length, int width, int height, int hot_x, int hot_y);
+
+        // void CrystalWindow_SetStandardCursor(P_INSTANCE WindowHandle window_handle, CrystalCursor cursor_enum)
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern void CrystalWindow_SetStandardCursor(IntPtr window_handle, CrystalCursor cursor_enum);
+
+        // void CrystalWindow_IconPix(P_INSTANCE WindowHandle window_handle, P_INSTANCE PixData pix)
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern void CrystalWindow_IconPix(IntPtr window_handle, ref PixData pix);
+
+        // void CrystalWindow_SetIcon(P_INSTANCE WindowHandle window_handle, utf8_string_struct pixformat, P_ELEMENTS void pixdata, size_t pixdata_length, int32_t width, int32_t height)
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern void CrystalWindow_SetIcon(IntPtr window_handle, ref utf8_string_struct pixformat,
             IntPtr pixdata, IntPtr pixdata_length, int width, int height);
 
         // void CrystalWindow_QueueRedraw(P_INSTANCE WindowHandle window_handle)
@@ -1167,20 +1208,6 @@ public class CrystalWindow : IDisposable
         // void CrystalWindow_GetLocation(P_INSTANCE WindowHandle window_handle, P_OUT int32_t x, P_OUT int32_t y)
         [DllImport("CrystalCatalystLibrary")]
         public static extern void CrystalWindow_GetLocation(IntPtr window_handle, out int x, out int y);
-
-        // void CrystalWindow_SetCursor(P_INSTANCE WindowHandle window_handle, utf8_string_struct pixformat, P_ELEMENTS void pixdata, size_t pixdata_length, int32_t width, int32_t height, int32_t hot_x, int32_t hot_y)
-        [DllImport("CrystalCatalystLibrary")]
-        public static extern void CrystalWindow_SetCursor(IntPtr window_handle, ref utf8_string_struct pixformat,
-            IntPtr pixdata, IntPtr pixdata_length, int width, int height, int hot_x, int hot_y);
-
-        // void CrystalWindow_SetStandardCursor(P_INSTANCE WindowHandle window_handle, CrystalCursor cursor_enum)
-        [DllImport("CrystalCatalystLibrary")]
-        public static extern void CrystalWindow_SetStandardCursor(IntPtr window_handle, CrystalCursor cursor_enum);
-
-        // void CrystalWindow_SetIcon(P_INSTANCE WindowHandle window_handle, utf8_string_struct pixformat, P_ELEMENTS void pixdata, size_t pixdata_length, int32_t width, int32_t height)
-        [DllImport("CrystalCatalystLibrary")]
-        public static extern void CrystalWindow_SetIcon(IntPtr window_handle, ref utf8_string_struct pixformat,
-            IntPtr pixdata, IntPtr pixdata_length, int width, int height);
 
         // void CrystalWindow_SetTitle(P_INSTANCE WindowHandle window_handle, utf8_string_struct title)
         [DllImport("CrystalCatalystLibrary")]
