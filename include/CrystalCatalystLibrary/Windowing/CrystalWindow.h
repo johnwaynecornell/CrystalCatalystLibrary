@@ -87,7 +87,16 @@ namespace NewAge {
     _EXPORT_ void CrystalWindow_ApplicationRetain(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ void CrystalWindow_ApplicationRelease(P_INSTANCE(WindowHandle) window_handle);
 
+    _EXPORT_ void CrystalWindow_PresentPix(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(PixData) pix);
     _EXPORT_ void CrystalWindow_PresentImage(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height);
+
+    _EXPORT_ void CrystalWindow_CursorPix(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(PixData) pix, int32_t hot_x, int32_t hot_y);
+    _EXPORT_ void CrystalWindow_SetCursor(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height, int32_t hot_x, int32_t hot_y);
+    _EXPORT_ void CrystalWindow_SetStandardCursor(P_INSTANCE(WindowHandle) window_handle, CrystalCursor cursor_enum);
+
+    _EXPORT_ void CrystalWindow_IconPix(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(PixData) pix);
+    _EXPORT_ void CrystalWindow_SetIcon(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height);
+
     _EXPORT_ void CrystalWindow_QueueRedraw(P_INSTANCE(WindowHandle) window_handle);
 
     _EXPORT_ void CrystalWindow_MouseCapture(P_INSTANCE(WindowHandle) window_handle);
@@ -102,9 +111,6 @@ namespace NewAge {
     _EXPORT_ void CrystalWindow_SetLocation(P_INSTANCE(WindowHandle) window_handle, int32_t x, int32_t y);
     _EXPORT_ void CrystalWindow_GetLocation(P_INSTANCE(WindowHandle) window_handle, P_OUT(int32_t) x, P_OUT(int32_t) y);
 
-    _EXPORT_ void CrystalWindow_SetCursor(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height, int32_t hot_x, int32_t hot_y);
-    _EXPORT_ void CrystalWindow_SetStandardCursor(P_INSTANCE(WindowHandle) window_handle, CrystalCursor cursor_enum);
-    _EXPORT_ void CrystalWindow_SetIcon(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height);
     _EXPORT_ void CrystalWindow_SetTitle(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct title);
     _EXPORT_ void CrystalWindow_GetTitle(P_INSTANCE(WindowHandle) window_handle, P_OUT(utf8_string_struct) title);
 

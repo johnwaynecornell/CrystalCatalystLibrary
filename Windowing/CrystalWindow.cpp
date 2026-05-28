@@ -92,6 +92,10 @@ namespace NewAge {
     }
 
 
+    void CrystalWindow_PresentPix(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(PixData) pix) {
+        CrystalWindow_PresentImage(window_handle, pix->pix_format, pix->pix_data, pix->pix_data_length, pix->width, pix->height);
+    }
+
     void CrystalWindow_PresentImage(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height) {
         window_handle->crystal_window->PresentImage(pixformat, pixdata, pixdata_length, width, height);
     }
@@ -150,12 +154,20 @@ namespace NewAge {
         window_handle->crystal_window->GetLocation(*x, *y);
     }
 
+    void CrystalWindow_CursorPix(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(PixData) pix) {
+        CrystalWindow_SetCursor(window_handle, pix->pix_format, pix->pix_data, pix->pix_data_length, pix->width, pix->height, 0, 0);
+    }
+
     void CrystalWindow_SetCursor(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height, int32_t hot_x, int32_t hot_y) {
         window_handle->crystal_window->SetCursor(pixformat, pixdata, pixdata_length, width, height, hot_x, hot_y);
     }
 
     void CrystalWindow_SetStandardCursor(P_INSTANCE(WindowHandle) window_handle, CrystalCursor cursor_enum) {
         window_handle->crystal_window->SetStandardCursor(cursor_enum);
+    }
+
+    void CrystalWindow_IconPix(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(PixData) pix) {
+        CrystalWindow_SetIcon(window_handle, pix->pix_format, pix->pix_data, pix->pix_data_length, pix->width, pix->height);
     }
 
     void CrystalWindow_SetIcon(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height) {
