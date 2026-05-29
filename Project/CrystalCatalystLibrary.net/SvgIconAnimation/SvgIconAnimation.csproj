@@ -8,13 +8,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\CrystalCatalystLibrary.net\CrystalCatalystLibrary.net.csproj" />
-      <ProjectReference Include="..\CrystalSkia.net\CrystalSkia.net.csproj" />
+        <ProjectReference Include="..\CrystalCatalystLibrary.net\CrystalCatalystLibrary.net.csproj" />
+        <ProjectReference Include="..\CrystalSkia.net\CrystalSkia.net.csproj" />
     </ItemGroup>
-
-    <PropertyGroup>
-        <MyReferencePath>$(NewAge)\DotNet\Libs\lib\$(Configuration)\$(TargetFramework)</MyReferencePath>
-    </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="SkiaSharp" Version="[3.119.2,4.0.0)" />
@@ -22,15 +18,7 @@
         <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="[3.119.2,4.0.0)" />
         <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="[3.119.2,4.0.0)" />
         <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="[3.119.2,4.0.0)" />
-    </ItemGroup>
-    
-    <ItemGroup>
-      <None Update="Example.color.txt">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
+
     </ItemGroup>
 
-    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-        <Exec Command="bash NewAge_forward.sh '$(MSBuildProjectName)' '$(NewAge)/bin/' '$(OutputPath)/'" />
-      </Target>
 </Project>

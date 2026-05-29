@@ -98,6 +98,7 @@ P_INSTANCE(WindowHandle) CrystalApplication_Windows::WindowCreate(int32_t width,
     }
 
     Application_WindowAdd(window_handle);
+    window->SetStandardCursor(CRYSTAL_CURSOR_ARROW);
 
     return window_handle;
 }
@@ -135,6 +136,7 @@ P_INSTANCE(WindowHandle) CrystalApplication_Windows::WindowCreate_Simple(int32_t
     }
 
     Application_WindowAdd(window_handle);
+    window->SetStandardCursor(CRYSTAL_CURSOR_ARROW);
 
     return window_handle;
 }

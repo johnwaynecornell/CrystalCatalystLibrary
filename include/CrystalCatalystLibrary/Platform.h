@@ -30,6 +30,15 @@ namespace NewAge {
         bool (*pix_data_free)(P_ELEMENTS(uint8_t) pixdata);
 
         operator bool();
+
+        void free()
+        {
+            if (pix_data)
+            {
+                if (pix_data_free) pix_data_free(pix_data);
+                pix_data = nullptr;
+            }
+        }
     };
 
     _EXPORT_ PixData Pixels_ConvertPixels(utf8_string_struct pixformat, utf8_string_struct pixformat_dest, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height);

@@ -176,20 +176,20 @@ namespace NewAge
     }
 
     void CrystalWindow_Windows::SetCursor(utf8_string_struct pixformat, P_ELEMENTS(void) pixdata, size_t pixdata_length, int32_t width, int32_t height, int32_t hot_x, int32_t hot_y) {
-        if (!hwnd || !pixdata || !pixformat) return;
-        PixData proxy = Pixels_ConvertPixels(pixformat, "bgra:int8", pixdata, pixdata_length, width, height);
+        if (!hwnd || !pixdata || !pixformat || height <= 0 || width <= 0) return;
 
-        BITMAPV5HEADER bi = { 0 };
-        bi.bV5Size = sizeof(BITMAPV5HEADER);
-        bi.bV5Width = width;
-        bi.bV5Height = -height;
-        bi.bV5Planes = 1;
-        bi.bV5BitCount = 32;
-        bi.bV5Compression = BI_BITFIELDS;
-        bi.bV5RedMask = 0x00FF0000;
-        bi.bV5GreenMask = 0x0000FF00;
-        bi.bV5BlueMask = 0x000000FF;
-        bi.bV5AlphaMask = 0xFF000000;
+        PixData proxy = Pixels_ConvertPixels(pixformat, "bgra:int8", pixdata, pixdata_length, width, height);
+        P_ELEMENTS(void) m = proxy ? proxy.pix_data : pixdata;
+        if (!m) return;
+
+        // Use standard BITMAPINFOHEADER. Much safer for alpha cursors than an empty V5 header.
+        BITMAPINFOHEADER bi = { 0 };
+        bi.biSize = sizeof(BITMAPINFOHEADER);
+        bi.biWidth = width;
+        bi.biHeight = -height; // Negative means top-down
+        bi.biPlanes = 1;
+        bi.biBitCount = 32;
+        bi.biCompression = BI_RGB; // 32-bit BI_RGB inherently implies BGRA layout
 
         void* bits = nullptr;
         HDC hdc = GetDC(nullptr);
@@ -197,25 +197,50 @@ namespace NewAge
         ReleaseDC(nullptr, hdc);
 
         if (hBitmap && bits) {
-            memcpy(bits, proxy ? proxy.pix_data : pixdata, width * height * 4);
-            HBITMAP hMask = CreateBitmap(width, height, 1, 1, nullptr);
+            // BULLETPROOF ROW-BY-ROW COPY
+            // Calculate the actual stride of the incoming memory based on the total length provided
+            size_t expected_min_length = (size_t)width * height * 4;
+            size_t incoming_stride = (pixdata_length >= expected_min_length) ? (pixdata_length / height) : (width * 4);
+            size_t dest_stride = width * 4;
+
+            uint8_t* src = static_cast<uint8_t*>(m);
+            uint8_t* dst = static_cast<uint8_t*>(bits);
+
+            for (int32_t y = 0; y < height; ++y) {
+                // Copy exactly the width of the image, completely ignoring any padding at the end of the source row
+                memcpy(dst + (y * dest_stride), src + (y * incoming_stride), dest_stride);
+            }
+
+            // Create a monochrome AND mask. For alpha-blended cursors, this should be all zeros (black).
+            // Scanlines in a monochrome bitmap must be WORD-aligned (2 bytes).
+            int mask_stride = ((width + 15) / 16) * 2;
+            int mask_size = mask_stride * height;
+            void* mask_bits = calloc(1, mask_size);
+            HBITMAP hMask = CreateBitmap(width, height, 1, 1, mask_bits);
+            free(mask_bits);
+
+            if (hot_x < 0) hot_x = 0;
+            if (hot_y < 0) hot_y = 0;
+
             ICONINFO ii = { 0 };
             ii.fIcon = FALSE;
-            ii.xHotspot = hot_x;
-            ii.yHotspot = hot_y;
+            ii.xHotspot = (DWORD)hot_x;
+            ii.yHotspot = (DWORD)hot_y;
             ii.hbmMask = hMask;
             ii.hbmColor = hBitmap;
+
             HCURSOR hCursor = CreateIconIndirect(&ii);
+            if (hCursor) {
+                 ::SetCursor(hCursor);
+                if (current_hCursor && owns_cursor) DestroyCursor(current_hCursor);
+                current_hCursor = hCursor;
+                owns_cursor = true;
+            }
 
-            if (current_hCursor) DestroyCursor(current_hCursor);
-            current_hCursor = hCursor;
-
-            SetClassLongPtr(hwnd, GCLP_HCURSOR, (LONG_PTR)hCursor);
-            ::SetCursor(hCursor);
             DeleteObject(hMask);
             DeleteObject(hBitmap);
         }
-        if (proxy) proxy.pix_data_free(proxy.pix_data);
+        if (proxy) proxy.free();
     }
 
     void CrystalWindow_Windows::SetStandardCursor(CrystalCursor cursor_enum) {
@@ -237,16 +262,17 @@ namespace NewAge
         }
         HCURSOR hCursor = LoadCursor(nullptr, idc);
 
-        if (current_hCursor) DestroyCursor(current_hCursor);
-        current_hCursor = nullptr;
-
-        SetClassLongPtr(hwnd, GCLP_HCURSOR, (LONG_PTR)hCursor);
         ::SetCursor(hCursor);
+        if (current_hCursor && owns_cursor) DestroyCursor(current_hCursor);
+        current_hCursor = hCursor;
+        owns_cursor = false;
     }
 
     void CrystalWindow_Windows::SetIcon(utf8_string_struct pixformat, P_ELEMENTS(void) pixdata, size_t pixdata_length, int32_t width, int32_t height) {
         if (!hwnd || !pixdata || !pixformat) return;
         PixData proxy = Pixels_ConvertPixels(pixformat, "bgra:int8", pixdata, pixdata_length, width, height);
+        P_ELEMENTS(void) m = proxy ? proxy.pix_data : pixdata;
+        if (!m) return;
 
         BITMAPV5HEADER bi = { 0 };
         bi.bV5Size = sizeof(BITMAPV5HEADER);
@@ -266,24 +292,32 @@ namespace NewAge
         ReleaseDC(nullptr, hdc);
 
         if (hBitmap && bits) {
-            memcpy(bits, proxy ? proxy.pix_data : pixdata, width * height * 4);
-            HBITMAP hMask = CreateBitmap(width, height, 1, 1, nullptr);
+            memcpy(bits, m, width * height * 4);
+            
+            int mask_stride = ((width + 15) / 16) * 2;
+            int mask_size = mask_stride * height;
+            void* mask_bits = calloc(1, mask_size);
+            HBITMAP hMask = CreateBitmap(width, height, 1, 1, mask_bits);
+            free(mask_bits);
+
             ICONINFO ii = { 0 };
             ii.fIcon = TRUE;
             ii.hbmMask = hMask;
             ii.hbmColor = hBitmap;
             HICON hIcon = CreateIconIndirect(&ii);
 
-            if (current_hIcon) DestroyIcon(current_hIcon);
-            current_hIcon = hIcon;
+            if (hIcon) {
+                SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+                SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
 
-            SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-            SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
-
+                if (current_hIcon) DestroyIcon(current_hIcon);
+                current_hIcon = hIcon;
+            }
+            
             DeleteObject(hMask);
             DeleteObject(hBitmap);
         }
-        if (proxy) proxy.pix_data_free(proxy.pix_data);
+        if (proxy) proxy.free();
     }
 
     void CrystalWindow_Windows::SetTitle(utf8_string_struct title) {
@@ -354,16 +388,28 @@ namespace NewAge
                 wnd->ready = true;
                 return 0;
         }
+        case WM_ERASEBKGND: {
+                return 1; // Tell Windows we handled it, preventing automatic background clearing
+        }
+        case WM_SETCURSOR:
+            if (LOWORD(lParam) == HTCLIENT)
+            {
+                if (wnd->current_hCursor) {
+                    ::SetCursor(wnd->current_hCursor);
+                    return TRUE;
+                }
+            }
+            break;
         case WM_PAINT: {
                 PAINTSTRUCT ps;
                 HDC hdc = BeginPaint(hwnd, &ps);
-
-                FillRect(hdc, &ps.rcPaint, (HBRUSH) (COLOR_WINDOW + 1));
+                wnd->paint_hdc = hdc;
 
                 if (wnd->callbacks.on_draw) {
                     wnd->callbacks.
                             on_draw(handle);
                 }
+                wnd->paint_hdc = nullptr;
                 EndPaint(hwnd, &ps);
         }
             break;
@@ -487,7 +533,8 @@ namespace NewAge
 
         P_ELEMENTS(void) m = proxy ? proxy.pix_data : pixdata;
 
-        HDC hdc = GetDC(hwnd);
+        bool use_paint_dc = (paint_hdc != nullptr);
+        HDC hdc = use_paint_dc ? paint_hdc : GetDC(hwnd);
 
 
         BITMAPINFO bmi;
@@ -501,9 +548,11 @@ namespace NewAge
 
         StretchDIBits(hdc, 0, 0, width, height, 0, 0, width, height, m, &bmi, DIB_RGB_COLORS, SRCCOPY);
 
-        if (proxy) proxy.pix_data_free(proxy.pix_data);
+        if (proxy) proxy.free();
 
-        ReleaseDC(hwnd, hdc);
+        if (!use_paint_dc) {
+            ReleaseDC(hwnd, hdc);
+        }
     }
 
     void CrystalWindow_Windows::QueueRedraw()
@@ -521,7 +570,7 @@ namespace NewAge
 
     CrystalWindow_Windows::~CrystalWindow_Windows() {
         if (current_hIcon) DestroyIcon(current_hIcon);
-        if (current_hCursor) DestroyCursor(current_hCursor);
+        if (current_hCursor && owns_cursor) DestroyCursor(current_hCursor);
     }
 
     HRESULT __stdcall CrystalWindow_Windows::QueryInterface(REFIID iid, P_ELEMENTS(void) * ppvObject)

@@ -57,6 +57,10 @@ namespace NewAge {
                 Atom take_focus;    // "WM_TAKE_FOCUS"
             } window;
 
+            struct {
+                Atom net_wm_icon;   // "_NET_WM_ICON"
+            } ewmh;
+
         } atoms;
 #pragma pack(pop)
 
@@ -92,6 +96,7 @@ namespace NewAge {
             atoms.window._delete     = XInternAtom(globalDisplay, "WM_DELETE_WINDOW",False);
             atoms.window.take_focus  = XInternAtom(globalDisplay, "WM_TAKE_FOCUS",  False);
 
+            atoms.ewmh.net_wm_icon   = GetAtom("_NET_WM_ICON");
         }
 
         Atom GetAtom(const char* name) {

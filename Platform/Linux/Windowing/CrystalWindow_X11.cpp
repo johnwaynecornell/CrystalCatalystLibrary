@@ -93,14 +93,14 @@ namespace NewAge {
 
         XcursorImage* image = XcursorImageCreate(width, height);
         if (!image) {
-            if (proxy) proxy.pix_data_free(proxy.pix_data);
+            if (proxy) proxy.free();
             return;
         }
 
         image->xhot = hot_x;
         image->yhot = hot_y;
 
-        uint32_t* src = (uint32_t*)(proxy ? proxy.pix_data : pixdata);
+        uint32_t* src = (uint32_t*) (proxy ? proxy.pix_data : pixdata);
         for (int i = 0; i < width * height; i++) {
             image->pixels[i] = src[i];
         }
@@ -109,8 +109,8 @@ namespace NewAge {
         XDefineCursor(display, window, cursor);
         XFreeCursor(display, cursor);
         XcursorImageDestroy(image);
-        if (proxy) proxy.pix_data_free(proxy.pix_data);
         XFlush(display);
+        if (proxy) proxy.free();
     }
 
     void CrystalWindow_X11::SetStandardCursor(CrystalCursor cursor_enum) {
@@ -136,16 +136,18 @@ namespace NewAge {
     }
 
     void CrystalWindow_X11::SetIcon(utf8_string_struct pixformat, P_ELEMENTS(void) pixdata, size_t pixdata_length, int32_t width, int32_t height) {
-        if (!pixdata || !pixformat) return;
+        if (!pixdata || !pixformat || width <= 0 || height <= 0) return;
+        if (!AppX11) return;
+
         PixData proxy = Pixels_ConvertPixels(pixformat, "bgra:int8", pixdata, pixdata_length, width, height);
 
         int num_pixels = width * height;
         std::vector<unsigned long> icon_data;
-        icon_data.reserve(2 + num_pixels);
-        icon_data.push_back((unsigned long)width);
-        icon_data.push_back((unsigned long)height);
+        icon_data.resize(2 + num_pixels);
+        icon_data[0] = (unsigned long)width;
+        icon_data[1] = (unsigned long)height;
 
-        uint32_t* src = (uint32_t*)(proxy ? proxy.pix_data : pixdata);
+        uint32_t* src = (uint32_t*) (proxy ? proxy.pix_data : pixdata);
         for (int i = 0; i < num_pixels; i++) {
             uint32_t bgra = src[i];
             uint32_t b = (bgra >> 0) & 0xFF;
@@ -153,14 +155,14 @@ namespace NewAge {
             uint32_t r = (bgra >> 16) & 0xFF;
             uint32_t a = (bgra >> 24) & 0xFF;
             uint32_t argb = (a << 24) | (r << 16) | (g << 8) | b;
-            icon_data.push_back((unsigned long)argb);
+            icon_data[i + 2] = (unsigned long)argb;
         }
 
-        Atom net_wm_icon = XInternAtom(display, "_NET_WM_ICON", False);
-        XChangeProperty(display, window, net_wm_icon, XA_CARDINAL, 32, PropModeReplace, (unsigned char*)icon_data.data(), icon_data.size());
+        XChangeProperty(display, window, AppX11->atoms.ewmh.net_wm_icon, XA_CARDINAL, 32, PropModeReplace, (unsigned char*)icon_data.data(), icon_data.size());
 
-        if (proxy) proxy.pix_data_free(proxy.pix_data);
         XFlush(display);
+        if (proxy) proxy.free();
+
     }
 
     void CrystalWindow_X11::SetTitle(utf8_string_struct title) {
@@ -448,13 +450,14 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
 
         if (!ximage) {
             std::cerr << mod_header() << "Failed to create XImage" << std::endl;
+            if (proxy) proxy.free();
             return;
         }
 
         GC gc = XCreateGC(display, window, 0, nullptr);
         if (!gc) {
             std::cerr << mod_header() << "Failed to create Graphics Context" << std::endl;
-            if (proxy) proxy.pix_data_free(proxy.pix_data);
+            if (proxy) proxy.free();
 
             ximage->data = nullptr;
             XDestroyImage(ximage);
@@ -464,11 +467,12 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
         XPutImage(display, window, gc, ximage, 0, 0, 0, 0, width, height);
         XFreeGC(display, gc);
 
-        if (proxy) proxy.pix_data_free(proxy.pix_data);
+        if (proxy) proxy.free();
 
         ximage->data = nullptr;
         XDestroyImage(ximage);
         XFlush(display);
+
     }
 
     void CrystalWindow_X11::QueueRedraw()

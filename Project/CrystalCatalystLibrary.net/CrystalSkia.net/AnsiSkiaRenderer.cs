@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using SkiaSharp;
 using JWCEssentials;
+using CrystalCatalystLibrary.net;
+using System.Runtime.InteropServices;
 
 namespace CrystalSkia.net;
 
@@ -32,6 +35,11 @@ public class AnsiSkiaRenderer
         public SKSize PixelSize { get; internal set; }
     }
 
+    public ParsedContent Parse(string str)
+    {
+        return Parse(Encoding.UTF8.GetBytes(str));
+    }
+    
     public ParsedContent Parse(byte[] data)
     {
         var content = new ParsedContent();
@@ -164,5 +172,41 @@ public class AnsiSkiaRenderer
             }
             y += FontSize + lineSpacing;
         }
+    }
+
+    public PixData RenderPix(ParsedContent content, bool blinkState)
+    {
+        var width = (int)Math.Ceiling(content.PixelSize.Width);
+        var height = (int)Math.Ceiling(content.PixelSize.Height);
+
+        if (width <= 0) width = 1;
+        if (height <= 0) height = 1;
+
+        using var bitmap = new SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
+        using var canvas = new SKCanvas(bitmap);
+        canvas.Clear(DefaultBg);
+        Render(content, canvas, blinkState);
+        canvas.Flush();
+
+        var pixData = new PixData();
+        pixData.width = width;
+        pixData.height = height;
+        pixData.pix_format = "bgra:int8";
+
+        int byteCount = bitmap.ByteCount;
+        GCHandle gc = GCHandle.Alloc(bitmap.Bytes, GCHandleType.Pinned);
+        
+        pixData.pix_data = gc.AddrOfPinnedObject();
+        pixData.pix_data_length = (IntPtr)byteCount;
+        pixData.pix_data_free = (IntPtr pixdata) =>
+        {
+            if (gc.IsAllocated)
+            {
+                gc.Free();
+            }
+            return true;
+        };
+
+        return pixData;
     }
 }

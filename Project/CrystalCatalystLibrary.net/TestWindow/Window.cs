@@ -112,13 +112,14 @@ public class Window
         canvas.Flush();
 
         PixData pix = new PixData();
-        pix.pix_format = "RGBA:int8";
+        pix.pix_format = "rgba:int8";
         pix.pix_data = bitmap.GetPixels();
         pix.pix_data_length = (IntPtr)bitmap.ByteCount;
         pix.width = Width;
         pix.height = Height;
-        pix.pix_data_free = (ref pixdata) => true;
+        pix.pix_data_free = (IntPtr pixdata) => true;
         
         wnd.PresentPix(ref pix);
+        pix.Dispose();
     }
 }

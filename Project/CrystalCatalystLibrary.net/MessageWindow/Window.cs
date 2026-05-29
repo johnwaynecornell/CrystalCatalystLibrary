@@ -191,7 +191,7 @@ public class Window
         canvas.Flush();
 
         IntPtr pixels = bitmap.GetPixels();
-        wnd.PresentImage("RGBA:int8", pixels, (IntPtr)bitmap.ByteCount, imageInfo.Width, imageInfo.Height);
+        wnd.PresentImage("rgba:int8", pixels, (IntPtr)bitmap.ByteCount, imageInfo.Width, imageInfo.Height);
     }
 
     private void DrawButtons()

@@ -28,6 +28,8 @@ public:
 
     HICON current_hIcon = nullptr;
     HCURSOR current_hCursor = nullptr;
+    HDC paint_hdc = nullptr;
+    bool owns_cursor = false;
 
     virtual void PresentImage(utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height);
     virtual void QueueRedraw();

@@ -10,11 +10,16 @@
         <MyReferencePath>$(NewAge)\DotNet\Libs\lib\$(Configuration)\$(TargetFramework)</MyReferencePath>
     </PropertyGroup>
     <ItemGroup>
-        <Reference Include="$(MyReferencePath)\JWCEssentials.net.dll"/>
-        <Reference Include="$(MyReferencePath)\AnsiEffectSniffer.dll"/>
+        <Reference Include="$(MyReferencePath)\JWCEssentials.net.dll" />
+        <Reference Include="$(MyReferencePath)\AnsiEffectSniffer.dll" />
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="SkiaSharp" Version="[3.119.2,4.0.0)" />
+        <PackageReference Include="SkiaSharp.Svg" Version="1.60.0" />
+        <PackageReference Include="Svg.Skia" Version="5.0.0" />
+    </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\CrystalCatalystLibrary.net\CrystalCatalystLibrary.net.csproj" />
     </ItemGroup>
 
     <Target Name="PostBuild" AfterTargets="PostBuildEvent">

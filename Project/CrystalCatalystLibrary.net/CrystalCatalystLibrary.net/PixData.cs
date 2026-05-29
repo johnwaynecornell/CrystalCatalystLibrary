@@ -11,9 +11,9 @@ public struct PixData : IDisposable
     /// <summary>
     /// Pixel format specification string describing channel order and data type.
     /// Format: <CHANNELS>:<TYPE>
-    /// Channels are from the set [rgba] in any order (e.g., "rgba", "bgra", "rgb").
+    /// Channels are from the set [RGBA] in any order (e.g., "RGBA", "BGRA", "rgb").
     /// Types are int8, float32, or float64.
-    /// Examples: "rgba:int8", "bgra:int8", "rgba:float32", "rgb:float64"
+    /// Examples: "rgba:int8", "bgra:int8", "RGBA:float32", "rgb:float64"
     /// </summary>
     public utf8_string_struct pix_format;
 
@@ -45,13 +45,13 @@ public struct PixData : IDisposable
     /// </summary>
     /// <param name="pixdata">Reference to the PixData structure being freed.</param>
     /// <returns>True if the memory was successfully released, false otherwise.</returns>
-    public delegate bool Pix_data_free(ref PixData pixdata);
+    public delegate bool Pix_data_free(IntPtr pixdata);
 
     /// <summary>
     /// Function pointer for the cleanup callback.
     /// This callback is invoked by the native library to release the pixel data buffer when it is no longer needed.
     /// </summary>
-    public Pix_data_free pix_data_free;
+    public Pix_data_free? pix_data_free;
 
     public void Dispose()
     {
@@ -59,13 +59,13 @@ public struct PixData : IDisposable
         {
             if (pix_data_free != null)
             {
-                pix_data_free(ref this);
+                pix_data_free(pix_data);
                 pix_data_free = null;
             }
             
             pix_data = IntPtr.Zero;
-            
-            pix_format.Dispose();
         }
+
+        pix_format.Dispose();
     }
 }

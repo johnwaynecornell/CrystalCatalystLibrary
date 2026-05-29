@@ -96,7 +96,7 @@ namespace NewAge {
     }
 
     void ChannelConvert_float32_int8(P_INSTANCE(PixConversion) This, P_ELEMENTS(void) src, int src_channel, P_ELEMENTS(void) dst, int dest_channel) {
-        ((float *)dst)[dest_channel] =(float) ((int8_t *)src)[src_channel] * 0xFF;
+        ((float *)dst)[dest_channel] =(float)((uint8_t *)src)[src_channel] / 255.0f;
     }
 
     void ChannelConvert_float32_float32(P_INSTANCE(PixConversion) This, P_ELEMENTS(void) src, int src_channel, P_ELEMENTS(void) dst, int dest_channel) {
@@ -108,7 +108,7 @@ namespace NewAge {
     }
 
     void ChannelConvert_float64_int8(P_INSTANCE(PixConversion) This, P_ELEMENTS(void) src, int src_channel, P_ELEMENTS(void) dst, int dest_channel) {
-        ((double *)dst)[dest_channel] =(double) ((int8_t *)src)[src_channel] * 0xFF;
+        ((double *)dst)[dest_channel] =(double)((uint8_t *)src)[src_channel] / 255.0f;
     }
 
     void ChannelConvert_float64_float32(P_INSTANCE(PixConversion) This, P_ELEMENTS(void) src, int src_channel, P_ELEMENTS(void) dst, int dest_channel) {
@@ -230,38 +230,81 @@ namespace NewAge {
     void PixConversion::convert(P_ELEMENTS(void) src, P_ELEMENTS(void) dst) {
         for (int i=0; i<to->num_channels; i++) {
             int src_channel = channel_map[i];
-            if (src_channel < 0) continue;
+            if (src_channel < 0) {
+                // Set default values for missing channels
+                if (to->channel_list[i] == 'A') {
+                    if (to->channel_type == EChannelType_int8) {
+                        ((uint8_t*)dst)[i] = 255;
+                    } else if (to->channel_type == EChannelType_float32) {
+                        ((float*)dst)[i] = 1.0f;
+                    } else if (to->channel_type == EChannelType_float64) {
+                        ((double*)dst)[i] = 1.0;
+                    }
+                } else {
+                    if (to->channel_type == EChannelType_int8) {
+                        ((uint8_t*)dst)[i] = 0;
+                    } else if (to->channel_type == EChannelType_float32) {
+                        ((float*)dst)[i] = 0.0f;
+                    } else if (to->channel_type == EChannelType_float64) {
+                        ((double*)dst)[i] = 0.0;
+                    }
+                }
+                continue;
+            }
 
             channel_convert(this, src, src_channel, dst, i);
         }
     };
 
     bool pix_free(uint8_t *data) {
-        delete data;
+        delete[] data;
         return true;
     }
 
     PixData Pixels_ConvertPixels(utf8_string_struct pixformat, utf8_string_struct pixformat_dest, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height) {
-        PixData Ret;
-        if (strcmp(pixformat, pixformat_dest) == 0) return Ret;
+        PixData Ret = {};
+
+        if (!pixdata || !pixformat || !pixformat_dest) return Ret;
 
         P_INSTANCE(PixInfo) src_pixinfo = PixInfo::get(pixformat);
+        if (!src_pixinfo) return Ret;
+
         P_INSTANCE(PixInfo) dst_pixinfo = PixInfo::get(pixformat_dest);
+        if (!dst_pixinfo) {
+            src_pixinfo->Release();
+            return Ret;
+        }
+
+        if (strcmp(pixformat, pixformat_dest) == 0) {
+            //'return Ret;
+            size_t size = src_pixinfo->pix_stride * width * height;
+            Ret.pix_data = new uint8_t[size];
+            memcpy(Ret.pix_data, pixdata, size);
+            Ret.pix_data_length = size;
+            Ret.width = width;
+            Ret.height = height;
+            Ret.pix_format = pixformat_dest;
+            Ret.pix_data_free = pix_free;
+            src_pixinfo->Release();
+            dst_pixinfo->Release();
+            return Ret;
+        }
+
         P_INSTANCE(PixConversion) conversion = PixConversion::get(src_pixinfo, dst_pixinfo);
+        if (!conversion) {
+            src_pixinfo->Release();
+            dst_pixinfo->Release();
+            return Ret;
+        }
 
         size_t pix_count = width * height;
-
-        size_t src_length = src_pixinfo->pix_stride * pix_count;
-
-        if (src_length > pixdata_length) {
-            /*TODO*/ //ErrorSystem
-        }
+        size_t total_dst_size = pix_count * dst_pixinfo->pix_stride;
 
         Ret.height = height;
         Ret.width = width;
-        Ret.pix_data = new uint8_t[pix_count * dst_pixinfo->pix_stride];
-        Ret.pix_format = pixformat;
-
+        Ret.pix_data = new uint8_t[total_dst_size];
+        Ret.pix_data_length = total_dst_size;
+        Ret.pix_format = pixformat_dest;
         Ret.pix_data_free = pix_free;
 
         int8_t *src_ptr = (int8_t *)pixdata;
@@ -269,7 +312,6 @@ namespace NewAge {
 
         for (int i=0; i < pix_count; i++) {
             conversion->convert(src_ptr, dst_ptr);
-            //dst_pixinfo->convert_from(src_ptr, src_pixinfo, dst_ptr);
             src_ptr += src_pixinfo->pix_stride;
             dst_ptr += dst_pixinfo->pix_stride;
         }

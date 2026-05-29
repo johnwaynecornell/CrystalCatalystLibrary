@@ -93,7 +93,7 @@ namespace NewAge {
 
 
     void CrystalWindow_PresentPix(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(PixData) pix) {
-        CrystalWindow_PresentImage(window_handle, pix->pix_format, pix->pix_data, pix->pix_data_length, pix->width, pix->height);
+        CrystalWindow_PresentImage(window_handle, pix->pix_format.c_str, pix->pix_data, pix->pix_data_length, pix->width, pix->height);
     }
 
     void CrystalWindow_PresentImage(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height) {
@@ -154,8 +154,8 @@ namespace NewAge {
         window_handle->crystal_window->GetLocation(*x, *y);
     }
 
-    void CrystalWindow_CursorPix(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(PixData) pix) {
-        CrystalWindow_SetCursor(window_handle, pix->pix_format, pix->pix_data, pix->pix_data_length, pix->width, pix->height, 0, 0);
+    void CrystalWindow_CursorPix(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(PixData) pix, int32_t hot_x, int32_t hot_y) {
+        CrystalWindow_SetCursor(window_handle, pix->pix_format.c_str, pix->pix_data, pix->pix_data_length, pix->width, pix->height, hot_x, hot_y);
     }
 
     void CrystalWindow_SetCursor(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height, int32_t hot_x, int32_t hot_y) {
@@ -167,7 +167,8 @@ namespace NewAge {
     }
 
     void CrystalWindow_IconPix(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(PixData) pix) {
-        CrystalWindow_SetIcon(window_handle, pix->pix_format, pix->pix_data, pix->pix_data_length, pix->width, pix->height);
+        
+        CrystalWindow_SetIcon(window_handle, pix->pix_format.c_str, pix->pix_data, pix->pix_data_length, pix->width, pix->height);
     }
 
     void CrystalWindow_SetIcon(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct pixformat, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height) {

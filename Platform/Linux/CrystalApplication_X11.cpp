@@ -32,6 +32,8 @@ namespace NewAge {
 
     void CrystalApplication_X11::Init()
     {
+        XInitThreads();
+
         CrystalApplication::Init();
 
         windowContext = XUniqueContext();

@@ -54,8 +54,8 @@ The pixel format string describes the channel order and data type:
 
 Examples:
 
-    RGBA:int8
-    BGRA:int8
+    rgba:int8
+    bgra:int8
     RGBA:float32
     RGBA:float64
 
@@ -67,7 +67,7 @@ Supported data types are expected to be:
 
 For example, a SkiaSharp bitmap created with `SKColorType.Rgba8888` can be presented as:
 
-    RGBA:int8
+    rgba:int8
 
 SkiaSharp Usage
 ---------------

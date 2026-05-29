@@ -160,8 +160,8 @@ Pixel format strings use the form:
 
 Examples include:
 
-*   `RGBA:int8`
-*   `BGRA:int8`
+*   `rgba:int8`
+*   `bgra:int8`
 *   `RGBA:float32`
 *   `RGBA:float64`
 *   `RABG:float64`, as used by the native test client
