@@ -62,6 +62,17 @@ class Program
         {
             if (button == 1 && x < 128 && y < 128) spin_time = wnd.uptimeSeconds();
         };
+        
+        int mouseX = 0;
+        int mouseY = 0;
+        
+        
+        wnd.OnMouseMove = (handle, x, y) =>
+        {
+            mouseX = x;
+            mouseY = y;
+        };
+        
 
         wnd.OnIdle = handle =>
         {
@@ -85,8 +96,50 @@ class Program
                 
                 m = SKMatrix.CreateRotation((float)Math.PI * 2 * spin, hotspot.X, hotspot.Y);
                 cursor_renderer.Matrix = m; 
+                cursor_renderer.Border = 12;
                 
-                cursor_pixdata = cursor_renderer.RenderPix(cursor_svg);
+                cursor_pixdata = cursor_renderer.RenderPix(cursor_svg, null, (bitmap, canvas) =>
+                {
+                    // Create a glow effect based on alpha
+                    using (var paint = new SKPaint())
+                    {
+                        double dist = Math.Sqrt(Math.Pow(mouseX - 64, 2) + Math.Pow(mouseY - 64, 2));
+                        double proximity = dist == 0 ? 1.0 : 1.0 - dist / 128.0;
+                        if (proximity < 0.01) proximity = 0.01;
+                        
+                        // Use a sine wave for smoother pulsing phase [0, 1]
+                        float phase = (float)(Math.Sin(time * 2.0) * 0.5 + 0.5) * (float) proximity;
+                        
+                        // Define colors to interpolate between
+                        SKColor startColor = SKColors.Black;
+                        SKColor endColor = SKColors.Magenta;
+
+                        // Interpolate between colors based on phase
+                        byte r = (byte)(startColor.Red + (endColor.Red - startColor.Red) * phase);
+                        byte g = (byte)(startColor.Green + (endColor.Green - startColor.Green) * phase);
+                        byte b = (byte)(startColor.Blue + (endColor.Blue - startColor.Blue) * phase);
+                        SKColor interpolatedColor = new SKColor(r, g, b);
+
+                        // Pulse the blur radius with the phase
+                        float blurRadius = 4.0f * phase;
+                        paint.ImageFilter = SKImageFilter.CreateBlur(blurRadius, blurRadius);
+                        
+                        // SrcIn: replaces pixel color with interpolatedColor while keeping the blurred alpha
+                        paint.ColorFilter = SKColorFilter.CreateBlendMode(
+                            interpolatedColor, 
+                            SKBlendMode.SrcIn
+                        );
+
+                        // Use Add or Screen blend mode to make it look like a "glow" on top of the original
+                        paint.BlendMode = SKBlendMode.Plus;
+
+                        // Draw the current bitmap state back onto itself through the glow filter
+                        canvas.SaveLayer(paint);
+                        canvas.ResetMatrix();
+                        canvas.DrawBitmap(bitmap, 0, 0);
+                        canvas.Restore();
+                    }
+                });
                 translateHotSpot = cursor_renderer.TranslateHotSpot(hotspot);
                 
                 wnd.CursorPix(ref cursor_pixdata, (int) translateHotSpot.X, (int) translateHotSpot.Y);

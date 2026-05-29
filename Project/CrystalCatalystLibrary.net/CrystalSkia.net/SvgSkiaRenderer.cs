@@ -54,7 +54,7 @@ public class SvgSkiaRenderer
         return true;
     }
 
-    public PixData RenderPix(Svg.Skia.SKSvg svg, Action<SKBitmap, SKCanvas> onCanvas = null)
+    public PixData RenderPix(Svg.Skia.SKSvg svg, Action<SKBitmap, SKCanvas>? onCanvas = null, Action<SKBitmap, SKCanvas>? postProc = null)
     {
         if (svg.Picture == null) return default;
         var bounds = svg.Picture.CullRect;
@@ -107,6 +107,12 @@ public class SvgSkiaRenderer
 
         canvas.Translate(translateX, translateY);
         Render(svg, canvas);
+        if (postProc != null)
+        {
+            canvas.Flush();
+            postProc(bitmap, canvas);
+        }
+        
         canvas.Flush();
 
         var pixData = new PixData();

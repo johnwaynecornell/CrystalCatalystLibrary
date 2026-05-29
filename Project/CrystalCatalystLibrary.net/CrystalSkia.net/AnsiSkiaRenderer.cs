@@ -174,7 +174,7 @@ public class AnsiSkiaRenderer
         }
     }
 
-    public PixData RenderPix(ParsedContent content, bool blinkState)
+    public PixData RenderPix(ParsedContent content, bool blinkState, Action<SKBitmap, SKCanvas>? onCanvas = null, Action<SKBitmap, SKCanvas>? postProc = null)
     {
         var width = (int)Math.Ceiling(content.PixelSize.Width);
         var height = (int)Math.Ceiling(content.PixelSize.Height);
@@ -185,9 +185,19 @@ public class AnsiSkiaRenderer
         using var bitmap = new SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
         using var canvas = new SKCanvas(bitmap);
         canvas.Clear(DefaultBg);
+        
+        onCanvas?.Invoke(bitmap, canvas);
+        
         Render(content, canvas, blinkState);
+        
+        if (postProc != null)
+        {
+            canvas.Flush();
+            postProc(bitmap, canvas);
+        }
+        
         canvas.Flush();
-
+        
         var pixData = new PixData();
         pixData.width = width;
         pixData.height = height;
