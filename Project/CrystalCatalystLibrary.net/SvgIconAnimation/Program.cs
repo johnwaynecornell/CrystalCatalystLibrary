@@ -32,7 +32,7 @@ class Program
         
         hotspot = new SKPoint(6, 4);
         translateHotSpot = cursor_renderer.TranslateHotSpot(hotspot);
-        wnd.CursorPix(ref cursor_pixdata, (int) translateHotSpot.X, (int) translateHotSpot.X);
+        wnd.CursorPix(ref cursor_pixdata, (int) translateHotSpot.X, (int) translateHotSpot.Y);
 
         wnd.ApplicationRetain();
         wnd.Show(true);
