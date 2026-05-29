@@ -12,6 +12,8 @@ public class SvgSkiaRenderer
     public SKMatrix Matrix { get; set; } = SKMatrix.Identity;
     public bool Crop { get; set; } = true;
     public SKSize? Size { get; set; }
+        
+    public int Border { get; set; } = 8;
 
     public SKSize Measure(Svg.Skia.SKSvg svg)
     {
@@ -69,10 +71,10 @@ public class SvgSkiaRenderer
         }
         else if (Crop)
         {
-            width = (int)Math.Ceiling(transformedBounds.Width) + 2;
-            height = (int)Math.Ceiling(transformedBounds.Height) + 2;
-            translateX = -transformedBounds.Left + 1;
-            translateY = -transformedBounds.Top + 1;
+            width = (int)Math.Ceiling(transformedBounds.Width) + (Border<<1);
+            height = (int)Math.Ceiling(transformedBounds.Height) + (Border<<1);
+            translateX = -transformedBounds.Left +  Border;
+            translateY = -transformedBounds.Top  + Border;
         }
         else
         {

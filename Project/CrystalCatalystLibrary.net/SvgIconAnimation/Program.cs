@@ -1,9 +1,4 @@
-using System;
-using System.IO;
-using System.Text;
-using System.Threading;
 using SkiaSharp;
-using Svg.Skia;
 using CrystalSkia.net;
 using CrystalCatalystLibrary.net;
 using SvgIconAnimation;
@@ -13,31 +8,31 @@ class Program
     [STAThread]
     static void Main(string[] args)
     {
-        CrystalCatalystLibrary.net.Application.Init(args);
+        Application.Init(args);
 
-        var cursor_svg = new Svg.Skia.SKSvg();
-        using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(SvgSrc.svgCatalystCrystal)))
-        {
-            cursor_svg.Load(stream);
-        }
+        var icon_svg = Crystal.SKSvgFromText(SvgSrc.svgCatalystRotor);
+        var cursor_svg = Crystal.SKSvgFromText(SvgSrc.svgCatalystCrystal);
+        
+        SvgSkiaRenderer cursor_renderer;
+        PixData cursor_pixdata;
 
-        var cursor_renderer = new SvgSkiaRenderer();
-        //cursor_renderer.Size = new SKSize(64, 64);
-        cursor_renderer.Crop = true; // Use Size
-        PixData cursor_pixdata = cursor_renderer.RenderPix(cursor_svg);
-
-        var icon_svg = new Svg.Skia.SKSvg();
-        using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(SvgSrc.svgCatalystRotor)))
-        {
-            icon_svg.Load(stream);
-        }
 
         var renderer = new SvgSkiaRenderer();
         renderer.Size = new SKSize(128, 128); // Ensure the icon stays the same size
         renderer.Crop = false; // Use Size
         var wnd = CrystalWindow.Create(400, 300, "SVG Icon Animation");
 
-        wnd.CursorPix(ref cursor_pixdata, 6, 4);
+        SKPoint translateHotSpot;
+        SKPoint hotspot;
+        
+        cursor_renderer = new SvgSkiaRenderer();
+        cursor_renderer.Crop = true; // Use Size
+        
+        cursor_pixdata = cursor_renderer.RenderPix(cursor_svg);
+        
+        hotspot = new SKPoint(6, 4);
+        translateHotSpot = cursor_renderer.TranslateHotSpot(hotspot);
+        wnd.CursorPix(ref cursor_pixdata, (int) translateHotSpot.X, (int) translateHotSpot.X);
 
         wnd.ApplicationRetain();
         wnd.Show(true);
@@ -61,7 +56,7 @@ class Program
             pix.Dispose();
         };
 
-        double spin_time = 0;
+        double spin_time = -1;
 
         wnd.OnMouseDown = (handle, button, x, y) =>
         {
@@ -77,9 +72,7 @@ class Program
 
                 SKMatrix m;
 
-                m = SKMatrix.Concat(SKMatrix.CreateTranslation(64, 64), SKMatrix.CreateRotation((float)Math.PI / 8f * (float) time*2));
-                m = SKMatrix.Concat(m, SKMatrix.CreateTranslation(-64, -64)); 
-                
+                m = SKMatrix.CreateRotation((float)Math.PI / 8f * (float) time*2,64,64);
                 renderer.Matrix = m;
                     
                 var pix = renderer.RenderPix(icon_svg);
@@ -90,15 +83,11 @@ class Program
                 float spin = (float)(time - spin_time);
                 if (spin > 1) spin = 0;
                 
-                SKPoint hotspot = new SKPoint(6, 4);
-                
-                m = SKMatrix.Concat(SKMatrix.CreateTranslation(hotspot.X, hotspot.Y), SKMatrix.CreateRotation((float)Math.PI * 2 * spin));
-                m = SKMatrix.Concat(m, SKMatrix.CreateTranslation(-hotspot.X, -hotspot.Y));
-                
+                m = SKMatrix.CreateRotation((float)Math.PI * 2 * spin, hotspot.X, hotspot.Y);
                 cursor_renderer.Matrix = m; 
                 
                 cursor_pixdata = cursor_renderer.RenderPix(cursor_svg);
-                SKPoint translateHotSpot = cursor_renderer.TranslateHotSpot(hotspot);
+                translateHotSpot = cursor_renderer.TranslateHotSpot(hotspot);
                 
                 wnd.CursorPix(ref cursor_pixdata, (int) translateHotSpot.X, (int) translateHotSpot.Y);
                 
@@ -107,6 +96,5 @@ class Program
         };
         
         Application.Run();
-        running = false;
     }
 }

@@ -6,6 +6,8 @@
 
 #include <cassert>
 #include <iostream>
+#include <algorithm>
+#include <cctype>
 
 namespace NewAge {
     int ChannelType_bytes(ChannelType value) {
@@ -30,12 +32,19 @@ namespace NewAge {
     P_INSTANCE(PixInfo)  PixInfo::get(utf8_string_struct pixformat) {
         P_INSTANCE(PixInfo) P = new PixInfo();
 
+        
         P->pixformat = pixformat;
 
         std::string pix = (std::string) pixformat.c_str;
 
         size_t colon = pix.find(':');
-        std::string _width;
+        std::string before_colon = pix.substr(0, colon);
+        std::string after_colon = pix.substr(colon + 1);
+
+        std::transform(before_colon.begin(), before_colon.end(), before_colon.begin(),
+                       [](unsigned char c) { return std::tolower(c); });
+
+        P->pixformat = (utf8_string_struct)(before_colon+":"+after_colon).c_str();
 
         if (colon == -1) {
             /* TODO */ //ErrprSystem IO
@@ -275,16 +284,8 @@ namespace NewAge {
             return Ret;
         }
 
-        if (strcmp(pixformat, pixformat_dest) == 0) {
-            //'return Ret;
-            size_t size = src_pixinfo->pix_stride * width * height;
-            Ret.pix_data = new uint8_t[size];
-            memcpy(Ret.pix_data, pixdata, size);
-            Ret.pix_data_length = size;
-            Ret.width = width;
-            Ret.height = height;
-            Ret.pix_format = pixformat_dest;
-            Ret.pix_data_free = pix_free;
+        if ((std::string)src_pixinfo->pixformat.c_str == (std::string)dst_pixinfo->pixformat.c_str) {
+            
             src_pixinfo->Release();
             dst_pixinfo->Release();
             return Ret;
