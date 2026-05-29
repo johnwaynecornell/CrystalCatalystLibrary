@@ -36,7 +36,7 @@ public class SvgSkiaRenderer
 
     public SKPoint TranslateHotSpot(SKPoint point)
     {
-        return Matrix.MapPoint(point) - new SKPoint(translateX, translateY);
+        return Matrix.MapPoint(point) + new SKPoint(translateX, translateY);
     }
 
     // 1. Define a STATIC delegate at the class level to prevent Garbage Collection
