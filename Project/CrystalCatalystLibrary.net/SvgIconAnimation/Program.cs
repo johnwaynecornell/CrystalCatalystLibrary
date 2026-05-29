@@ -100,13 +100,14 @@ class Program
                 
                 cursor_pixdata = cursor_renderer.RenderPix(cursor_svg, null, (bitmap, canvas) =>
                 {
+                    double dist = Math.Sqrt(Math.Pow(mouseX - 64, 2) + Math.Pow(mouseY - 64, 2));
+                    double proximity = dist == 0 ? 1.0 : 1.0 - dist / 128.0;
+                    
+                    if (proximity <= 0.00) return;
+                    
                     // Create a glow effect based on alpha
                     using (var paint = new SKPaint())
                     {
-                        double dist = Math.Sqrt(Math.Pow(mouseX - 64, 2) + Math.Pow(mouseY - 64, 2));
-                        double proximity = dist == 0 ? 1.0 : 1.0 - dist / 128.0;
-                        if (proximity < 0.01) proximity = 0.01;
-                        
                         // Use a sine wave for smoother pulsing phase [0, 1]
                         float phase = (float)(Math.Sin(time * 2.0) * 0.5 + 0.5) * (float) proximity;
                         
