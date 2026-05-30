@@ -101,6 +101,26 @@ public class Window
             Console.WriteLine($"[DEBUG_LOG] OpenGL Version: {version}");
             Console.WriteLine($"[DEBUG_LOG] OpenGL Vendor: {vendor}");
             Console.WriteLine($"[DEBUG_LOG] OpenGL Renderer: {renderer}");
+
+            // Guard against legacy/software OpenGL
+            bool isGdi = renderer.Contains("GDI Generic", StringComparison.OrdinalIgnoreCase);
+            bool versionOk = false;
+            if (version != null && Version.TryParse(version.Split(' ')[0], out var v))
+            {
+                if (v >= new Version(3, 3)) versionOk = true;
+            }
+
+            if (isGdi || !versionOk)
+            {
+                Console.WriteLine("-----------------------------------------------------------");
+                Console.WriteLine("CRITICAL WARNING: Modern OpenGL (3.3+) not detected!");
+                Console.WriteLine($"Detected Renderer: {renderer}");
+                Console.WriteLine($"Detected Version: {version}");
+                Console.WriteLine("Shader setup will likely fail. Skipping shader initialization.");
+                Console.WriteLine("Please ensure your GPU drivers are installed and support OpenGL 3.3.");
+                Console.WriteLine("-----------------------------------------------------------");
+                return;
+            }
         }
         catch (Exception ex)
         {
@@ -247,15 +267,18 @@ public class Window
         _gl.ClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-        _gl.UseProgram(_program);
-        int timeLocation = _gl.GetUniformLocation(_program, "uTime");
-        if (timeLocation != -1)
+        if (_program != 0)
         {
-            _gl.Uniform1(timeLocation, (float)time);
-        }
+            _gl.UseProgram(_program);
+            int timeLocation = _gl.GetUniformLocation(_program, "uTime");
+            if (timeLocation != -1)
+            {
+                _gl.Uniform1(timeLocation, (float)time);
+            }
 
-        _gl.BindVertexArray(_vao);
-        GLHelper.DrawElements(_gl, PrimitiveType.Triangles, 6, DrawElementsType.UnsignedInt, IntPtr.Zero);
+            _gl.BindVertexArray(_vao);
+            GLHelper.DrawElements(_gl, PrimitiveType.Triangles, 6, DrawElementsType.UnsignedInt, IntPtr.Zero);
+        }
         
         var err = _gl.GetError();
         if (err != GLEnum.NoError)

@@ -9,6 +9,35 @@
 #include <strsafe.h>
 #include <iostream>
 
+// WGL Extensions
+#ifndef WGL_ARB_pixel_format
+#define WGL_DRAW_TO_WINDOW_ARB            0x2001
+#define WGL_SUPPORT_OPENGL_ARB            0x2010
+#define WGL_DOUBLE_BUFFER_ARB             0x2011
+#define WGL_PIXEL_TYPE_ARB                0x2013
+#define WGL_TYPE_RGBA_ARB                 0x202B
+#define WGL_COLOR_BITS_ARB                0x2014
+#define WGL_ALPHA_BITS_ARB                0x201B
+#define WGL_DEPTH_BITS_ARB                0x2022
+#define WGL_STENCIL_BITS_ARB               0x2023
+#define WGL_ACCELERATION_ARB              0x2003
+#define WGL_FULL_ACCELERATION_ARB         0x2027
+#endif
+
+#ifndef WGL_ARB_create_context
+#define WGL_CONTEXT_MAJOR_VERSION_ARB     0x2091
+#define WGL_CONTEXT_MINOR_VERSION_ARB     0x2092
+#define WGL_CONTEXT_LAYER_PLANE_ARB       0x2093
+#define WGL_CONTEXT_FLAGS_ARB             0x2094
+#define WGL_CONTEXT_PROFILE_MASK_ARB      0x9126
+#define WGL_CONTEXT_CORE_PROFILE_BIT_ARB  0x00000001
+#define WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB 0x00000002
+#endif
+
+typedef BOOL (WINAPI * PFNWGLCHOOSEPIXELFORMATARBPROC) (HDC hdc, const int *piAttribIList, const FLOAT *pfAttribFList, UINT nMaxFormats, int *piFormats, UINT *nNumFormats);
+typedef HGLRC (WINAPI * PFNWGLCREATECONTEXTATTRIBSARBPROC) (HDC hDC, HGLRC hShareContext, const int *attribList);
+typedef BOOL (WINAPI * PFNWGLSWAPINTERVALEXTPROC) (int interval);
+
 //this is here for IDE compatability on Linux
 #ifndef CALLBACK
 #define CALLBACK
@@ -59,33 +88,160 @@ namespace NewAge
     LRESULT CALLBACK WindowProc(HWND hwnd, uint32_t  uMsg, WPARAM wParam, LPARAM lParam);
 
     void CrystalWindow_Windows::GLInit() {
-        PIXELFORMATDESCRIPTOR pfd = {
-            sizeof(PIXELFORMATDESCRIPTOR),   // size of this pfd
-            1,                               // version number
-            PFD_DRAW_TO_WINDOW |             // support window
-            PFD_SUPPORT_OPENGL |             // support OpenGL
-            PFD_DOUBLEBUFFER,                // double buffered
-            PFD_TYPE_RGBA,                   // RGBA type
-            24,                              // 24-bit color depth
-            0, 0, 0, 0, 0, 0,                // color bits ignored
-            0,                               // no alpha buffer
-            0,                               // shift bit ignored
-            0,                               // no accumulation buffer
-            0, 0, 0, 0,                      // accum bits ignored
-            24,                              // 24-bit z-buffer
-            8,                               // 8-bit stencil buffer
-            0,                               // no auxiliary buffer
-            PFD_MAIN_PLANE,                  // main layer
-            0,                               // reserved
-            0, 0, 0                          // layer masks ignored
-    };
+        // 1. Create a dummy window for bootstrap
+        HINSTANCE hInst = GetModuleHandle(NULL);
+        WNDCLASSA dummy_wc = {0};
+        dummy_wc.lpfnWndProc = DefWindowProcA;
+        dummy_wc.hInstance = hInst;
+        dummy_wc.lpszClassName = "CrystalWGLBootstrap";
+        RegisterClassA(&dummy_wc);
 
+        HWND dummy_hwnd = CreateWindowA(
+            dummy_wc.lpszClassName, "Dummy",
+            0, 0, 0, 0, 0,
+            NULL, NULL, dummy_wc.hInstance, NULL
+        );
+
+        if (!dummy_hwnd) {
+            std::cerr << mod_header() << " Failed to create bootstrap window" << std::endl;
+            UnregisterClassA(dummy_wc.lpszClassName, hInst);
+            return;
+        }
+
+        HDC dummy_dc = GetDC(dummy_hwnd);
+        PIXELFORMATDESCRIPTOR pfd = { sizeof(pfd), 1 };
+        pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+        pfd.iPixelType = PFD_TYPE_RGBA;
+        pfd.cColorBits = 32;
+        pfd.cDepthBits = 24;
+        pfd.cStencilBits = 8;
+        pfd.iLayerType = PFD_MAIN_PLANE;
+
+        int dummy_pf = ChoosePixelFormat(dummy_dc, &pfd);
+        SetPixelFormat(dummy_dc, dummy_pf, &pfd);
+
+        HGLRC dummy_context = wglCreateContext(dummy_dc);
+        if (!dummy_context) {
+            std::cerr << mod_header() << " Failed to create bootstrap context" << std::endl;
+            ReleaseDC(dummy_hwnd, dummy_dc);
+            DestroyWindow(dummy_hwnd);
+            UnregisterClassA(dummy_wc.lpszClassName, hInst);
+            return;
+        }
+
+        wglMakeCurrent(dummy_dc, dummy_context);
+
+        // 2. Load WGL extensions
+        auto wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)wglGetProcAddress("wglChoosePixelFormatARB");
+        auto wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB");
+        auto wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)wglGetProcAddress("wglSwapIntervalEXT");
+
+        bool has_modern_pf = (wglChoosePixelFormatARB != nullptr);
+        bool has_modern_ctx = (wglCreateContextAttribsARB != nullptr);
+
+        std::cout << mod_header() << " WGL_ARB_pixel_format: " << (has_modern_pf ? "YES" : "NO") << std::endl;
+        std::cout << mod_header() << " WGL_ARB_create_context: " << (has_modern_ctx ? "YES" : "NO") << std::endl;
+
+        // Cleanup bootstrap
+        wglMakeCurrent(NULL, NULL);
+        wglDeleteContext(dummy_context);
+        ReleaseDC(dummy_hwnd, dummy_dc);
+        DestroyWindow(dummy_hwnd);
+        UnregisterClassA(dummy_wc.lpszClassName, hInst);
+
+        // 3. Setup real window
         HDC hdc = GetDC(hwnd);
-        int32_t iPixelFormat = ChoosePixelFormat(hdc, &pfd);
-        SetPixelFormat(hdc, iPixelFormat, &pfd);
+        int pixel_format = 0;
 
-        gl_context = wglCreateContext(hdc);
-        wglMakeCurrent(hdc, gl_context);
+        if (has_modern_pf) {
+            int pix_attribs[] = {
+                WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
+                WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
+                WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
+                WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
+                WGL_COLOR_BITS_ARB, 32,
+                WGL_ALPHA_BITS_ARB, 8,
+                WGL_DEPTH_BITS_ARB, 24,
+                WGL_STENCIL_BITS_ARB, 8,
+                WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,
+                0
+            };
+
+            UINT num_formats = 0;
+            if (!wglChoosePixelFormatARB(hdc, pix_attribs, NULL, 1, &pixel_format, &num_formats) || num_formats == 0) {
+                std::cerr << mod_header() << " wglChoosePixelFormatARB failed, falling back to legacy" << std::endl;
+                pixel_format = ChoosePixelFormat(hdc, &pfd);
+            } else {
+                std::cout << mod_header() << " Selected accelerated pixel format: " << pixel_format << std::endl;
+            }
+        } else {
+            std::cout << mod_header() << " WGL_ARB_pixel_format not available, using legacy ChoosePixelFormat" << std::endl;
+            pixel_format = ChoosePixelFormat(hdc, &pfd);
+        }
+
+        if (pixel_format == 0) {
+            std::cerr << mod_header() << " Failed to find a suitable pixel format" << std::endl;
+            ReleaseDC(hwnd, hdc);
+            return;
+        }
+
+        int current_pf = GetPixelFormat(hdc);
+        if (current_pf == 0) {
+            if (!SetPixelFormat(hdc, pixel_format, &pfd)) {
+                DWORD error = GetLastError();
+                std::cerr << mod_header() << " SetPixelFormat failed with error: " << error << std::endl;
+            }
+        } else {
+            std::cout << mod_header() << " Pixel format already set to " << current_pf << ". Skipping SetPixelFormat." << std::endl;
+        }
+
+        if (has_modern_ctx) {
+            int ctx_attribs[] = {
+                WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
+                WGL_CONTEXT_MINOR_VERSION_ARB, 3,
+                WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+                0
+            };
+
+            gl_context = wglCreateContextAttribsARB(hdc, 0, ctx_attribs);
+            if (!gl_context) {
+                std::cerr << mod_header() << " wglCreateContextAttribsARB failed for 3.3 Core, falling back to legacy context" << std::endl;
+                gl_context = wglCreateContext(hdc);
+            } else {
+                std::cout << mod_header() << " Created OpenGL 3.3 Core Profile context" << std::endl;
+            }
+        } else {
+            std::cout << mod_header() << " WGL_ARB_create_context not available, using legacy wglCreateContext" << std::endl;
+            gl_context = wglCreateContext(hdc);
+        }
+
+        if (!gl_context) {
+            std::cerr << mod_header() << " CRITICAL: Failed to create any OpenGL context" << std::endl;
+            ReleaseDC(hwnd, hdc);
+            return;
+        }
+
+        if (!wglMakeCurrent(hdc, gl_context)) {
+            std::cerr << mod_header() << " wglMakeCurrent failed" << std::endl;
+        }
+
+        // Log resulting OpenGL version/vendor/renderer
+        const char* gl_version = (const char*)glGetString(GL_VERSION);
+        const char* gl_vendor = (const char*)glGetString(GL_VENDOR);
+        const char* gl_renderer = (const char*)glGetString(GL_RENDERER);
+
+        std::cout << mod_header() << " Final OpenGL Version: " << (gl_version ? gl_version : "NULL") << std::endl;
+        std::cout << mod_header() << " Final OpenGL Vendor: " << (gl_vendor ? gl_vendor : "NULL") << std::endl;
+        std::cout << mod_header() << " Final OpenGL Renderer: " << (gl_renderer ? gl_renderer : "NULL") << std::endl;
+
+        if (gl_renderer && strstr(gl_renderer, "GDI Generic")) {
+            std::cerr << mod_header() << " WARNING: Still using GDI Generic renderer. Acceleration might be missing." << std::endl;
+        }
+
+        if (wglSwapIntervalEXT) {
+            wglSwapIntervalEXT(1); // Enable VSync by default
+        }
+
         ReleaseDC(hwnd, hdc);
     }
 
