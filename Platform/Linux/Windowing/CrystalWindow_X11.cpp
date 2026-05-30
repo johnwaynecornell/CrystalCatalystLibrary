@@ -518,6 +518,27 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
 #include <GL/glx.h>
 
     void CrystalWindow_X11::GLInit() {
+        std::cerr << mod_header() << "X11 GLInit started" << std::endl;
+
+        // Log GLX version
+        int major, minor;
+        if (glXQueryVersion(display, &major, &minor)) {
+            std::cerr << mod_header() << "GLX version: " << major << "." << minor << std::endl;
+        } else {
+            std::cerr << mod_header() << "Warning: Could not query GLX version" << std::endl;
+        }
+
+        /*
+         * TODO: Modernize X11 OpenGL initialization using glXChooseFBConfig and glXCreateContextAttribsARB
+         * so CrystalCatalyst can explicitly request OpenGL 3.3+ instead of relying on legacy GLX context behavior.
+         */
+
+        /*
+         * Note: The current GLInit chooses a GLX visual after the X11 window already exists.
+         * Future robust OpenGL support should ensure the X11 Window is created with a visual/colormap
+         * compatible with the selected GLX FBConfig to avoid BadMatch or driver-specific failures.
+         */
+
         // Define the GLX attributes for the visual
         int32_t attributes[] = {
             GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None
@@ -537,6 +558,7 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
             XFree(visual_info);
             return;
         }
+        std::cerr << mod_header() << "GLX context created successfully" << std::endl;
 
         // Make the context current
         if (!glXMakeCurrent(display, window, gl_context)) {
@@ -545,6 +567,16 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
             XFree(visual_info);
             return;
         }
+        std::cerr << mod_header() << "GL context made current successfully" << std::endl;
+
+        // Log GL info
+        const char* version = (const char*)glGetString(GL_VERSION);
+        const char* vendor = (const char*)glGetString(GL_VENDOR);
+        const char* renderer = (const char*)glGetString(GL_RENDERER);
+
+        if (version) std::cerr << mod_header() << "GL_VERSION: " << version << std::endl;
+        if (vendor) std::cerr << mod_header() << "GL_VENDOR: " << vendor << std::endl;
+        if (renderer) std::cerr << mod_header() << "GL_RENDERER: " << renderer << std::endl;
 
         // Free the visual info
         XFree(visual_info);
