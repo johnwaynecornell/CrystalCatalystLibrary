@@ -175,7 +175,7 @@ namespace NewAge {
                             reinterpret_cast<const unsigned char*>(types), num_types);
 
 
-        //delete types;
+        delete[] types;
 
         data->provide_chosen = DataInterchange::provide_for_clipboard;
     }

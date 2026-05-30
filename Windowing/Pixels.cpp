@@ -42,8 +42,6 @@ namespace NewAge {
     P_INSTANCE(PixInfo)  PixInfo::get(utf8_string_struct pixformat) {
         P_INSTANCE(PixInfo) P = new PixInfo();
 
-        P->pixformat = pixformat;
-
         std::string pix = (std::string) pixformat.c_str;
 
         size_t colon = pix.find(':');
@@ -60,7 +58,8 @@ namespace NewAge {
         std::transform(before_colon.begin(), before_colon.end(), before_colon.begin(),
                        [](unsigned char c) { return std::tolower(c); });
 
-        P->pixformat = (utf8_string_struct)(before_colon+":"+after_colon).c_str();
+        P->pixformat_storage = before_colon + ":" + after_colon;
+        P->pixformat = P->pixformat_storage.c_str();
 
         std::string _channel_type = pix.substr(colon + 1);
         if (_channel_type == "int8") P->channel_type = EChannelType_int8;

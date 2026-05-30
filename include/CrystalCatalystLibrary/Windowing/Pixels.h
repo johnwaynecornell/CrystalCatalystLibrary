@@ -15,7 +15,7 @@ namespace NewAge {
 
     class PixInfo {
     public:
-
+        std::string pixformat_storage;
         utf8_string_struct pixformat;
         ChannelType channel_type = EChannelType_NONE;
         int num_channels = 0;

@@ -104,6 +104,12 @@ namespace NewAge {
                 P_INSTANCE(HandleNode)  removed = cur->next;
                 cur->next = removed->next;
 
+                if (removed->handle) {
+                    if (removed->handle->crystal_window) {
+                        delete removed->handle->crystal_window;
+                    }
+                    free(removed->handle);
+                }
                 free(removed);
             } else {
                 cur = cur->next;

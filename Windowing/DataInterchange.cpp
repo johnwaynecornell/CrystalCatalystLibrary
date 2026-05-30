@@ -25,10 +25,14 @@ namespace NewAge {
     }
 
     void DataInterchange_Free(P_INSTANCE(DataInterchange) drag) {
-        P_INSTANCE(DataInterchange::Node) I;
-        for (I = DataInterchange_FormatEnum(drag); I != nullptr; I = I->next) {
-            DataInterchange_ItemsFormatRemove(drag, I);
+        P_INSTANCE(DataInterchange::Node) I = drag->data_head.next;
+        while (I != nullptr) {
+            P_INSTANCE(DataInterchange::Node) next = I->next;
+            delete I;
+            I = next;
         }
+        drag->data_head.next = nullptr;
+        
         clear_selection(drag);
 
         if (drag->os_specific && drag->os_specific_free) {
@@ -73,15 +77,18 @@ namespace NewAge {
     }
 
     P_INSTANCE(DataInterchange::Node) DataInterchange_ItemsFormatRemove(P_INSTANCE(DataInterchange) drop, P_INSTANCE(DataInterchange::Node) node) {
-        P_INSTANCE(DataInterchange::Node) I;
+        P_INSTANCE(DataInterchange::Node) I = &drop->data_head;
 
-        for (I = DataInterchange_FormatEnum(drop); I != nullptr && I->next != node; I = I->next){}
+        while (I->next != nullptr && I->next != node) {
+            I = I->next;
+        }
 
-        if (I == nullptr) return nullptr;
+        if (I->next == nullptr) return nullptr;
 
         P_INSTANCE(DataInterchange::Node) R = I->next;
-
         I->next = R->next;
+
+        delete R;
 
         return I->next;
     }
