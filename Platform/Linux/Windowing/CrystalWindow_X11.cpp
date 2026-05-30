@@ -7,6 +7,11 @@
 #include <unistd.h>
 #include <iostream>
 
+#include <GL/gl.h>
+#include <GL/glxext.h>
+#include <cstring>
+#include <vector>
+
 #include "DragDrop_X11.h"
 
 #ifdef mod_header
@@ -29,6 +34,12 @@ namespace NewAge {
 
     CrystalWindow_X11::~CrystalWindow_X11() {
         if (drag_provide) delete drag_provide;
+        if (gl_context) {
+            glXMakeCurrent(display, None, nullptr);
+            glXDestroyContext(display, gl_context);
+        }
+        if (gl_visual_info) XFree(gl_visual_info);
+        if (gl_colormap) XFreeColormap(display, gl_colormap);
     }
 
     void CrystalWindow_X11::Show(bool restore) {
@@ -90,6 +101,7 @@ namespace NewAge {
     void CrystalWindow_X11::SetCursor(utf8_string_struct pixformat, P_ELEMENTS(void) pixdata, size_t pixdata_length, int32_t width, int32_t height, int32_t hot_x, int32_t hot_y) {
         if (!pixdata || !pixformat) return;
         PixData proxy = Pixels_ConvertPixels(pixformat, "bgra:int8", pixdata, pixdata_length, width, height);
+        if (!proxy && proxy.pix_format.c_str && strcmp(proxy.pix_format.c_str, "error") == 0) return;
 
         XcursorImage* image = XcursorImageCreate(width, height);
         if (!image) {
@@ -140,6 +152,7 @@ namespace NewAge {
         if (!AppX11) return;
 
         PixData proxy = Pixels_ConvertPixels(pixformat, "bgra:int8", pixdata, pixdata_length, width, height);
+        if (!proxy && proxy.pix_format.c_str && strcmp(proxy.pix_format.c_str, "error") == 0) return;
 
         int num_pixels = width * height;
         std::vector<unsigned long> icon_data;
@@ -441,12 +454,15 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
         if (!pixdata || !pixformat) return;
 
         PixData proxy= Pixels_ConvertPixels(pixformat, "bgra:int8", pixdata, pixdata_length, width, height);
-        /* TODO */ //Check error condition
+        if (!proxy && proxy.pix_format.c_str && strcmp(proxy.pix_format.c_str, "error") == 0) return;
 
         XImage* ximage;
 
         P_ELEMENTS(void) m = proxy ? proxy.pix_data : pixdata;
-        ximage = XCreateImage(display, CopyFromParent, 24, ZPixmap, 0, (char *) m, width, height, 32, 0);
+        Visual* visual = gl_visual_info ? gl_visual_info->visual : DefaultVisual(display, DefaultScreen(display));
+        int depth = gl_visual_info ? gl_visual_info->depth : 24;
+
+        ximage = XCreateImage(display, visual, depth, ZPixmap, 0, (char *) m, width, height, 32, 0);
 
         if (!ximage) {
             std::cerr << mod_header() << "Failed to create XImage" << std::endl;
@@ -514,8 +530,16 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
         std::cerr << mod_header() << "Mouse pointer released" << std::endl;
     }
 
-#include <GL/gl.h>
-#include <GL/glx.h>
+#ifndef GLX_CONTEXT_MAJOR_VERSION_ARB
+#define GLX_CONTEXT_MAJOR_VERSION_ARB           0x2091
+#define GLX_CONTEXT_MINOR_VERSION_ARB           0x2092
+#define GLX_CONTEXT_FLAGS_ARB                   0x2094
+#define GLX_CONTEXT_PROFILE_MASK_ARB            0x9126
+#define GLX_CONTEXT_CORE_PROFILE_BIT_ARB        0x00000001
+#define GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB 0x00000002
+#endif
+
+    typedef GLXContext (*glXCreateContextAttribsARBProc)(Display*, GLXFBConfig, GLXContext, Bool, const int*);
 
     void CrystalWindow_X11::GLInit() {
         std::cerr << mod_header() << "X11 GLInit started" << std::endl;
@@ -528,60 +552,67 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
             std::cerr << mod_header() << "Warning: Could not query GLX version" << std::endl;
         }
 
-        /*
-         * TODO: Modernize X11 OpenGL initialization using glXChooseFBConfig and glXCreateContextAttribsARB
-         * so CrystalCatalyst can explicitly request OpenGL 3.3+ instead of relying on legacy GLX context behavior.
-         */
-
-        /*
-         * Note: The current GLInit chooses a GLX visual after the X11 window already exists.
-         * Future robust OpenGL support should ensure the X11 Window is created with a visual/colormap
-         * compatible with the selected GLX FBConfig to avoid BadMatch or driver-specific failures.
-         */
-
-        // Define the GLX attributes for the visual
-        int32_t attributes[] = {
-            GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None
-        };
-
-        // Get a matching framebuffer configuration
-        XVisualInfo* visual_info = glXChooseVisual(display, 0, attributes);
-        if (visual_info == nullptr) {
-            std::cerr << mod_header() << "No appropriate visual found" << std::endl;
+        if (!gl_fb_config) {
+            std::cerr << mod_header() << "Error: No GLX FBConfig stored on window. OpenGL initialization failed." << std::endl;
             return;
         }
 
-        // Create a GLX context
-        gl_context = glXCreateContext(display, visual_info, nullptr, GL_TRUE);
-        if (gl_context == nullptr) {
-            std::cerr << mod_header() << "Failed to create a GLX context" << std::endl;
-            XFree(visual_info);
+        glXCreateContextAttribsARBProc glXCreateContextAttribsARB = (glXCreateContextAttribsARBProc)glXGetProcAddressARB((const GLubyte*)"glXCreateContextAttribsARB");
+
+        if (glXCreateContextAttribsARB) {
+            int context_attribs[] = {
+                GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
+                GLX_CONTEXT_MINOR_VERSION_ARB, 3,
+                GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
+                None
+            };
+
+            std::cerr << mod_header() << "Attempting to create OpenGL 3.3 Core Profile context..." << std::endl;
+            gl_context = glXCreateContextAttribsARB(display, gl_fb_config, nullptr, True, context_attribs);
+
+            if (!gl_context) {
+                std::cerr << mod_header() << "Failed to create OpenGL 3.3 Core context. Attempting compatibility profile..." << std::endl;
+                int compat_attribs[] = {
+                    GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
+                    GLX_CONTEXT_MINOR_VERSION_ARB, 3,
+                    None
+                };
+                gl_context = glXCreateContextAttribsARB(display, gl_fb_config, nullptr, True, compat_attribs);
+            }
+        } else {
+            std::cerr << mod_header() << "glXCreateContextAttribsARB not available. Falling back to glXCreateNewContext." << std::endl;
+        }
+
+        if (!gl_context) {
+            std::cerr << mod_header() << "Attempting fallback: glXCreateNewContext..." << std::endl;
+            gl_context = glXCreateNewContext(display, gl_fb_config, GLX_RGBA_TYPE, nullptr, True);
+        }
+
+        if (!gl_context && gl_visual_info) {
+            std::cerr << mod_header() << "Attempting fallback: legacy glXCreateContext..." << std::endl;
+            gl_context = glXCreateContext(display, gl_visual_info, nullptr, True);
+        }
+
+        if (!gl_context) {
+            std::cerr << mod_header() << "CRITICAL: Failed to create any GLX context" << std::endl;
             return;
         }
-        std::cerr << mod_header() << "GLX context created successfully" << std::endl;
 
-        // Make the context current
         if (!glXMakeCurrent(display, window, gl_context)) {
             std::cerr << mod_header() << "Could not make GL context current" << std::endl;
-            glXDestroyContext(display, gl_context);
-            XFree(visual_info);
             return;
         }
-        std::cerr << mod_header() << "GL context made current successfully" << std::endl;
 
         // Log GL info
-        const char* version = (const char*)glGetString(GL_VERSION);
-        const char* vendor = (const char*)glGetString(GL_VENDOR);
-        const char* renderer = (const char*)glGetString(GL_RENDERER);
+        const char* gl_version = (const char*)glGetString(GL_VERSION);
+        const char* gl_vendor = (const char*)glGetString(GL_VENDOR);
+        const char* gl_renderer = (const char*)glGetString(GL_RENDERER);
 
-        if (version) std::cerr << mod_header() << "GL_VERSION: " << version << std::endl;
-        if (vendor) std::cerr << mod_header() << "GL_VENDOR: " << vendor << std::endl;
-        if (renderer) std::cerr << mod_header() << "GL_RENDERER: " << renderer << std::endl;
+        std::cerr << mod_header() << "Final OpenGL Version: " << (gl_version ? gl_version : "NULL") << std::endl;
+        std::cerr << mod_header() << "Final OpenGL Vendor: " << (gl_vendor ? gl_vendor : "NULL") << std::endl;
+        std::cerr << mod_header() << "Final OpenGL Renderer: " << (gl_renderer ? gl_renderer : "NULL") << std::endl;
 
-        // Free the visual info
-        XFree(visual_info);
-
-        std::cerr << mod_header() << "OpenGL context initialized" << std::endl;
+        std::cerr << mod_header() << "OpenGL context initialized successfully" << std::endl;
     }
 
     void CrystalWindow_X11::GLMakeCurrent() {

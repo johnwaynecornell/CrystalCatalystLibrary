@@ -19,6 +19,9 @@ namespace NewAge {
         Window window = None;
         P_INSTANCE(Display)  display = nullptr;
         GLXContext gl_context = nullptr;
+        GLXFBConfig gl_fb_config = nullptr;
+        XVisualInfo* gl_visual_info = nullptr;
+        Colormap gl_colormap = None;
         DragProvide_X11* drag_provide = nullptr;
         // In CrystalWindow_X11 members, add:
         Atom target_atom = None;     // the requested "format" (e.g., UTF8_STRING/text/html)

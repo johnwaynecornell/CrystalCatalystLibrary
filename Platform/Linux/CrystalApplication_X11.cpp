@@ -62,12 +62,57 @@ namespace NewAge {
 
         int32_t screen = DefaultScreen(globalDisplay);
         Window root = RootWindow(globalDisplay, screen);
+
+        GLXFBConfig fb_config = nullptr;
+        XVisualInfo* visual_info = nullptr;
+        Colormap colormap = None;
+
+        int fb_attrs[] = {
+            GLX_X_RENDERABLE, True,
+            GLX_DRAWABLE_TYPE, GLX_WINDOW_BIT,
+            GLX_RENDER_TYPE, GLX_RGBA_BIT,
+            GLX_X_VISUAL_TYPE, GLX_TRUE_COLOR,
+            GLX_DOUBLEBUFFER, True,
+            GLX_RED_SIZE, 8,
+            GLX_GREEN_SIZE, 8,
+            GLX_BLUE_SIZE, 8,
+            GLX_ALPHA_SIZE, 8,
+            GLX_DEPTH_SIZE, 24,
+            GLX_STENCIL_SIZE, 8,
+            None
+        };
+
+        int fb_count = 0;
+        GLXFBConfig* fbc = glXChooseFBConfig(globalDisplay, screen, fb_attrs, &fb_count);
+        if (fbc && fb_count > 0) {
+            fb_config = fbc[0];
+            XFree(fbc);
+            visual_info = glXGetVisualFromFBConfig(globalDisplay, fb_config);
+        } else {
+            std::cerr << "CrystalApplication_X11: Failed to find a suitable GLX FBConfig. Falling back to default visual." << std::endl;
+        }
+
         XSetWindowAttributes swa;
         swa.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | StructureNotifyMask;
-        Window win = XCreateWindow(globalDisplay, root, 0, 0, width, height, 0, CopyFromParent, InputOutput, CopyFromParent, CWEventMask, &swa);
+        
+        Window win;
+        if (visual_info) {
+            colormap = XCreateColormap(globalDisplay, root, visual_info->visual, AllocNone);
+            swa.colormap = colormap;
+            swa.background_pixmap = None;
+            swa.border_pixel = 0;
+            win = XCreateWindow(globalDisplay, root, 0, 0, (unsigned int)width, (unsigned int)height, 0,
+                                visual_info->depth, InputOutput, visual_info->visual,
+                                CWEventMask | CWColormap | CWBackPixmap | CWBorderPixel, &swa);
+        } else {
+            win = XCreateWindow(globalDisplay, root, 0, 0, (unsigned int)width, (unsigned int)height, 0,
+                                CopyFromParent, InputOutput, CopyFromParent,
+                                CWEventMask, &swa);
+        }
 
         if (!win) {
             std::cerr << "Failed to create window" << std::endl;
+            if (visual_info) XFree(visual_info);
             return nullptr;
         }
 
@@ -86,17 +131,21 @@ namespace NewAge {
         auto* window_structure = new CrystalWindow_X11();
         if (!window_structure) {
             std::cerr << "Failed to allocate memory for window_structure" << std::endl;
+            if (visual_info) XFree(visual_info);
             return nullptr;
         }
 
         window_structure->window = win;
         window_structure->display = globalDisplay;
         window_structure->gl_context = nullptr;
+        window_structure->gl_fb_config = fb_config;
+        window_structure->gl_visual_info = visual_info;
+        window_structure->gl_colormap = colormap;
 
         auto* window_handle = (P_INSTANCE(WindowHandle))malloc(sizeof(WindowHandle));
         if (!window_handle) {
             std::cerr << "Failed to allocate memory for window_handle" << std::endl;
-            free(window_structure);
+            delete window_structure;
             return nullptr;
         }
         window_handle->crystal_window = window_structure;
@@ -105,6 +154,7 @@ namespace NewAge {
         XSaveContext(globalDisplay, win, windowContext, (XPointer)window_handle);
 
         Application_WindowAdd(window_handle);
+        XFlush(globalDisplay);
 
         return window_handle;
     }
@@ -162,7 +212,7 @@ namespace NewAge {
         auto* window_handle = (P_INSTANCE(WindowHandle))malloc(sizeof(WindowHandle));
         if (!window_handle) {
             std::cerr << "Failed to allocate memory for window_handle" << std::endl;
-            free(window_structure);
+            delete window_structure;
             return nullptr;
         }
         window_handle->crystal_window = window_structure;

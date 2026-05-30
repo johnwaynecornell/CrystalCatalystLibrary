@@ -103,14 +103,16 @@ public class Window
             Console.WriteLine($"[DEBUG_LOG] OpenGL Renderer: {renderer}");
 
             // Guard against legacy/software OpenGL
-            bool isGdi = renderer.Contains("GDI Generic", StringComparison.OrdinalIgnoreCase);
+            bool isSoftware = renderer.Contains("GDI Generic", StringComparison.OrdinalIgnoreCase) ||
+                              renderer.Contains("Software Rasterizer", StringComparison.OrdinalIgnoreCase) ||
+                              renderer.Contains("swrast", StringComparison.OrdinalIgnoreCase);
             bool versionOk = false;
             if (version != null && Version.TryParse(version.Split(' ')[0], out var v))
             {
                 if (v >= new Version(3, 3)) versionOk = true;
             }
 
-            if (isGdi || !versionOk)
+            if (isSoftware || !versionOk)
             {
                 Console.WriteLine("-----------------------------------------------------------");
                 Console.WriteLine("CRITICAL WARNING: Modern OpenGL (3.3+) not detected!");

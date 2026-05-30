@@ -8,6 +8,7 @@
 #include <ole2.h>
 #include <strsafe.h>
 #include <iostream>
+#include <cstring>
 
 // WGL Extensions
 #ifndef WGL_ARB_pixel_format
@@ -358,6 +359,7 @@ namespace NewAge
         if (!hwnd || !pixdata || !pixformat || height <= 0 || width <= 0) return;
 
         PixData proxy = Pixels_ConvertPixels(pixformat, "bgra:int8", pixdata, pixdata_length, width, height);
+        if (!proxy && proxy.pix_format.c_str && strcmp(proxy.pix_format.c_str, "error") == 0) return;
         P_ELEMENTS(void) m = proxy ? proxy.pix_data : pixdata;
         if (!m) return;
 
@@ -450,6 +452,7 @@ namespace NewAge
     void CrystalWindow_Windows::SetIcon(utf8_string_struct pixformat, P_ELEMENTS(void) pixdata, size_t pixdata_length, int32_t width, int32_t height) {
         if (!hwnd || !pixdata || !pixformat) return;
         PixData proxy = Pixels_ConvertPixels(pixformat, "bgra:int8", pixdata, pixdata_length, width, height);
+        if (!proxy && proxy.pix_format.c_str && strcmp(proxy.pix_format.c_str, "error") == 0) return;
         P_ELEMENTS(void) m = proxy ? proxy.pix_data : pixdata;
         if (!m) return;
 
@@ -708,7 +711,7 @@ namespace NewAge
         if (!pixdata || !pixformat) return;
 
         PixData proxy= Pixels_ConvertPixels(pixformat, "bgra:int8", pixdata, pixdata_length, width, height);
-        /* TODO */ //Check error condition
+        if (!proxy && proxy.pix_format.c_str && strcmp(proxy.pix_format.c_str, "error") == 0) return;
 
         P_ELEMENTS(void) m = proxy ? proxy.pix_data : pixdata;
 

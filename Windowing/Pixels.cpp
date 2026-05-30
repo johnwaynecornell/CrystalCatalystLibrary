@@ -284,13 +284,22 @@ namespace NewAge {
     PixData Pixels_ConvertPixels(utf8_string_struct pixformat, utf8_string_struct pixformat_dest, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height) {
         PixData Ret = {};
 
-        if (!pixdata || !pixformat || !pixformat_dest) return Ret;
+        if (!pixdata || !pixformat || !pixformat_dest) {
+            Ret.pix_format = (char*)"error";
+            return Ret;
+        }
 
         P_INSTANCE(PixInfo) src_pixinfo = PixInfo::get(pixformat);
-        if (!src_pixinfo) return Ret;
+        if (!src_pixinfo) {
+            std::cerr << "Pixels_ConvertPixels: Failed to get PixInfo for source format: " << (pixformat.c_str ? pixformat.c_str : "NULL") << std::endl;
+            Ret.pix_format = (char*)"error";
+            return Ret;
+        }
 
         P_INSTANCE(PixInfo) dst_pixinfo = PixInfo::get(pixformat_dest);
         if (!dst_pixinfo) {
+            std::cerr << "Pixels_ConvertPixels: Failed to get PixInfo for destination format: " << (pixformat_dest.c_str ? pixformat_dest.c_str : "NULL") << std::endl;
+            Ret.pix_format = (char*)"error";
             src_pixinfo->Release();
             return Ret;
         }
@@ -304,6 +313,8 @@ namespace NewAge {
 
         P_INSTANCE(PixConversion) conversion = PixConversion::get(src_pixinfo, dst_pixinfo);
         if (!conversion) {
+            std::cerr << "Pixels_ConvertPixels: Failed to get PixConversion from " << src_pixinfo->pixformat << " to " << dst_pixinfo->pixformat << std::endl;
+            Ret.pix_format = (char*)"error";
             src_pixinfo->Release();
             dst_pixinfo->Release();
             return Ret;
