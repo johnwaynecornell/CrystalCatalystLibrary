@@ -29,7 +29,7 @@ public class SvgSkiaRenderer
         
         canvas.Save();
         var matrix = Matrix;
-        canvas.Concat(ref matrix);
+        canvas.Concat(matrix);
         canvas.DrawPicture(svg.Picture);
         canvas.Restore();
     }

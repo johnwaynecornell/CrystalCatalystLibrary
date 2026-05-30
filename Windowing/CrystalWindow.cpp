@@ -124,6 +124,14 @@ namespace NewAge {
         window_handle->crystal_window->GLInit();
     }
 
+    void CrystalWindow_GLPresent(P_INSTANCE(WindowHandle) window_handle) {
+        window_handle->crystal_window->GLPresent();
+    }
+
+    P_INSTANCE(void) CrystalWindow_GLGetProcAddress(P_INSTANCE(WindowHandle) window_handle, P_ELEMENTS(const char) name) {
+        return window_handle->crystal_window->GLGetProcAddress(name);
+    }
+
     void CrystalWindow_Show(P_INSTANCE(WindowHandle) window_handle, bool restore)
     {
         window_handle->crystal_window->Show(restore);

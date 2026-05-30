@@ -86,6 +86,22 @@ namespace NewAge
 
         gl_context = wglCreateContext(hdc);
         wglMakeCurrent(hdc, gl_context);
+        ReleaseDC(hwnd, hdc);
+    }
+
+    void CrystalWindow_Windows::GLPresent() {
+        HDC hdc = GetDC(hwnd);
+        SwapBuffers(hdc);
+        ReleaseDC(hwnd, hdc);
+    }
+
+    void* CrystalWindow_Windows::GLGetProcAddress(const char* name) {
+        void* p = (void*)wglGetProcAddress(name);
+        if (p == 0 || (p == (void*)0x1) || (p == (void*)0x2) || (p == (void*)0x3) || (p == (void*)-1)) {
+            HMODULE module = GetModuleHandleA("opengl32.dll");
+            p = (void*)GetProcAddress(module, name);
+        }
+        return p;
     }
 
     void CrystalWindow_Windows::Show(bool restore)

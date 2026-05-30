@@ -779,6 +779,16 @@ public class CrystalWindow : IDisposable
         Imports.CrystalWindow_GLInit(Handle);
     }
 
+    public void GLPresent()
+    {
+        Imports.CrystalWindow_GLPresent(Handle);
+    }
+
+    public IntPtr GLGetProcAddress(string name)
+    {
+        return Imports.CrystalWindow_GLGetProcAddress(Handle, name);
+    }
+
     public void Show(bool restore)
     {
         Imports.CrystalWindow_Show(Handle, restore);
@@ -1180,6 +1190,14 @@ public class CrystalWindow : IDisposable
         // void CrystalWindow_GLInit(P_INSTANCE WindowHandle window_handle)
         [DllImport("CrystalCatalystLibrary")]
         public static extern void CrystalWindow_GLInit(IntPtr window_handle);
+
+        // void CrystalWindow_GLPresent(P_INSTANCE WindowHandle window_handle)
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern void CrystalWindow_GLPresent(IntPtr window_handle);
+
+        // void* CrystalWindow_GLGetProcAddress(P_INSTANCE WindowHandle window_handle, const char* name)
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern IntPtr CrystalWindow_GLGetProcAddress(IntPtr window_handle, [MarshalAs(UnmanagedType.LPStr)] string name);
 
         // void CrystalWindow_Show(P_INSTANCE WindowHandle window_handle, bool restore)
         [DllImport("CrystalCatalystLibrary")]

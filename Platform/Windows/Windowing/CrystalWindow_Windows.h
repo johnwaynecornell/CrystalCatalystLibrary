@@ -37,6 +37,8 @@ public:
     virtual void MouseCapture();
     virtual void MouseRelease();
     virtual void GLInit();
+    virtual void GLPresent();
+    virtual void* GLGetProcAddress(const char* name);
     virtual void Show(bool restore);
 
     void Close() override;

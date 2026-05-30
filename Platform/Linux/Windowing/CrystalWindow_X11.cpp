@@ -552,6 +552,14 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
         std::cerr << mod_header() << "OpenGL context initialized" << std::endl;
     }
 
+    void CrystalWindow_X11::GLPresent() {
+        glXSwapBuffers(display, window);
+    }
+
+    void* CrystalWindow_X11::GLGetProcAddress(const char* name) {
+        return (void*)glXGetProcAddress((const GLubyte*)name);
+    }
+
     bool CrystalWindow_X11::CoordsToRoot(int32_t &x, int32_t &y) {
         Window root = DefaultRootWindow(display);
         Window child_return;

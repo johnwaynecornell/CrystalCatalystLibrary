@@ -174,6 +174,18 @@ public class AnsiSkiaRenderer
         }
     }
 
+    // Static delegate to prevent GC collection of the callback
+    private static readonly PixData.Pix_data_free SafeFreeDelegate = FreeUnmanagedPixels;
+
+    private static bool FreeUnmanagedPixels(IntPtr pixdata)
+    {
+        if (pixdata != IntPtr.Zero)
+        {
+            Marshal.FreeHGlobal(pixdata);
+        }
+        return true;
+    }
+
     public PixData RenderPix(ParsedContent content, bool blinkState, Action<SKBitmap, SKCanvas>? onCanvas = null, Action<SKBitmap, SKCanvas>? postProc = null)
     {
         var width = (int)Math.Ceiling(content.PixelSize.Width);
@@ -182,7 +194,14 @@ public class AnsiSkiaRenderer
         if (width <= 0) width = 1;
         if (height <= 0) height = 1;
 
-        using var bitmap = new SKBitmap(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
+        int stride = width * 4;
+        int byteCount = stride * height;
+        IntPtr unmanagedPixels = Marshal.AllocHGlobal(byteCount);
+
+        var info = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
+        using var bitmap = new SKBitmap();
+        bitmap.InstallPixels(info, unmanagedPixels, stride);
+        
         using var canvas = new SKCanvas(bitmap);
         canvas.Clear(DefaultBg);
         
@@ -203,19 +222,9 @@ public class AnsiSkiaRenderer
         pixData.height = height;
         pixData.pix_format = "bgra:int8";
 
-        int byteCount = bitmap.ByteCount;
-        GCHandle gc = GCHandle.Alloc(bitmap.Bytes, GCHandleType.Pinned);
-        
-        pixData.pix_data = gc.AddrOfPinnedObject();
+        pixData.pix_data = unmanagedPixels;
         pixData.pix_data_length = (IntPtr)byteCount;
-        pixData.pix_data_free = (IntPtr pixdata) =>
-        {
-            if (gc.IsAllocated)
-            {
-                gc.Free();
-            }
-            return true;
-        };
+        pixData.pix_data_free = SafeFreeDelegate;
 
         return pixData;
     }

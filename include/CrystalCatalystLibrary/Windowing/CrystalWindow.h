@@ -102,6 +102,8 @@ namespace NewAge {
     _EXPORT_ void CrystalWindow_MouseCapture(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ void CrystalWindow_MouseRelease(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ void CrystalWindow_GLInit(P_INSTANCE(WindowHandle) window_handle);
+    _EXPORT_ void CrystalWindow_GLPresent(P_INSTANCE(WindowHandle) window_handle);
+    _EXPORT_ P_INSTANCE(void) CrystalWindow_GLGetProcAddress(P_INSTANCE(WindowHandle) window_handle, P_ELEMENTS(const char) name);
     _EXPORT_ void CrystalWindow_Show(P_INSTANCE(WindowHandle) window_handle, bool restore);
     _EXPORT_ void CrystalWindow_Close(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ void CrystalWindow_PostClose(P_INSTANCE(WindowHandle) window_handle);
@@ -168,6 +170,8 @@ namespace NewAge {
         virtual void MouseCapture() = 0;
         virtual void MouseRelease() = 0;
         virtual void GLInit() = 0;
+        virtual void GLPresent() = 0;
+        virtual void* GLGetProcAddress(const char* name) = 0;
         virtual void Show(bool restore) = 0;
         virtual void Close() = 0;
         virtual void PostClose() = 0;

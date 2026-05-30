@@ -10,6 +10,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrystalSkia.net", "CrystalS
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SvgIconAnimation", "SvgIconAnimation\SvgIconAnimation.csproj", "{EB9DAD2B-DA2E-42C8-BE05-7C51E317A5A4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenGLCrystalTest", "OpenGLCrystalTest\OpenGLCrystalTest.csproj", "{60BFD02E-175D-4EE1-8772-DCA32EDA87E5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrystalOpenGL", "CrystalOpenGL\CrystalOpenGL.csproj", "{9E3873A4-B3AF-4CA6-BA42-C71D29385931}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -80,6 +84,30 @@ Global
 		{EB9DAD2B-DA2E-42C8-BE05-7C51E317A5A4}.Release|x64.Build.0 = Release|Any CPU
 		{EB9DAD2B-DA2E-42C8-BE05-7C51E317A5A4}.Release|x86.ActiveCfg = Release|Any CPU
 		{EB9DAD2B-DA2E-42C8-BE05-7C51E317A5A4}.Release|x86.Build.0 = Release|Any CPU
+		{60BFD02E-175D-4EE1-8772-DCA32EDA87E5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{60BFD02E-175D-4EE1-8772-DCA32EDA87E5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{60BFD02E-175D-4EE1-8772-DCA32EDA87E5}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{60BFD02E-175D-4EE1-8772-DCA32EDA87E5}.Debug|x64.Build.0 = Debug|Any CPU
+		{60BFD02E-175D-4EE1-8772-DCA32EDA87E5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{60BFD02E-175D-4EE1-8772-DCA32EDA87E5}.Debug|x86.Build.0 = Debug|Any CPU
+		{60BFD02E-175D-4EE1-8772-DCA32EDA87E5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{60BFD02E-175D-4EE1-8772-DCA32EDA87E5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{60BFD02E-175D-4EE1-8772-DCA32EDA87E5}.Release|x64.ActiveCfg = Release|Any CPU
+		{60BFD02E-175D-4EE1-8772-DCA32EDA87E5}.Release|x64.Build.0 = Release|Any CPU
+		{60BFD02E-175D-4EE1-8772-DCA32EDA87E5}.Release|x86.ActiveCfg = Release|Any CPU
+		{60BFD02E-175D-4EE1-8772-DCA32EDA87E5}.Release|x86.Build.0 = Release|Any CPU
+		{9E3873A4-B3AF-4CA6-BA42-C71D29385931}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9E3873A4-B3AF-4CA6-BA42-C71D29385931}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9E3873A4-B3AF-4CA6-BA42-C71D29385931}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{9E3873A4-B3AF-4CA6-BA42-C71D29385931}.Debug|x64.Build.0 = Debug|Any CPU
+		{9E3873A4-B3AF-4CA6-BA42-C71D29385931}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9E3873A4-B3AF-4CA6-BA42-C71D29385931}.Debug|x86.Build.0 = Debug|Any CPU
+		{9E3873A4-B3AF-4CA6-BA42-C71D29385931}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9E3873A4-B3AF-4CA6-BA42-C71D29385931}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9E3873A4-B3AF-4CA6-BA42-C71D29385931}.Release|x64.ActiveCfg = Release|Any CPU
+		{9E3873A4-B3AF-4CA6-BA42-C71D29385931}.Release|x64.Build.0 = Release|Any CPU
+		{9E3873A4-B3AF-4CA6-BA42-C71D29385931}.Release|x86.ActiveCfg = Release|Any CPU
+		{9E3873A4-B3AF-4CA6-BA42-C71D29385931}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
