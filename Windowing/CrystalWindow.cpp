@@ -124,6 +124,10 @@ namespace NewAge {
         window_handle->crystal_window->GLInit();
     }
 
+    void CrystalWindow_GLMakeCurrent(P_INSTANCE(WindowHandle) window_handle) {
+        window_handle->crystal_window->GLMakeCurrent();
+    }
+
     void CrystalWindow_GLPresent(P_INSTANCE(WindowHandle) window_handle) {
         window_handle->crystal_window->GLPresent();
     }

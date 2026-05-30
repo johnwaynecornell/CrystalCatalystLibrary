@@ -72,8 +72,8 @@ namespace NewAge
             0,                               // shift bit ignored
             0,                               // no accumulation buffer
             0, 0, 0, 0,                      // accum bits ignored
-            32,                              // 32-bit z-buffer
-            0,                               // no stencil buffer
+            24,                              // 24-bit z-buffer
+            8,                               // 8-bit stencil buffer
             0,                               // no auxiliary buffer
             PFD_MAIN_PLANE,                  // main layer
             0,                               // reserved
@@ -85,6 +85,13 @@ namespace NewAge
         SetPixelFormat(hdc, iPixelFormat, &pfd);
 
         gl_context = wglCreateContext(hdc);
+        wglMakeCurrent(hdc, gl_context);
+        ReleaseDC(hwnd, hdc);
+    }
+
+    void CrystalWindow_Windows::GLMakeCurrent() {
+        if (!gl_context) return;
+        HDC hdc = GetDC(hwnd);
         wglMakeCurrent(hdc, gl_context);
         ReleaseDC(hwnd, hdc);
     }

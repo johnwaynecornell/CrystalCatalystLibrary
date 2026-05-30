@@ -779,6 +779,11 @@ public class CrystalWindow : IDisposable
         Imports.CrystalWindow_GLInit(Handle);
     }
 
+    public void GLMakeCurrent()
+    {
+        Imports.CrystalWindow_GLMakeCurrent(Handle);
+    }
+
     public void GLPresent()
     {
         Imports.CrystalWindow_GLPresent(Handle);
@@ -1190,6 +1195,10 @@ public class CrystalWindow : IDisposable
         // void CrystalWindow_GLInit(P_INSTANCE WindowHandle window_handle)
         [DllImport("CrystalCatalystLibrary")]
         public static extern void CrystalWindow_GLInit(IntPtr window_handle);
+
+        // void CrystalWindow_GLMakeCurrent(P_INSTANCE WindowHandle window_handle)
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern void CrystalWindow_GLMakeCurrent(IntPtr window_handle);
 
         // void CrystalWindow_GLPresent(P_INSTANCE WindowHandle window_handle)
         [DllImport("CrystalCatalystLibrary")]

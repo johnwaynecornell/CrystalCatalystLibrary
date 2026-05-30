@@ -552,6 +552,13 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
         std::cerr << mod_header() << "OpenGL context initialized" << std::endl;
     }
 
+    void CrystalWindow_X11::GLMakeCurrent() {
+        if (!gl_context) return;
+        if (!glXMakeCurrent(display, window, gl_context)) {
+            std::cerr << mod_header() << "Could not make GL context current" << std::endl;
+        }
+    }
+
     void CrystalWindow_X11::GLPresent() {
         glXSwapBuffers(display, window);
     }

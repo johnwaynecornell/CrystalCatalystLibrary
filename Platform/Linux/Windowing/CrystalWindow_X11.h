@@ -41,6 +41,7 @@ namespace NewAge {
         void MouseCapture() override;
         void MouseRelease() override;
         void GLInit() override;
+        void GLMakeCurrent() override;
         void GLPresent() override;
         void* GLGetProcAddress(const char* name) override;
         void Show(bool restore) override;

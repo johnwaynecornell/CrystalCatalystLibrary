@@ -49,6 +49,7 @@ void CrystalApplication_Windows::Init() {
     hInstance = GetModuleHandle(nullptr);
 
     WNDCLASS wc = { 0 };
+    wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
     wc.lpfnWndProc = CrystalWindow_Windows_WindowProc;
     wc.hInstance = hInstance;
     wc.lpszClassName = "CrystalWindow";

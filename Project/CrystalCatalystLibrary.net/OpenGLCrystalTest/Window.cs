@@ -233,6 +233,7 @@ public class Window
 
     private void OnDraw(CrystalWindow windowHandle)
     {
+        wnd.GLMakeCurrent();
         if (!_initialized)
         {
             InitGLResources();
