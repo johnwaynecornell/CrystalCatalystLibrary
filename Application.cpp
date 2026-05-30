@@ -105,6 +105,8 @@ namespace NewAge {
                 cur->next = removed->next;
 
                 free(removed);
+            } else {
+                cur = cur->next;
             }
         }
     }

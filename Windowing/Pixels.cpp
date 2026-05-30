@@ -27,17 +27,33 @@ namespace NewAge {
 
     PixInfo::~PixInfo() {
         if (channel_list != nullptr) delete []channel_list;
+        for (int i = 0; i < 256; i++) {
+            SingleLink_Node<int>* cur = channels[i].next;
+            while (cur) {
+                SingleLink_Node<int>* next = cur->next;
+                cur->next = nullptr;
+                delete cur;
+                cur = next;
+            }
+            channels[i].next = nullptr;
+        }
     }
 
     P_INSTANCE(PixInfo)  PixInfo::get(utf8_string_struct pixformat) {
         P_INSTANCE(PixInfo) P = new PixInfo();
 
-        
         P->pixformat = pixformat;
 
         std::string pix = (std::string) pixformat.c_str;
 
         size_t colon = pix.find(':');
+
+        if (colon == std::string::npos) {
+            /* TODO */ //ErrorSystem IO
+            P->Release();
+            return nullptr;
+        }
+
         std::string before_colon = pix.substr(0, colon);
         std::string after_colon = pix.substr(colon + 1);
 
@@ -46,18 +62,14 @@ namespace NewAge {
 
         P->pixformat = (utf8_string_struct)(before_colon+":"+after_colon).c_str();
 
-        if (colon == -1) {
-            /* TODO */ //ErrprSystem IO
-            return nullptr;
-        }
-
         std::string _channel_type = pix.substr(colon + 1);
         if (_channel_type == "int8") P->channel_type = EChannelType_int8;
         else if (_channel_type == "float32") P->channel_type = EChannelType_float32;
         else if (_channel_type == "float64") P->channel_type = EChannelType_float64;
 
         if (P->channel_type == EChannelType_NONE) {
-            /* TODO */ //ErrprSystem IO
+            /* TODO */ //ErrorSystem IO
+            P->Release();
             return nullptr;
         }
 
@@ -232,7 +244,7 @@ namespace NewAge {
     }
 
     void PixConversion::Release() {
-        delete channel_map;
+        delete[] channel_map;
         delete this;
     }
 
