@@ -42,6 +42,24 @@ namespace NewAge {
         CRYSTAL_CURSOR_HAND = 9,
         CRYSTAL_CURSOR_NOT_ALLOWED = 10,
     };
+
+    enum class GLProfile : int32_t {
+        Any = 0,
+        Core = 1,
+        Compatibility = 2
+    };
+
+    struct GLOptions {
+        int32_t major = 3;
+        int32_t minor = 3;
+        GLProfile profile = GLProfile::Core;
+        bool debug = false;
+        bool forwardCompatible = false;
+        int32_t depthBits = 24;
+        int32_t stencilBits = 8;
+        int32_t alphaBits = 8;
+        bool doubleBuffer = true;
+    };
     typedef struct {
         void (*on_draw)(P_INSTANCE(WindowHandle) window_handle);
 
@@ -102,6 +120,9 @@ namespace NewAge {
     _EXPORT_ void CrystalWindow_MouseCapture(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ void CrystalWindow_MouseRelease(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ void CrystalWindow_GLInit(P_INSTANCE(WindowHandle) window_handle);
+    _EXPORT_ bool CrystalWindow_GLInitVersioned(P_INSTANCE(WindowHandle) window_handle, int32_t major, int32_t minor);
+    _EXPORT_ bool CrystalWindow_GLInitAdvanced(P_INSTANCE(WindowHandle) window_handle, GLOptions options);
+    _EXPORT_ void CrystalWindow_GLGetVersion(P_INSTANCE(WindowHandle) window_handle, P_OUT(int32_t) major, P_OUT(int32_t) minor);
     _EXPORT_ void CrystalWindow_GLMakeCurrent(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ void CrystalWindow_GLPresent(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ P_INSTANCE(void) CrystalWindow_GLGetProcAddress(P_INSTANCE(WindowHandle) window_handle, P_ELEMENTS(const char) name);
@@ -170,7 +191,8 @@ namespace NewAge {
 
         virtual void MouseCapture() = 0;
         virtual void MouseRelease() = 0;
-        virtual void GLInit() = 0;
+        virtual bool GLInitAdvanced(const GLOptions& options) = 0;
+        virtual void GLGetVersion(int32_t& major, int32_t& minor) = 0;
         virtual void GLMakeCurrent() = 0;
         virtual void GLPresent() = 0;
         virtual void* GLGetProcAddress(const char* name) = 0;

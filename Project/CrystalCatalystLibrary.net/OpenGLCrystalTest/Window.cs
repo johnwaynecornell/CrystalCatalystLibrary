@@ -71,9 +71,14 @@ public class Window
         wnd = CrystalWindow.Create(800, 600, "OpenGLTest");
         wnd.ApplicationRetain();
 
-        Console.WriteLine("[DEBUG_LOG] Calling GLInit");
-        wnd.GLInit();
-        Console.WriteLine("[DEBUG_LOG] GLInit called, getting GL API");
+        Console.WriteLine("[DEBUG_LOG] Calling GLInitVersioned(3, 3)");
+        bool success = wnd.GLInitVersioned(3, 3);
+        Console.WriteLine($"[DEBUG_LOG] GLInitVersioned result: {success}");
+
+        wnd.GLGetVersion(out int major, out int minor);
+        Console.WriteLine($"[DEBUG_LOG] GLGetVersion reported: {major}.{minor}");
+
+        Console.WriteLine("[DEBUG_LOG] Getting GL API");
         _gl = GL.GetApi(wnd.GLGetProcAddress);
 
         wnd.OnDraw = OnDraw;

@@ -11,6 +11,7 @@
 #include <GL/glxext.h>
 #include <cstring>
 #include <vector>
+#include <cstdio>
 
 #include "DragDrop_X11.h"
 
@@ -539,48 +540,81 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
 #define GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB 0x00000002
 #endif
 
+#ifndef GLX_CONTEXT_DEBUG_BIT_ARB
+#define GLX_CONTEXT_DEBUG_BIT_ARB               0x00000001
+#endif
+#ifndef GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB
+#define GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB  0x00000002
+#endif
+
     typedef GLXContext (*glXCreateContextAttribsARBProc)(Display*, GLXFBConfig, GLXContext, Bool, const int*);
 
-    void CrystalWindow_X11::GLInit() {
-        std::cerr << mod_header() << "X11 GLInit started" << std::endl;
+    bool CrystalWindow_X11::GLInitAdvanced(const GLOptions& options) {
+        std::cerr << mod_header() << "X11 GLInitAdvanced started" << std::endl;
+        std::cerr << mod_header() << "Requested OpenGL version: " << options.major << "." << options.minor << std::endl;
 
         // Log GLX version
-        int major, minor;
-        if (glXQueryVersion(display, &major, &minor)) {
-            std::cerr << mod_header() << "GLX version: " << major << "." << minor << std::endl;
+        int glx_major, glx_minor;
+        if (glXQueryVersion(display, &glx_major, &glx_minor)) {
+            std::cerr << mod_header() << "GLX version: " << glx_major << "." << glx_minor << std::endl;
         } else {
             std::cerr << mod_header() << "Warning: Could not query GLX version" << std::endl;
         }
 
         if (!gl_fb_config) {
             std::cerr << mod_header() << "Error: No GLX FBConfig stored on window. OpenGL initialization failed." << std::endl;
-            return;
+            return false;
+        }
+
+        if (gl_context) {
+            GLMakeCurrent();
+            int actual_major = 0;
+            int actual_minor = 0;
+            GLGetVersion(actual_major, actual_minor);
+            bool satisfies_request =
+                actual_major > options.major ||
+                (actual_major == options.major && actual_minor >= options.minor);
+            std::cerr << mod_header() << " OpenGL context already exists: " << actual_major << "." << actual_minor << std::endl;
+            return satisfies_request;
         }
 
         glXCreateContextAttribsARBProc glXCreateContextAttribsARB = (glXCreateContextAttribsARBProc)glXGetProcAddressARB((const GLubyte*)"glXCreateContextAttribsARB");
 
         if (glXCreateContextAttribsARB) {
-            int context_attribs[] = {
-                GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
-                GLX_CONTEXT_MINOR_VERSION_ARB, 3,
-                GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
-                None
-            };
+            std::vector<int> context_attribs;
+            context_attribs.push_back(GLX_CONTEXT_MAJOR_VERSION_ARB);
+            context_attribs.push_back(options.major);
+            context_attribs.push_back(GLX_CONTEXT_MINOR_VERSION_ARB);
+            context_attribs.push_back(options.minor);
 
-            std::cerr << mod_header() << "Attempting to create OpenGL 3.3 Core Profile context..." << std::endl;
-            gl_context = glXCreateContextAttribsARB(display, gl_fb_config, nullptr, True, context_attribs);
+            int profile_mask = 0;
+            if (options.profile == GLProfile::Core) profile_mask = GLX_CONTEXT_CORE_PROFILE_BIT_ARB;
+            else if (options.profile == GLProfile::Compatibility) profile_mask = GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB;
+
+            if (profile_mask != 0) {
+                context_attribs.push_back(GLX_CONTEXT_PROFILE_MASK_ARB);
+                context_attribs.push_back(profile_mask);
+            }
+
+            int flags = 0;
+            if (options.debug) flags |= GLX_CONTEXT_DEBUG_BIT_ARB;
+            if (options.forwardCompatible) flags |= GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB;
+
+            if (flags != 0) {
+                context_attribs.push_back(GLX_CONTEXT_FLAGS_ARB);
+                context_attribs.push_back(flags);
+            }
+
+            context_attribs.push_back(None);
+
+            std::cerr << mod_header() << "Attempting to create OpenGL context via glXCreateContextAttribsARB..." << std::endl;
+            gl_context = glXCreateContextAttribsARB(display, gl_fb_config, nullptr, True, context_attribs.data());
 
             if (!gl_context) {
-                std::cerr << mod_header() << "Failed to create OpenGL 3.3 Core context. Attempting compatibility profile..." << std::endl;
-                int compat_attribs[] = {
-                    GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
-                    GLX_CONTEXT_MINOR_VERSION_ARB, 3,
-                    None
-                };
-                gl_context = glXCreateContextAttribsARB(display, gl_fb_config, nullptr, True, compat_attribs);
+                std::cerr << mod_header() << "Failed to create requested OpenGL context. Trying fallback..." << std::endl;
             }
         } else {
-            std::cerr << mod_header() << "glXCreateContextAttribsARB not available. Falling back to glXCreateNewContext." << std::endl;
+            std::cerr << mod_header() << "glXCreateContextAttribsARB not available. Falling back to legacy methods." << std::endl;
         }
 
         if (!gl_context) {
@@ -595,12 +629,16 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
 
         if (!gl_context) {
             std::cerr << mod_header() << "CRITICAL: Failed to create any GLX context" << std::endl;
-            return;
+            return false;
         }
 
         if (!glXMakeCurrent(display, window, gl_context)) {
             std::cerr << mod_header() << "Could not make GL context current" << std::endl;
-            return;
+            glXMakeCurrent(display, None, nullptr);
+            glXDestroyContext(display, gl_context);
+            gl_context = nullptr;
+
+            return false;
         }
 
         // Log GL info
@@ -612,7 +650,29 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
         std::cerr << mod_header() << "Final OpenGL Vendor: " << (gl_vendor ? gl_vendor : "NULL") << std::endl;
         std::cerr << mod_header() << "Final OpenGL Renderer: " << (gl_renderer ? gl_renderer : "NULL") << std::endl;
 
+        int actual_major = 0, actual_minor = 0;
+        GLGetVersion(actual_major, actual_minor);
+        if (actual_major < options.major || (actual_major == options.major && actual_minor < options.minor)) {
+            std::cerr << mod_header() << "Error: Created context version (" << actual_major << "." << actual_minor 
+                      << ") is less than requested (" << options.major << "." << options.minor << ")." << std::endl;
+            glXMakeCurrent(display, None, nullptr);
+            glXDestroyContext(display, gl_context);
+            gl_context = nullptr;
+
+            return false;
+        }
+
         std::cerr << mod_header() << "OpenGL context initialized successfully" << std::endl;
+        return true;
+    }
+
+    void CrystalWindow_X11::GLGetVersion(int32_t& major, int32_t& minor) {
+        major = 0;
+        minor = 0;
+        const char* gl_version = (const char*)glGetString(GL_VERSION);
+        if (gl_version) {
+            sscanf(gl_version, "%d.%d", &major, &minor);
+        }
     }
 
     void CrystalWindow_X11::GLMakeCurrent() {

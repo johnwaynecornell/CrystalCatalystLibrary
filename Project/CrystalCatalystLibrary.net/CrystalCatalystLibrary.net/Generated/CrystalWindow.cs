@@ -776,7 +776,22 @@ public class CrystalWindow : IDisposable
 
     public void GLInit()
     {
-        Imports.CrystalWindow_GLInit(Handle);
+        GLInitVersioned(3, 3);
+    }
+
+    public bool GLInitVersioned(int major, int minor)
+    {
+        return Imports.CrystalWindow_GLInitVersioned(Handle, major, minor);
+    }
+
+    public bool GLInitAdvanced(GLOptions options)
+    {
+        return Imports.CrystalWindow_GLInitAdvanced(Handle, options);
+    }
+
+    public void GLGetVersion(out int major, out int minor)
+    {
+        Imports.CrystalWindow_GLGetVersion(Handle, out major, out minor);
     }
 
     public void GLMakeCurrent()
@@ -1195,6 +1210,15 @@ public class CrystalWindow : IDisposable
         // void CrystalWindow_GLInit(P_INSTANCE WindowHandle window_handle)
         [DllImport("CrystalCatalystLibrary")]
         public static extern void CrystalWindow_GLInit(IntPtr window_handle);
+
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern bool CrystalWindow_GLInitVersioned(IntPtr window_handle, int major, int minor);
+
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern bool CrystalWindow_GLInitAdvanced(IntPtr window_handle, GLOptions options);
+
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern void CrystalWindow_GLGetVersion(IntPtr window_handle, out int major, out int minor);
 
         // void CrystalWindow_GLMakeCurrent(P_INSTANCE WindowHandle window_handle)
         [DllImport("CrystalCatalystLibrary")]

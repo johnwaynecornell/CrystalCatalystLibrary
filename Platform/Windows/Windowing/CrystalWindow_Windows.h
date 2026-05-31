@@ -36,7 +36,8 @@ public:
 
     virtual void MouseCapture();
     virtual void MouseRelease();
-    virtual void GLInit();
+    virtual bool GLInitAdvanced(const GLOptions& options);
+    virtual void GLGetVersion(int32_t& major, int32_t& minor);
     virtual void GLMakeCurrent();
     virtual void GLPresent();
     virtual void* GLGetProcAddress(const char* name);

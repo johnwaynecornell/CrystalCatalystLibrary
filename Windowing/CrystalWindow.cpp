@@ -121,7 +121,22 @@ namespace NewAge {
     }
 
     void CrystalWindow_GLInit(P_INSTANCE(WindowHandle) window_handle) {
-        window_handle->crystal_window->GLInit();
+        CrystalWindow_GLInitVersioned(window_handle, 3, 3);
+    }
+
+    bool CrystalWindow_GLInitVersioned(P_INSTANCE(WindowHandle) window_handle, int32_t major, int32_t minor) {
+        GLOptions options{};
+        options.major = major;
+        options.minor = minor;
+        return window_handle->crystal_window->GLInitAdvanced(options);
+    }
+
+    bool CrystalWindow_GLInitAdvanced(P_INSTANCE(WindowHandle) window_handle, GLOptions options) {
+        return window_handle->crystal_window->GLInitAdvanced(options);
+    }
+
+    void CrystalWindow_GLGetVersion(P_INSTANCE(WindowHandle) window_handle, P_OUT(int32_t) major, P_OUT(int32_t) minor) {
+        window_handle->crystal_window->GLGetVersion(*major, *minor);
     }
 
     void CrystalWindow_GLMakeCurrent(P_INSTANCE(WindowHandle) window_handle) {

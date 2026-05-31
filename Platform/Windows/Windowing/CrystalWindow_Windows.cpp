@@ -9,6 +9,8 @@
 #include <strsafe.h>
 #include <iostream>
 #include <cstring>
+#include <vector>
+#include <cstdio>
 
 // WGL Extensions
 #ifndef WGL_ARB_pixel_format
@@ -33,6 +35,13 @@
 #define WGL_CONTEXT_PROFILE_MASK_ARB      0x9126
 #define WGL_CONTEXT_CORE_PROFILE_BIT_ARB  0x00000001
 #define WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB 0x00000002
+#endif
+
+#ifndef WGL_CONTEXT_DEBUG_BIT_ARB
+#define WGL_CONTEXT_DEBUG_BIT_ARB         0x00000001
+#endif
+#ifndef WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB
+#define WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB 0x00000002
 #endif
 
 typedef BOOL (WINAPI * PFNWGLCHOOSEPIXELFORMATARBPROC) (HDC hdc, const int *piAttribIList, const FLOAT *pfAttribFList, UINT nMaxFormats, int *piFormats, UINT *nNumFormats);
@@ -88,7 +97,30 @@ namespace NewAge
 
     LRESULT CALLBACK WindowProc(HWND hwnd, uint32_t  uMsg, WPARAM wParam, LPARAM lParam);
 
-    void CrystalWindow_Windows::GLInit() {
+    static void CleanupWGLContext(HGLRC& context) {
+        if (context) {
+            wglMakeCurrent(NULL, NULL);
+            wglDeleteContext(context);
+            context = nullptr;
+        }
+    }
+
+    bool CrystalWindow_Windows::GLInitAdvanced(const GLOptions& options) {
+        std::cerr << mod_header() << " Windows GLInitAdvanced started" << std::endl;
+
+        if (gl_context) {
+            GLMakeCurrent();
+            int actual_major = 0;
+            int actual_minor = 0;
+            GLGetVersion(actual_major, actual_minor);
+            bool satisfies_request =
+                actual_major > options.major ||
+                (actual_major == options.major && actual_minor >= options.minor);
+            std::cerr << mod_header() << " OpenGL context already exists: " << actual_major << "." << actual_minor << std::endl;
+            return satisfies_request;
+        }
+        std::cerr << mod_header() << " Requested OpenGL version: " << options.major << "." << options.minor << std::endl;
+
         // 1. Create a dummy window for bootstrap
         HINSTANCE hInst = GetModuleHandle(NULL);
         WNDCLASSA dummy_wc = {0};
@@ -106,7 +138,7 @@ namespace NewAge
         if (!dummy_hwnd) {
             std::cerr << mod_header() << " Failed to create bootstrap window" << std::endl;
             UnregisterClassA(dummy_wc.lpszClassName, hInst);
-            return;
+            return false;
         }
 
         HDC dummy_dc = GetDC(dummy_hwnd);
@@ -127,7 +159,7 @@ namespace NewAge
             ReleaseDC(dummy_hwnd, dummy_dc);
             DestroyWindow(dummy_hwnd);
             UnregisterClassA(dummy_wc.lpszClassName, hInst);
-            return;
+            return false;
         }
 
         wglMakeCurrent(dummy_dc, dummy_context);
@@ -155,21 +187,20 @@ namespace NewAge
         int pixel_format = 0;
 
         if (has_modern_pf) {
-            int pix_attribs[] = {
-                WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
-                WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
-                WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
-                WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
-                WGL_COLOR_BITS_ARB, 32,
-                WGL_ALPHA_BITS_ARB, 8,
-                WGL_DEPTH_BITS_ARB, 24,
-                WGL_STENCIL_BITS_ARB, 8,
-                WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,
-                0
-            };
+            std::vector<int> pix_attribs;
+            pix_attribs.push_back(WGL_DRAW_TO_WINDOW_ARB); pix_attribs.push_back(GL_TRUE);
+            pix_attribs.push_back(WGL_SUPPORT_OPENGL_ARB); pix_attribs.push_back(GL_TRUE);
+            pix_attribs.push_back(WGL_DOUBLE_BUFFER_ARB); pix_attribs.push_back(options.doubleBuffer ? GL_TRUE : GL_FALSE);
+            pix_attribs.push_back(WGL_PIXEL_TYPE_ARB); pix_attribs.push_back(WGL_TYPE_RGBA_ARB);
+            pix_attribs.push_back(WGL_COLOR_BITS_ARB); pix_attribs.push_back(32);
+            pix_attribs.push_back(WGL_ALPHA_BITS_ARB); pix_attribs.push_back(options.alphaBits);
+            pix_attribs.push_back(WGL_DEPTH_BITS_ARB); pix_attribs.push_back(options.depthBits);
+            pix_attribs.push_back(WGL_STENCIL_BITS_ARB); pix_attribs.push_back(options.stencilBits);
+            pix_attribs.push_back(WGL_ACCELERATION_ARB); pix_attribs.push_back(WGL_FULL_ACCELERATION_ARB);
+            pix_attribs.push_back(0);
 
             UINT num_formats = 0;
-            if (!wglChoosePixelFormatARB(hdc, pix_attribs, NULL, 1, &pixel_format, &num_formats) || num_formats == 0) {
+            if (!wglChoosePixelFormatARB(hdc, pix_attribs.data(), NULL, 1, &pixel_format, &num_formats) || num_formats == 0) {
                 std::cerr << mod_header() << " wglChoosePixelFormatARB failed, falling back to legacy" << std::endl;
                 pixel_format = ChoosePixelFormat(hdc, &pfd);
             } else {
@@ -183,7 +214,7 @@ namespace NewAge
         if (pixel_format == 0) {
             std::cerr << mod_header() << " Failed to find a suitable pixel format" << std::endl;
             ReleaseDC(hwnd, hdc);
-            return;
+            return false;
         }
 
         int current_pf = GetPixelFormat(hdc);
@@ -191,25 +222,38 @@ namespace NewAge
             if (!SetPixelFormat(hdc, pixel_format, &pfd)) {
                 DWORD error = GetLastError();
                 std::cerr << mod_header() << " SetPixelFormat failed with error: " << error << std::endl;
+                ReleaseDC(hwnd, hdc);
+                return false;
             }
         } else {
             std::cout << mod_header() << " Pixel format already set to " << current_pf << ". Skipping SetPixelFormat." << std::endl;
         }
 
         if (has_modern_ctx) {
-            int ctx_attribs[] = {
-                WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
-                WGL_CONTEXT_MINOR_VERSION_ARB, 3,
-                WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
-                0
-            };
+            std::vector<int> ctx_attribs;
+            ctx_attribs.push_back(WGL_CONTEXT_MAJOR_VERSION_ARB); ctx_attribs.push_back(options.major);
+            ctx_attribs.push_back(WGL_CONTEXT_MINOR_VERSION_ARB); ctx_attribs.push_back(options.minor);
+            
+            int profile_mask = 0;
+            if (options.profile == GLProfile::Core) profile_mask = WGL_CONTEXT_CORE_PROFILE_BIT_ARB;
+            else if (options.profile == GLProfile::Compatibility) profile_mask = WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB;
 
-            gl_context = wglCreateContextAttribsARB(hdc, 0, ctx_attribs);
+            if (profile_mask != 0) {
+                ctx_attribs.push_back(WGL_CONTEXT_PROFILE_MASK_ARB); ctx_attribs.push_back(profile_mask);
+            }
+
+            int flags = 0;
+            if (options.debug) flags |= WGL_CONTEXT_DEBUG_BIT_ARB;
+            if (options.forwardCompatible) flags |= WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB;
+            if (flags != 0) {
+                ctx_attribs.push_back(WGL_CONTEXT_FLAGS_ARB); ctx_attribs.push_back(flags);
+            }
+            ctx_attribs.push_back(0);
+
+            gl_context = wglCreateContextAttribsARB(hdc, 0, ctx_attribs.data());
             if (!gl_context) {
-                std::cerr << mod_header() << " wglCreateContextAttribsARB failed for 3.3 Core, falling back to legacy context" << std::endl;
+                std::cerr << mod_header() << " wglCreateContextAttribsARB failed, falling back to legacy context" << std::endl;
                 gl_context = wglCreateContext(hdc);
-            } else {
-                std::cout << mod_header() << " Created OpenGL 3.3 Core Profile context" << std::endl;
             }
         } else {
             std::cout << mod_header() << " WGL_ARB_create_context not available, using legacy wglCreateContext" << std::endl;
@@ -219,11 +263,14 @@ namespace NewAge
         if (!gl_context) {
             std::cerr << mod_header() << " CRITICAL: Failed to create any OpenGL context" << std::endl;
             ReleaseDC(hwnd, hdc);
-            return;
+            return false;
         }
 
         if (!wglMakeCurrent(hdc, gl_context)) {
             std::cerr << mod_header() << " wglMakeCurrent failed" << std::endl;
+            CleanupWGLContext(gl_context);
+            ReleaseDC(hwnd, hdc);
+            return false;
         }
 
         // Log resulting OpenGL version/vendor/renderer
@@ -240,10 +287,30 @@ namespace NewAge
         }
 
         if (wglSwapIntervalEXT) {
-            wglSwapIntervalEXT(1); // Enable VSync by default
+            wglSwapIntervalEXT(options.doubleBuffer ? 1 : 0);
+        }
+
+        int actual_major = 0, actual_minor = 0;
+        GLGetVersion(actual_major, actual_minor);
+        if (actual_major < options.major || (actual_major == options.major && actual_minor < options.minor)) {
+            std::cerr << mod_header() << " Error: Created context version (" << actual_major << "." << actual_minor 
+                      << ") is less than requested (" << options.major << "." << options.minor << ")." << std::endl;
+            CleanupWGLContext(gl_context);
+            ReleaseDC(hwnd, hdc);
+            return false;
         }
 
         ReleaseDC(hwnd, hdc);
+        std::cerr << mod_header() << " OpenGL context initialized successfully" << std::endl;
+        return true;
+    }
+
+    void CrystalWindow_Windows::GLGetVersion(int32_t& major, int32_t& minor) {
+        major = 0; minor = 0;
+        const char* gl_version = (const char*)glGetString(GL_VERSION);
+        if (gl_version) {
+            sscanf(gl_version, "%d.%d", &major, &minor);
+        }
     }
 
     void CrystalWindow_Windows::GLMakeCurrent() {
