@@ -33,6 +33,12 @@ public class Window
     private uint _texture;
     private PixData _pixData;
 
+    private const int DemoTextureWidth = 256;
+    private const int DemoTextureHeight = 256;
+    private const double DemoTextureUpdateFps = 30.0;
+
+    private int _lastTextureUpdateFrame = -1;
+    
     private bool _initialized = false;
 
     private const string DemoPixFormat = "rgba:int8";
@@ -197,9 +203,18 @@ public class Window
         _gl.VertexAttribPointer(1, 2, GLEnum.Float, false, 5 * sizeof(float), (IntPtr)(3 * sizeof(float)));
         _gl.EnableVertexAttribArray(1);
 
-        _pixData = FixedPixDataRenderer.CreateDemoTexture(256, 256, DemoPixFormat, DemoStrictFormat);
-        _texture = GLTextureHelper.CreateTexture2DFromPixData(_gl, _pixData, false, DemoStrictFormat);
+        _pixData = FixedPixDataRenderer.CreateDemoTexture(
+            DemoTextureWidth,
+            DemoTextureHeight,
+            DemoPixFormat,
+            DemoStrictFormat);
 
+        _texture = GLTextureHelper.CreateTexture2DFromPixData(
+            _gl,
+            _pixData,
+            false,
+            DemoStrictFormat);
+        
         _gl.UseProgram(_program);
         int textureLocation = _gl.GetUniformLocation(_program, "uTexture");
         if (textureLocation != -1)
@@ -212,6 +227,66 @@ public class Window
         {
             Console.WriteLine($"[DEBUG_LOG] GL Error during Init: {err}");
         }
+    }
+    
+    private void UpdateAnimatedTexture(double time)
+    {
+        if (!_pixData)
+            return;
+
+        int frame = (int)(time * DemoTextureUpdateFps);
+        if (frame == _lastTextureUpdateFrame)
+            return;
+
+        _lastTextureUpdateFrame = frame;
+
+        using PixData framePixData = FixedPixDataRenderer.CreateFixed(
+            _pixData.width,
+            _pixData.height,
+            (canvas, info) =>
+            {
+                using var sourceBitmap = PixDataSkia.CreateBitmapView(_pixData);
+                canvas.DrawBitmap(sourceBitmap, 0, 0);
+                DrawAnimatedCornerSquare(canvas, info, time);
+            },
+            DemoPixFormat,
+            DemoStrictFormat);
+
+        GLTextureHelper.WritePixels(_gl, _texture, framePixData, DemoStrictFormat);
+    }
+    
+    private static void DrawAnimatedCornerSquare(SKCanvas canvas, SKImageInfo info, double time)
+    {
+        const float margin = 12.0f;
+        const float travel = 48.0f;
+        const float size = 34.0f;
+
+        float pulse = 0.5f + 0.5f * MathF.Sin((float)time * 4.0f);
+        float x = margin + travel * pulse;
+        float y = margin;
+
+        using var fill = new SKPaint
+        {
+            IsAntialias = true,
+            Style = SKPaintStyle.Fill,
+            Color = new SKColor(
+                (byte)(80 + 175 * pulse),
+                (byte)(220 - 120 * pulse),
+                255,
+                230)
+        };
+
+        using var stroke = new SKPaint
+        {
+            IsAntialias = true,
+            Style = SKPaintStyle.Stroke,
+            StrokeWidth = 3,
+            Color = SKColors.White
+        };
+
+        var rect = new SKRect(x, y, x + size, y + size);
+        canvas.DrawRoundRect(rect, 6, 6, fill);
+        canvas.DrawRoundRect(rect, 6, 6, stroke);
     }
 
     private void CheckShaderCompileStatus(uint shader, string name)
@@ -293,6 +368,7 @@ public class Window
         }
 
         double time = wnd.uptimeSeconds();
+        UpdateAnimatedTexture(time);
         
         _gl.ClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         _gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
