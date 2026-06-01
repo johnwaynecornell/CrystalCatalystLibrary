@@ -111,4 +111,70 @@ public static class PixDataSkia
         return result;
     }
     
+    public static SKBitmap CreateBitmapCopy(PixData pixData)
+    {
+        using SKBitmap view = CreateBitmapView(pixData);
+
+        SKBitmap? copy = view.Copy();
+        if (copy == null)
+        {
+            throw new InvalidOperationException(
+                $"Failed to copy PixData into an owning SKBitmap for format '{pixData.pix_format}'.");
+        }
+
+        return copy;
+    }
+    
+    public static SKBitmap CreateBitmapCopy(
+        PixData pixData,
+        string fallbackPixFormat,
+        bool strict = false)
+    {
+        if (TryGetImageInfo(pixData, out _))
+        {
+            return CreateBitmapCopy(pixData);
+        }
+
+        if (strict)
+        {
+            throw new NotSupportedException(
+                $"PixData format '{pixData.pix_format}' cannot be viewed as a Skia bitmap and strict mode is enabled.");
+        }
+
+        PixData proxy = Pixels.ConvertPixelsPix(ref pixData, fallbackPixFormat);
+        if (!proxy)
+        {
+            throw new NotSupportedException(
+                $"PixData format '{pixData.pix_format}' cannot be converted to '{fallbackPixFormat}'.");
+        }
+
+        try
+        {
+            return CreateBitmapCopy(proxy);
+        }
+        finally
+        {
+            proxy.Dispose();
+        }
+    }
+
+    public static SKBitmap ToBitmap(this PixData pixData)
+    {
+        return CreateBitmapCopy(pixData);
+    }
+
+    public static bool TryCreateBitmapCopy(PixData pixData, out SKBitmap? bitmap)
+    {
+        bitmap = null;
+
+        try
+        {
+            bitmap = CreateBitmapCopy(pixData);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }
