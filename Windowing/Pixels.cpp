@@ -104,15 +104,15 @@ namespace NewAge {
     }
 
     void ChannelConvert_int8_int8(P_INSTANCE(PixConversion) This, P_ELEMENTS(void) src, int src_channel, P_ELEMENTS(void) dst, int dest_channel) {
-        ((int8_t *)dst)[dest_channel] =((int8_t *)src)[src_channel];
+        ((uint8_t *)dst)[dest_channel] =((uint8_t *)src)[src_channel];
     }
 
     void ChannelConvert_int8_float32(P_INSTANCE(PixConversion) This, P_ELEMENTS(void) src, int src_channel, P_ELEMENTS(void) dst, int dest_channel) {
-        ((int8_t *)dst)[dest_channel] =(int8_t)(((float32 *)src)[src_channel] * 0xFF);
+        ((uint8_t *)dst)[dest_channel] =(uint8_t)(((float32 *)src)[src_channel] * 255.0f);
     }
 
     void ChannelConvert_int8_float64(P_INSTANCE(PixConversion) This, P_ELEMENTS(void) src, int src_channel, P_ELEMENTS(void) dst, int dest_channel) {
-        ((int8_t *)dst)[dest_channel] =(int8_t)(((float64 *)src)[src_channel] * 0xFF);
+        ((uint8_t *)dst)[dest_channel] =(uint8_t)(((float64 *)src)[src_channel] * 255.0);
     }
 
     void ChannelConvert_float32_int8(P_INSTANCE(PixConversion) This, P_ELEMENTS(void) src, int src_channel, P_ELEMENTS(void) dst, int dest_channel) {
