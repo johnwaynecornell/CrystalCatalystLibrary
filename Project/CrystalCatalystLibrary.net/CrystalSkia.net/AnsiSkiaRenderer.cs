@@ -186,8 +186,9 @@ public class AnsiSkiaRenderer
         return true;
     }
 
-    public PixData RenderPix(ParsedContent content, bool blinkState, Action<SKBitmap, SKCanvas>? onCanvas = null, Action<SKBitmap, SKCanvas>? postProc = null, string pixFormatDest = "bgra:int8", bool strict = false)
+    public PixData RenderPix(ParsedContent content, bool blinkState, Action<SKBitmap, SKCanvas>? onCanvas = null, Action<SKBitmap, SKCanvas>? postProc = null, string? pixFormatDest = null, bool strict = false)
     {
+        pixFormatDest ??= "bgra:int8";
         var width = (int)Math.Ceiling(content.PixelSize.Width);
         var height = (int)Math.Ceiling(content.PixelSize.Height);
 

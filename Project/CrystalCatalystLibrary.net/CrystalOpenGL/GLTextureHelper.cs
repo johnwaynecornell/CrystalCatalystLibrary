@@ -26,7 +26,9 @@ public static class GLTextureHelper
         if (pixData.width <= 0 || pixData.height <= 0)
             throw new ArgumentException("PixData width and height must be positive.");
 
-        string format = PixFormats.Parse(pixData.pix_format.ToString() ?? "").PixFormat;
+        string formatStr = pixData.pix_format.ToString();
+        if (string.IsNullOrEmpty(formatStr)) formatStr = "rgba:int8";
+        string format = PixFormats.Parse(formatStr).PixFormat;
         PixData proxy = default;
 
         if (!GLPixFormatMap.TryGetUploadFormat(format, out var internalFormat, out var pixelFormat, out var pixelType))
@@ -74,7 +76,9 @@ public static class GLTextureHelper
         gl.BindTexture(TextureTarget.Texture2D, texture);
         gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
 
-        string format = PixFormats.Parse(src.pix_format.ToString() ?? "").PixFormat;
+        string formatStr = src.pix_format.ToString();
+        if (string.IsNullOrEmpty(formatStr)) formatStr = "rgba:int8";
+        string format = PixFormats.Parse(formatStr).PixFormat;
         PixData proxy = default;
 
         if (!GLPixFormatMap.TryGetUploadFormat(format, out _, out var pixelFormat, out var pixelType))
@@ -92,8 +96,26 @@ public static class GLTextureHelper
         if (proxy) proxy.Dispose();
     }
 
-    public static PixData ReadPixels(GL gl, uint texture, string pixFormatDest = "bgra:int8")
+    public static string GetPixFormatFromTexture(GL gl, uint texture)
     {
+        gl.BindTexture(TextureTarget.Texture2D, texture);
+        gl.GetTexLevelParameter(TextureTarget.Texture2D, 0, GLEnum.TextureInternalFormat, out int internalFormatInt);
+        
+        if (GLPixFormatMap.TryGetPixFormat((InternalFormat)internalFormatInt, out string pixFormat))
+        {
+            return pixFormat;
+        }
+        
+        return "rgba:int8";
+    }
+
+    public static PixData ReadPixels(GL gl, uint texture, string? pixFormatDest = null)
+    {
+        if (string.IsNullOrEmpty(pixFormatDest))
+        {
+            pixFormatDest = GetPixFormatFromTexture(gl, texture);
+        }
+
         gl.BindTexture(TextureTarget.Texture2D, texture);
 
         gl.GetTexLevelParameter(TextureTarget.Texture2D, 0, GLEnum.TextureWidth, out int width);
@@ -104,15 +126,28 @@ public static class GLTextureHelper
 
         string destFormat = PixFormats.Parse(pixFormatDest).PixFormat;
 
-        // Read into a known GL-supported format first
-        string readFormat = "bgra:int8";
-        PixelFormat glFormat = PixelFormat.Bgra;
+        // Try to read directly in the requested format if supported by GLPixFormatMap
+        string readFormat = destFormat;
+        if (!GLPixFormatMap.TryGetUploadFormat(readFormat, out _, out var glFormat, out var pixelType))
+        {
+             // Fallback to RGBA or BGRA
+             readFormat = "rgba:int8";
+             glFormat = PixelFormat.Rgba;
+             pixelType = PixelType.UnsignedByte;
+             
+             // If dest is bgra, use bgra as middleman
+             if (destFormat == "bgra:int8")
+             {
+                 readFormat = "bgra:int8";
+                 glFormat = PixelFormat.Bgra;
+             }
+        }
 
         int byteCount = PixFormats.GetExpectedByteLength(readFormat, width, height);
         IntPtr unmanagedPixels = Marshal.AllocHGlobal(byteCount);
 
         gl.PixelStore(PixelStoreParameter.PackAlignment, 1);
-        GLBridges.GetTexImage(gl, TextureTarget.Texture2D, 0, glFormat, PixelType.UnsignedByte, unmanagedPixels);
+        GLBridges.GetTexImage(gl, TextureTarget.Texture2D, 0, glFormat, pixelType, unmanagedPixels);
 
         var pixData = new PixData
         {

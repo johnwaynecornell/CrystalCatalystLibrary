@@ -22,9 +22,10 @@ public static class FixedPixDataRenderer
         int width,
         int height,
         Action<SKCanvas, SKImageInfo>? draw = null,
-        string pixFormatDest = "bgra:int8",
+        string? pixFormatDest = null,
         bool strict = false)
     {
+        pixFormatDest ??= "bgra:int8";
         if (width <= 0 || height <= 0)
         {
             throw new ArgumentException("Width and height must be positive.");
@@ -80,7 +81,7 @@ public static class FixedPixDataRenderer
         return pixData;
     }
 
-    public static PixData CreateDemoTexture(int width = 256, int height = 256, string pixFormatDest = "bgra:int8", bool strict = false)
+    public static PixData CreateDemoTexture(int width = 256, int height = 256, string? pixFormatDest = null, bool strict = false)
     {
         return CreateFixed(width, height, (canvas, info) =>
         {

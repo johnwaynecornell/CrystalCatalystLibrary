@@ -59,4 +59,26 @@ public static class GLPixFormatMap
     {
         return TryGetUploadFormat(pixFormat, out _, out _, out _);
     }
+
+    public static bool TryGetPixFormat(InternalFormat internalFormat, out string pixFormat)
+    {
+        switch (internalFormat)
+        {
+            case InternalFormat.Rgba8:
+                pixFormat = "rgba:int8";
+                return true;
+            case InternalFormat.Rgb8:
+                pixFormat = "rgb:int8";
+                return true;
+            case InternalFormat.Rgba32f:
+                pixFormat = "rgba:float32";
+                return true;
+            case InternalFormat.Rgb32f:
+                pixFormat = "rgb:float32";
+                return true;
+            default:
+                pixFormat = "";
+                return false;
+        }
+    }
 }

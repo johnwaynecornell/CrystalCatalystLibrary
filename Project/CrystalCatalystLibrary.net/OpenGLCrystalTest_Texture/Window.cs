@@ -196,7 +196,7 @@ public class Window
         _gl.VertexAttribPointer(1, 2, GLEnum.Float, false, 5 * sizeof(float), (IntPtr)(3 * sizeof(float)));
         _gl.EnableVertexAttribArray(1);
 
-        _pixData = FixedPixDataRenderer.CreateDemoTexture(256, 256, DemoPixFormat);
+        _pixData = FixedPixDataRenderer.CreateDemoTexture(256, 256);
         _texture = GLTextureHelper.CreateTexture2DFromPixData(_gl, _pixData);
 
         _gl.UseProgram(_program);
