@@ -186,7 +186,7 @@ public class AnsiSkiaRenderer
         return true;
     }
 
-    public PixData RenderPix(ParsedContent content, bool blinkState, Action<SKBitmap, SKCanvas>? onCanvas = null, Action<SKBitmap, SKCanvas>? postProc = null)
+    public PixData RenderPix(ParsedContent content, bool blinkState, Action<SKBitmap, SKCanvas>? onCanvas = null, Action<SKBitmap, SKCanvas>? postProc = null, string pixFormatDest = "bgra:int8")
     {
         var width = (int)Math.Ceiling(content.PixelSize.Width);
         var height = (int)Math.Ceiling(content.PixelSize.Height);
@@ -225,6 +225,16 @@ public class AnsiSkiaRenderer
         pixData.pix_data = unmanagedPixels;
         pixData.pix_data_length = (IntPtr)byteCount;
         pixData.pix_data_free = SafeFreeDelegate;
+
+        if (pixFormatDest != "bgra:int8")
+        {
+            var proxy = Pixels.ConvertPixelsPix(ref pixData, pixFormatDest);
+            if (proxy)
+            {
+                pixData.Dispose();
+                return proxy;
+            }
+        }
 
         return pixData;
     }

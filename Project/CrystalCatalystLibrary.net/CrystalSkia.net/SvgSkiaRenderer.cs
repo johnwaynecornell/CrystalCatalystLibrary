@@ -54,7 +54,7 @@ public class SvgSkiaRenderer
         return true;
     }
 
-    public PixData RenderPix(Svg.Skia.SKSvg svg, Action<SKBitmap, SKCanvas>? onCanvas = null, Action<SKBitmap, SKCanvas>? postProc = null)
+    public PixData RenderPix(Svg.Skia.SKSvg svg, Action<SKBitmap, SKCanvas>? onCanvas = null, Action<SKBitmap, SKCanvas>? postProc = null, string pixFormatDest = "bgra:int8")
     {
         if (svg.Picture == null) return default;
         var bounds = svg.Picture.CullRect;
@@ -126,6 +126,16 @@ public class SvgSkiaRenderer
         
         // 5. Use the static delegate so C# doesn't trash it before C++ calls it
         pixData.pix_data_free = SafeFreeDelegate;
+
+        if (pixFormatDest != "bgra:int8")
+        {
+            var proxy = Pixels.ConvertPixelsPix(ref pixData, pixFormatDest);
+            if (proxy)
+            {
+                pixData.Dispose();
+                return proxy;
+            }
+        }
 
         return pixData;
     }

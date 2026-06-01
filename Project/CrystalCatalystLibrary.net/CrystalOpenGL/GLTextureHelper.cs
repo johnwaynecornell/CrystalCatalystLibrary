@@ -26,10 +26,20 @@ public static class GLTextureHelper
         if (pixData.width <= 0 || pixData.height <= 0)
             throw new ArgumentException("PixData width and height must be positive.");
 
-        PixData proxy = Pixels.ConvertPixelsPix(ref pixData, "bgra:int8");
-        if (proxy.pix_format == "error") throw new NotSupportedException("PixData conversion to 'bgra:int8' failed");
-        if (proxy) pixData = proxy;
-        
+        string format = pixData.pix_format.ToString() ?? "";
+        PixData proxy = default;
+
+        if (!GLPixFormatMap.TryGetUploadFormat(format, out var internalFormat, out var pixelFormat, out var pixelType))
+        {
+            proxy = Pixels.ConvertPixelsPix(ref pixData, "rgba:int8");
+            if (!proxy) throw new NotSupportedException($"Format '{format}' is not supported and fallback conversion failed.");
+            
+            if (!GLPixFormatMap.TryGetUploadFormat("rgba:int8", out internalFormat, out pixelFormat, out pixelType))
+                throw new Exception("Unexpected: rgba:int8 not found in GLPixFormatMap");
+            
+            pixData = proxy;
+        }
+
         uint texture = gl.GenTexture();
         gl.BindTexture(TextureTarget.Texture2D, texture);
 
@@ -40,7 +50,7 @@ public static class GLTextureHelper
 
         gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
 
-        GLBridges.TexImage2D(gl, TextureTarget.Texture2D, 0, InternalFormat.Rgba8, (uint)pixData.width, (uint)pixData.height, 0, PixelFormat.Bgra, PixelType.UnsignedByte, pixData.pix_data);
+        GLBridges.TexImage2D(gl, TextureTarget.Texture2D, 0, internalFormat, (uint)pixData.width, (uint)pixData.height, 0, pixelFormat, pixelType, pixData.pix_data);
 
         if (generateMipmaps)
         {
@@ -63,19 +73,21 @@ public static class GLTextureHelper
         gl.BindTexture(TextureTarget.Texture2D, texture);
         gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
 
-        string formatStr = src.pix_format.ToString() ?? "";
-        if (formatStr == "bgra:int8")
+        string format = src.pix_format.ToString() ?? "";
+        PixData proxy = default;
+
+        if (!GLPixFormatMap.TryGetUploadFormat(format, out _, out var pixelFormat, out var pixelType))
         {
-            GLBridges.TexSubImage2D(gl, TextureTarget.Texture2D, 0, 0, 0, (uint)src.width, (uint)src.height, PixelFormat.Bgra, PixelType.UnsignedByte, src.pix_data);
+            proxy = Pixels.ConvertPixelsPix(ref src, "rgba:int8");
+            if (!proxy) throw new NotSupportedException($"Format '{format}' is not supported and fallback conversion failed.");
+            
+            GLPixFormatMap.TryGetUploadFormat("rgba:int8", out _, out pixelFormat, out pixelType);
+            src = proxy;
         }
-        else if (formatStr == "rgba:int8")
-        {
-            GLBridges.TexSubImage2D(gl, TextureTarget.Texture2D, 0, 0, 0, (uint)src.width, (uint)src.height, PixelFormat.Rgba, PixelType.UnsignedByte, src.pix_data);
-        }
-        else
-        {
-            throw new NotSupportedException($"Format '{formatStr}' is not supported for WritePixels.");
-        }
+
+        GLBridges.TexSubImage2D(gl, TextureTarget.Texture2D, 0, 0, 0, (uint)src.width, (uint)src.height, pixelFormat, pixelType, src.pix_data);
+
+        if (proxy) proxy.Dispose();
     }
 
     public static PixData ReadPixels(GL gl, uint texture)
@@ -93,7 +105,7 @@ public static class GLTextureHelper
         string pixFormat = "bgra:int8";
         PixelFormat glFormat = PixelFormat.Bgra;
 
-        int byteCount = width * height * 4;
+        int byteCount = PixFormats.GetExpectedByteLength(pixFormat, width, height);
         IntPtr unmanagedPixels = Marshal.AllocHGlobal(byteCount);
 
         gl.PixelStore(PixelStoreParameter.PackAlignment, 1);

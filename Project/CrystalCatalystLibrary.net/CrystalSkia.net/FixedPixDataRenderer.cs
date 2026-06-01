@@ -21,7 +21,8 @@ public static class FixedPixDataRenderer
     public static PixData CreateFixed(
         int width,
         int height,
-        Action<SKCanvas, SKImageInfo>? draw = null)
+        Action<SKCanvas, SKImageInfo>? draw = null,
+        string pixFormatDest = "bgra:int8")
     {
         if (width <= 0 || height <= 0)
         {
@@ -54,10 +55,20 @@ public static class FixedPixDataRenderer
             pix_data_free = SafeFreeDelegate
         };
 
+        if (pixFormatDest != "bgra:int8")
+        {
+            var proxy = Pixels.ConvertPixelsPix(ref pixData, pixFormatDest);
+            if (proxy)
+            {
+                pixData.Dispose();
+                return proxy;
+            }
+        }
+
         return pixData;
     }
 
-    public static PixData CreateDemoTexture(int width = 256, int height = 256)
+    public static PixData CreateDemoTexture(int width = 256, int height = 256, string pixFormatDest = "bgra:int8")
     {
         return CreateFixed(width, height, (canvas, info) =>
         {
@@ -98,6 +109,6 @@ public static class FixedPixDataRenderer
             };
             using var font = new SKFont(SKTypeface.Default, 32);
             canvas.DrawText("Crystal Skia", width / 2f, height / 2f + 16, SKTextAlign.Center, font, textPaint);
-        });
+        }, pixFormatDest);
     }
 }

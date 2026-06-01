@@ -35,6 +35,8 @@ public class Window
 
     private bool _initialized = false;
 
+    private const string DemoPixFormat = "rgba:int8";
+
     private const string VertexShaderSource = @"
         #version 330 core
         layout (location = 0) in vec3 aPos;
@@ -194,7 +196,7 @@ public class Window
         _gl.VertexAttribPointer(1, 2, GLEnum.Float, false, 5 * sizeof(float), (IntPtr)(3 * sizeof(float)));
         _gl.EnableVertexAttribArray(1);
 
-        _pixData = FixedPixDataRenderer.CreateDemoTexture(256, 256);
+        _pixData = FixedPixDataRenderer.CreateDemoTexture(256, 256, DemoPixFormat);
         _texture = GLTextureHelper.CreateTexture2DFromPixData(_gl, _pixData);
 
         _gl.UseProgram(_program);
