@@ -26,7 +26,7 @@ public static class GLTextureHelper
         if (pixData.width <= 0 || pixData.height <= 0)
             throw new ArgumentException("PixData width and height must be positive.");
 
-        string format = pixData.pix_format.ToString() ?? "";
+        string format = (string) pixData.pix_format ?? "";
         PixData proxy = default;
 
         if (!GLPixFormatMap.TryGetUploadFormat(format, out var internalFormat, out var pixelFormat, out var pixelType))
@@ -73,7 +73,7 @@ public static class GLTextureHelper
         gl.BindTexture(TextureTarget.Texture2D, texture);
         gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
 
-        string format = src.pix_format.ToString() ?? "";
+        string format = (string) src.pix_format ?? "";
         PixData proxy = default;
 
         if (!GLPixFormatMap.TryGetUploadFormat(format, out _, out var pixelFormat, out var pixelType))
