@@ -50,6 +50,12 @@ public static class PixDataSkia
         return PixFormats.GetBytesPerPixel(pixFormat) * pixData.width;
     }
 
+    /*
+        This function returns a temporary bitmap view of the PixData pixels.
+        The returned bitmap is a view into the PixData pixel buffer and does not own the buffer.
+        The PixData must remain valid and unchanged for the lifetime of the returned bitmap.
+        using the View patern in this file allows easy management of the PixData pixel buffer.
+     */
     public static SKBitmap CreateBitmapView(PixData pixData)
     {
         if (!pixData)
