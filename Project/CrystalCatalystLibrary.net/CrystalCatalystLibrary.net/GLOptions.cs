@@ -21,6 +21,7 @@ public struct GLOptions
     public int stencilBits;
     public int alphaBits;
     [MarshalAs(UnmanagedType.U1)] public bool doubleBuffer;
+    [MarshalAs(UnmanagedType.U1)] public bool stereo;
 
     public static GLOptions Default => new GLOptions
     {
@@ -32,6 +33,7 @@ public struct GLOptions
         depthBits = 24,
         stencilBits = 8,
         alphaBits = 8,
-        doubleBuffer = true
+        doubleBuffer = true,
+        stereo = false
     };
 }

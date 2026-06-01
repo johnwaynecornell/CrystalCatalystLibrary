@@ -552,6 +552,7 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
     bool CrystalWindow_X11::GLInitAdvanced(const GLOptions& options) {
         std::cerr << mod_header() << "X11 GLInitAdvanced started" << std::endl;
         std::cerr << mod_header() << "Requested OpenGL version: " << options.major << "." << options.minor << std::endl;
+        if (options.stereo) std::cerr << mod_header() << "Requested Stereo: YES" << std::endl;
 
         // Log GLX version
         int glx_major, glx_minor;
@@ -561,9 +562,52 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
             std::cerr << mod_header() << "Warning: Could not query GLX version" << std::endl;
         }
 
-        if (!gl_fb_config) {
-            std::cerr << mod_header() << "Error: No GLX FBConfig stored on window. OpenGL initialization failed." << std::endl;
+        if (!gl_fb_config || !gl_visual_info) {
+            std::cerr << mod_header() << "Error: No GLX FBConfig or VisualInfo stored on window. OpenGL initialization failed." << std::endl;
             return false;
+        }
+
+        // Try to find a better FBConfig that matches the requested options but is compatible with the current visual
+        int fb_attrs[] = {
+            GLX_X_RENDERABLE, True,
+            GLX_DRAWABLE_TYPE, GLX_WINDOW_BIT,
+            GLX_RENDER_TYPE, GLX_RGBA_BIT,
+            GLX_X_VISUAL_TYPE, GLX_TRUE_COLOR,
+            GLX_DOUBLEBUFFER, options.doubleBuffer ? True : False,
+            GLX_STEREO, options.stereo ? True : False,
+            GLX_RED_SIZE, 8,
+            GLX_GREEN_SIZE, 8,
+            GLX_BLUE_SIZE, 8,
+            GLX_ALPHA_SIZE, options.alphaBits,
+            GLX_DEPTH_SIZE, options.depthBits,
+            GLX_STENCIL_SIZE, options.stencilBits,
+            None
+        };
+
+        int fb_count = 0;
+        GLXFBConfig* fbc = glXChooseFBConfig(display, gl_visual_info->screen, fb_attrs, &fb_count);
+        if (fbc && fb_count > 0) {
+            bool found = false;
+            for (int i = 0; i < fb_count; i++) {
+                XVisualInfo* vi = glXGetVisualFromFBConfig(display, fbc[i]);
+                if (vi) {
+                    if (vi->visualid == gl_visual_info->visualid) {
+                        gl_fb_config = fbc[i];
+                        found = true;
+                        XFree(vi);
+                        break;
+                    }
+                    XFree(vi);
+                }
+            }
+            if (found) {
+                std::cerr << mod_header() << "Found compatible FBConfig matching requested options." << std::endl;
+            } else {
+                std::cerr << mod_header() << "Warning: Could not find FBConfig matching requested options that is compatible with current window visual." << std::endl;
+            }
+            XFree(fbc);
+        } else {
+            std::cerr << mod_header() << "Warning: glXChooseFBConfig found no configs matching requested options." << std::endl;
         }
 
         if (gl_context) {

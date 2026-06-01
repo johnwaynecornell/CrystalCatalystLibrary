@@ -59,6 +59,7 @@ namespace NewAge {
         int32_t stencilBits = 8;
         int32_t alphaBits = 8;
         bool doubleBuffer = true;
+        bool stereo = false;
     };
     typedef struct {
         void (*on_draw)(P_INSTANCE(WindowHandle) window_handle);

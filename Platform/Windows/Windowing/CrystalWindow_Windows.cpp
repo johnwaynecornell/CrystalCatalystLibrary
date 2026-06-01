@@ -17,6 +17,7 @@
 #define WGL_DRAW_TO_WINDOW_ARB            0x2001
 #define WGL_SUPPORT_OPENGL_ARB            0x2010
 #define WGL_DOUBLE_BUFFER_ARB             0x2011
+#define WGL_STEREO_ARB                    0x2012
 #define WGL_PIXEL_TYPE_ARB                0x2013
 #define WGL_TYPE_RGBA_ARB                 0x202B
 #define WGL_COLOR_BITS_ARB                0x2014
@@ -144,6 +145,7 @@ namespace NewAge
         HDC dummy_dc = GetDC(dummy_hwnd);
         PIXELFORMATDESCRIPTOR pfd = { sizeof(pfd), 1 };
         pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+        if (options.stereo) pfd.dwFlags |= PFD_STEREO;
         pfd.iPixelType = PFD_TYPE_RGBA;
         pfd.cColorBits = 32;
         pfd.cDepthBits = 24;
@@ -191,6 +193,7 @@ namespace NewAge
             pix_attribs.push_back(WGL_DRAW_TO_WINDOW_ARB); pix_attribs.push_back(GL_TRUE);
             pix_attribs.push_back(WGL_SUPPORT_OPENGL_ARB); pix_attribs.push_back(GL_TRUE);
             pix_attribs.push_back(WGL_DOUBLE_BUFFER_ARB); pix_attribs.push_back(options.doubleBuffer ? GL_TRUE : GL_FALSE);
+            pix_attribs.push_back(WGL_STEREO_ARB); pix_attribs.push_back(options.stereo ? GL_TRUE : GL_FALSE);
             pix_attribs.push_back(WGL_PIXEL_TYPE_ARB); pix_attribs.push_back(WGL_TYPE_RGBA_ARB);
             pix_attribs.push_back(WGL_COLOR_BITS_ARB); pix_attribs.push_back(32);
             pix_attribs.push_back(WGL_ALPHA_BITS_ARB); pix_attribs.push_back(options.alphaBits);
