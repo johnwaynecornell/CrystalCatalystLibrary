@@ -26,16 +26,17 @@ public static class GLTextureHelper
         if (pixData.width <= 0 || pixData.height <= 0)
             throw new ArgumentException("PixData width and height must be positive.");
 
-        string format = (string) pixData.pix_format ?? "";
+        string format = PixFormats.Parse(pixData.pix_format.ToString() ?? "").PixFormat;
         PixData proxy = default;
 
         if (!GLPixFormatMap.TryGetUploadFormat(format, out var internalFormat, out var pixelFormat, out var pixelType))
         {
-            proxy = Pixels.ConvertPixelsPix(ref pixData, "rgba:int8");
+            string fallbackFormat = "rgba:int8";
+            proxy = Pixels.ConvertPixelsPix(ref pixData, fallbackFormat);
             if (!proxy) throw new NotSupportedException($"Format '{format}' is not supported and fallback conversion failed.");
             
-            if (!GLPixFormatMap.TryGetUploadFormat("rgba:int8", out internalFormat, out pixelFormat, out pixelType))
-                throw new Exception("Unexpected: rgba:int8 not found in GLPixFormatMap");
+            if (!GLPixFormatMap.TryGetUploadFormat(fallbackFormat, out internalFormat, out pixelFormat, out pixelType))
+                throw new Exception($"Unexpected: {fallbackFormat} not found in GLPixFormatMap");
             
             pixData = proxy;
         }
@@ -73,15 +74,16 @@ public static class GLTextureHelper
         gl.BindTexture(TextureTarget.Texture2D, texture);
         gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
 
-        string format = (string) src.pix_format ?? "";
+        string format = PixFormats.Parse(src.pix_format.ToString() ?? "").PixFormat;
         PixData proxy = default;
 
         if (!GLPixFormatMap.TryGetUploadFormat(format, out _, out var pixelFormat, out var pixelType))
         {
-            proxy = Pixels.ConvertPixelsPix(ref src, "rgba:int8");
+            string fallbackFormat = "rgba:int8";
+            proxy = Pixels.ConvertPixelsPix(ref src, fallbackFormat);
             if (!proxy) throw new NotSupportedException($"Format '{format}' is not supported and fallback conversion failed.");
             
-            GLPixFormatMap.TryGetUploadFormat("rgba:int8", out _, out pixelFormat, out pixelType);
+            GLPixFormatMap.TryGetUploadFormat(fallbackFormat, out _, out pixelFormat, out pixelType);
             src = proxy;
         }
 
@@ -90,22 +92,23 @@ public static class GLTextureHelper
         if (proxy) proxy.Dispose();
     }
 
-    public static PixData ReadPixels(GL gl, uint texture)
+    public static PixData ReadPixels(GL gl, uint texture, string pixFormatDest = "bgra:int8")
     {
         gl.BindTexture(TextureTarget.Texture2D, texture);
 
         gl.GetTexLevelParameter(TextureTarget.Texture2D, 0, GLEnum.TextureWidth, out int width);
         gl.GetTexLevelParameter(TextureTarget.Texture2D, 0, GLEnum.TextureHeight, out int height);
-        gl.GetTexLevelParameter(TextureTarget.Texture2D, 0, GLEnum.TextureInternalFormat, out int internalFormat);
 
         if (width <= 0 || height <= 0)
             throw new Exception("Failed to retrieve texture dimensions or texture is empty.");
 
-        // Infer pixformat
-        string pixFormat = "bgra:int8";
+        string destFormat = PixFormats.Parse(pixFormatDest).PixFormat;
+
+        // Read into a known GL-supported format first
+        string readFormat = "bgra:int8";
         PixelFormat glFormat = PixelFormat.Bgra;
 
-        int byteCount = PixFormats.GetExpectedByteLength(pixFormat, width, height);
+        int byteCount = PixFormats.GetExpectedByteLength(readFormat, width, height);
         IntPtr unmanagedPixels = Marshal.AllocHGlobal(byteCount);
 
         gl.PixelStore(PixelStoreParameter.PackAlignment, 1);
@@ -115,11 +118,21 @@ public static class GLTextureHelper
         {
             width = width,
             height = height,
-            pix_format = pixFormat,
+            pix_format = readFormat,
             pix_data = unmanagedPixels,
             pix_data_length = (IntPtr)byteCount,
             pix_data_free = SafeFreeDelegate
         };
+
+        if (readFormat != destFormat)
+        {
+            var proxy = Pixels.ConvertPixelsPix(ref pixData, destFormat);
+            if (proxy)
+            {
+                pixData.Dispose();
+                return proxy;
+            }
+        }
 
         return pixData;
     }

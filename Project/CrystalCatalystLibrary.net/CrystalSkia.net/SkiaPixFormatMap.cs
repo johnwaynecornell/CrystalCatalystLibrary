@@ -34,6 +34,16 @@ public static class SkiaPixFormatMap
         return true;
     }
 
+    public static bool IsRenderTargetSupported(string pixFormat)
+    {
+        return TryGetImageInfo(pixFormat, 1, 1, out _);
+    }
+
+    public static string GetFallbackRenderTargetFormat(string pixFormat)
+    {
+        return "bgra:int8";
+    }
+
     public static SKImageInfo GetImageInfo(
         string pixFormat,
         int width,
@@ -43,8 +53,7 @@ public static class SkiaPixFormatMap
         {
             return info;
         }
-        
-        // Fallback to a default format that Skia likes
-        return new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
+
+        throw new NotSupportedException($"Pixel format '{pixFormat}' is not supported as a Skia render target.");
     }
 }

@@ -54,7 +54,7 @@ public class SvgSkiaRenderer
         return true;
     }
 
-    public PixData RenderPix(Svg.Skia.SKSvg svg, Action<SKBitmap, SKCanvas>? onCanvas = null, Action<SKBitmap, SKCanvas>? postProc = null, string pixFormatDest = "bgra:int8")
+    public PixData RenderPix(Svg.Skia.SKSvg svg, Action<SKBitmap, SKCanvas>? onCanvas = null, Action<SKBitmap, SKCanvas>? postProc = null, string pixFormatDest = "bgra:int8", bool strict = false)
     {
         if (svg.Picture == null) return default;
         var bounds = svg.Picture.CullRect;
@@ -87,14 +87,23 @@ public class SvgSkiaRenderer
         if (width <= 0) width = 1;
         if (height <= 0) height = 1;
 
-        // 2. Force the stride to be EXACTLY width * 4 (No Skia SIMD padding)
-        int stride = width * 4;
+        string destFormat = PixFormats.Parse(pixFormatDest).PixFormat;
+
+        if (strict && !SkiaPixFormatMap.IsRenderTargetSupported(destFormat))
+        {
+            throw new NotSupportedException($"Pixel format '{destFormat}' is not supported as a Skia render target and strict mode is enabled.");
+        }
+
+        string renderPixFormat = SkiaPixFormatMap.IsRenderTargetSupported(destFormat)
+            ? destFormat
+            : SkiaPixFormatMap.GetFallbackRenderTargetFormat(destFormat);
+
+        SKImageInfo info = SkiaPixFormatMap.GetImageInfo(renderPixFormat, width, height);
+        int stride = PixFormats.GetBytesPerPixel(renderPixFormat) * width;
         int byteCount = stride * height;
 
         // 3. Allocate unmanaged memory directly
         IntPtr unmanagedPixels = Marshal.AllocHGlobal(byteCount);
-
-        var info = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
 
         // 4. Wrap Skia around our strictly-sized unmanaged memory
         using var bitmap = new SKBitmap();
@@ -118,7 +127,7 @@ public class SvgSkiaRenderer
         var pixData = new PixData();
         pixData.width = width;
         pixData.height = height;
-        pixData.pix_format = "bgra:int8";
+        pixData.pix_format = renderPixFormat;
         
         // Pass the unmanaged pointer directly to C++
         pixData.pix_data = unmanagedPixels;
@@ -127,9 +136,9 @@ public class SvgSkiaRenderer
         // 5. Use the static delegate so C# doesn't trash it before C++ calls it
         pixData.pix_data_free = SafeFreeDelegate;
 
-        if (pixFormatDest != "bgra:int8")
+        if (renderPixFormat != destFormat)
         {
-            var proxy = Pixels.ConvertPixelsPix(ref pixData, pixFormatDest);
+            var proxy = Pixels.ConvertPixelsPix(ref pixData, destFormat);
             if (proxy)
             {
                 pixData.Dispose();

@@ -186,7 +186,7 @@ public class AnsiSkiaRenderer
         return true;
     }
 
-    public PixData RenderPix(ParsedContent content, bool blinkState, Action<SKBitmap, SKCanvas>? onCanvas = null, Action<SKBitmap, SKCanvas>? postProc = null, string pixFormatDest = "bgra:int8")
+    public PixData RenderPix(ParsedContent content, bool blinkState, Action<SKBitmap, SKCanvas>? onCanvas = null, Action<SKBitmap, SKCanvas>? postProc = null, string pixFormatDest = "bgra:int8", bool strict = false)
     {
         var width = (int)Math.Ceiling(content.PixelSize.Width);
         var height = (int)Math.Ceiling(content.PixelSize.Height);
@@ -194,11 +194,22 @@ public class AnsiSkiaRenderer
         if (width <= 0) width = 1;
         if (height <= 0) height = 1;
 
-        int stride = width * 4;
+        string destFormat = PixFormats.Parse(pixFormatDest).PixFormat;
+
+        if (strict && !SkiaPixFormatMap.IsRenderTargetSupported(destFormat))
+        {
+            throw new NotSupportedException($"Pixel format '{destFormat}' is not supported as a Skia render target and strict mode is enabled.");
+        }
+
+        string renderPixFormat = SkiaPixFormatMap.IsRenderTargetSupported(destFormat)
+            ? destFormat
+            : SkiaPixFormatMap.GetFallbackRenderTargetFormat(destFormat);
+
+        SKImageInfo info = SkiaPixFormatMap.GetImageInfo(renderPixFormat, width, height);
+        int stride = PixFormats.GetBytesPerPixel(renderPixFormat) * width;
         int byteCount = stride * height;
         IntPtr unmanagedPixels = Marshal.AllocHGlobal(byteCount);
 
-        var info = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
         using var bitmap = new SKBitmap();
         bitmap.InstallPixels(info, unmanagedPixels, stride);
         
@@ -220,15 +231,15 @@ public class AnsiSkiaRenderer
         var pixData = new PixData();
         pixData.width = width;
         pixData.height = height;
-        pixData.pix_format = "bgra:int8";
+        pixData.pix_format = renderPixFormat;
 
         pixData.pix_data = unmanagedPixels;
         pixData.pix_data_length = (IntPtr)byteCount;
         pixData.pix_data_free = SafeFreeDelegate;
 
-        if (pixFormatDest != "bgra:int8")
+        if (renderPixFormat != destFormat)
         {
-            var proxy = Pixels.ConvertPixelsPix(ref pixData, pixFormatDest);
+            var proxy = Pixels.ConvertPixelsPix(ref pixData, destFormat);
             if (proxy)
             {
                 pixData.Dispose();
