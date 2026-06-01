@@ -1,3 +1,4 @@
+using System.Data.SqlTypes;
 using JWCEssentials.net;
 
 namespace CrystalCatalystLibrary.net;
@@ -67,5 +68,10 @@ public struct PixData : IDisposable
         }
 
         pix_format.Dispose();
+    }
+    
+    public static implicit operator bool(PixData pixdata)
+    {
+        return pixdata.pix_data != IntPtr.Zero;
     }
 }

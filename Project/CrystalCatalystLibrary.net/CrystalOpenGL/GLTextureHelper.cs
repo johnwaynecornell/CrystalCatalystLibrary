@@ -26,11 +26,10 @@ public static class GLTextureHelper
         if (pixData.width <= 0 || pixData.height <= 0)
             throw new ArgumentException("PixData width and height must be positive.");
 
-        if (pixData.pix_format != "bgra:int8")
-        {
-            throw new NotSupportedException($"Only 'bgra:int8' format is supported. Found: {pixData.pix_format}");
-        }
-
+        PixData proxy = Pixels.ConvertPixelsPix(ref pixData, "bgra:int8");
+        if (proxy.pix_format == "error") throw new NotSupportedException("PixData conversion to 'bgra:int8' failed");
+        if (proxy) pixData = proxy;
+        
         uint texture = gl.GenTexture();
         gl.BindTexture(TextureTarget.Texture2D, texture);
 
@@ -48,6 +47,8 @@ public static class GLTextureHelper
             gl.GenerateMipmap(TextureTarget.Texture2D);
         }
 
+        if (proxy) proxy.Dispose();
+        
         return texture;
     }
 

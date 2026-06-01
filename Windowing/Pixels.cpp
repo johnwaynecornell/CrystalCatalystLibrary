@@ -281,6 +281,10 @@ namespace NewAge {
         return true;
     }
 
+    PixData Pixels_ConvertPixelsPix(P_INSTANCE(PixData) pix, utf8_string_struct pixformat_dest) {
+        return Pixels_ConvertPixels(pix->pix_format, pixformat_dest,pix->pix_data, pix->pix_data_length, pix->width, pix->height);
+    }
+
     PixData Pixels_ConvertPixels(utf8_string_struct pixformat, utf8_string_struct pixformat_dest, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height) {
         PixData Ret = {};
 
