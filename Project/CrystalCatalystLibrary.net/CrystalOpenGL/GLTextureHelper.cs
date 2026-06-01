@@ -18,7 +18,7 @@ public static class GLTextureHelper
         return true;
     }
 
-    public static uint CreateTexture2DFromPixData(GL gl, PixData pixData, bool generateMipmaps = false)
+    public static uint CreateTexture2DFromPixData(GL gl, PixData pixData, bool generateMipmaps = false, bool strict = false)
     {
         if (pixData.pix_data == IntPtr.Zero)
             throw new ArgumentException("PixData.pix_data is zero.");
@@ -33,9 +33,14 @@ public static class GLTextureHelper
 
         if (!GLPixFormatMap.TryGetUploadFormat(format, out var internalFormat, out var pixelFormat, out var pixelType))
         {
-            string fallbackFormat = "rgba:int8";
+            if (strict)
+            {
+                throw new NotSupportedException($"Pixel format '{format}' is not directly supported by OpenGL texture upload and strict mode is enabled.");
+            }
+
+            string fallbackFormat = GLPixFormatMap.GetFallbackUploadFormat(format);
             proxy = Pixels.ConvertPixelsPix(ref pixData, fallbackFormat);
-            if (!proxy) throw new NotSupportedException($"Format '{format}' is not supported and fallback conversion failed.");
+            if (!proxy) throw new NotSupportedException($"Format '{format}' is not supported and fallback conversion to '{fallbackFormat}' failed.");
             
             if (!GLPixFormatMap.TryGetUploadFormat(fallbackFormat, out internalFormat, out pixelFormat, out pixelType))
                 throw new Exception($"Unexpected: {fallbackFormat} not found in GLPixFormatMap");
@@ -65,7 +70,7 @@ public static class GLTextureHelper
         return texture;
     }
 
-    public static void WritePixels(GL gl, uint texture, PixData src)
+    public static void WritePixels(GL gl, uint texture, PixData src, bool strict = false)
     {
         if (src.pix_data == IntPtr.Zero)
             throw new ArgumentException("PixData.pix_data is zero.");
@@ -83,9 +88,14 @@ public static class GLTextureHelper
 
         if (!GLPixFormatMap.TryGetUploadFormat(format, out _, out var pixelFormat, out var pixelType))
         {
-            string fallbackFormat = "rgba:int8";
+            if (strict)
+            {
+                throw new NotSupportedException($"Pixel format '{format}' is not directly supported by OpenGL texture upload and strict mode is enabled.");
+            }
+
+            string fallbackFormat = GLPixFormatMap.GetFallbackUploadFormat(format);
             proxy = Pixels.ConvertPixelsPix(ref src, fallbackFormat);
-            if (!proxy) throw new NotSupportedException($"Format '{format}' is not supported and fallback conversion failed.");
+            if (!proxy) throw new NotSupportedException($"Format '{format}' is not supported and fallback conversion to '{fallbackFormat}' failed.");
             
             GLPixFormatMap.TryGetUploadFormat(fallbackFormat, out _, out pixelFormat, out pixelType);
             src = proxy;
@@ -96,7 +106,13 @@ public static class GLTextureHelper
         if (proxy) proxy.Dispose();
     }
 
-    public static string GetPixFormatFromTexture(GL gl, uint texture)
+    /// <summary>
+    /// Infers a PixData format from the OpenGL texture internal format.
+    /// Note: this cannot recover the original external upload channel order.
+    /// For example, both bgra:int8 and rgba:int8 commonly resolve to Rgba8
+    /// internally, so this method returns a canonical readback format.
+    /// </summary>
+    public static string GetCanonicalPixFormatFromTexture(GL gl, uint texture)
     {
         gl.BindTexture(TextureTarget.Texture2D, texture);
         gl.GetTexLevelParameter(TextureTarget.Texture2D, 0, GLEnum.TextureInternalFormat, out int internalFormatInt);
@@ -109,11 +125,11 @@ public static class GLTextureHelper
         return "rgba:int8";
     }
 
-    public static PixData ReadPixels(GL gl, uint texture, string? pixFormatDest = null)
+    public static PixData ReadPixels(GL gl, uint texture, string? pixFormatDest = null, bool strict = false)
     {
         if (string.IsNullOrEmpty(pixFormatDest))
         {
-            pixFormatDest = GetPixFormatFromTexture(gl, texture);
+            pixFormatDest = GetCanonicalPixFormatFromTexture(gl, texture);
         }
 
         gl.BindTexture(TextureTarget.Texture2D, texture);
@@ -130,17 +146,14 @@ public static class GLTextureHelper
         string readFormat = destFormat;
         if (!GLPixFormatMap.TryGetUploadFormat(readFormat, out _, out var glFormat, out var pixelType))
         {
-             // Fallback to RGBA or BGRA
-             readFormat = "rgba:int8";
-             glFormat = PixelFormat.Rgba;
-             pixelType = PixelType.UnsignedByte;
-             
-             // If dest is bgra, use bgra as middleman
-             if (destFormat == "bgra:int8")
-             {
-                 readFormat = "bgra:int8";
-                 glFormat = PixelFormat.Bgra;
-             }
+            if (strict)
+            {
+                throw new NotSupportedException($"Pixel format '{destFormat}' is not directly supported by OpenGL texture readback and strict mode is enabled.");
+            }
+
+            readFormat = GLPixFormatMap.GetFallbackUploadFormat(destFormat);
+            if (!GLPixFormatMap.TryGetUploadFormat(readFormat, out _, out glFormat, out pixelType))
+                throw new Exception($"Unexpected: {readFormat} not found in GLPixFormatMap");
         }
 
         int byteCount = PixFormats.GetExpectedByteLength(readFormat, width, height);

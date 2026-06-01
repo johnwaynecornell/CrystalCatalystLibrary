@@ -36,6 +36,7 @@ public class Window
     private bool _initialized = false;
 
     private const string DemoPixFormat = "rgba:int8";
+    private const bool DemoStrictFormat = false;
 
     private const string VertexShaderSource = @"
         #version 330 core
@@ -196,8 +197,8 @@ public class Window
         _gl.VertexAttribPointer(1, 2, GLEnum.Float, false, 5 * sizeof(float), (IntPtr)(3 * sizeof(float)));
         _gl.EnableVertexAttribArray(1);
 
-        _pixData = FixedPixDataRenderer.CreateDemoTexture(256, 256);
-        _texture = GLTextureHelper.CreateTexture2DFromPixData(_gl, _pixData);
+        _pixData = FixedPixDataRenderer.CreateDemoTexture(256, 256, DemoPixFormat, DemoStrictFormat);
+        _texture = GLTextureHelper.CreateTexture2DFromPixData(_gl, _pixData, false, DemoStrictFormat);
 
         _gl.UseProgram(_program);
         int textureLocation = _gl.GetUniformLocation(_program, "uTexture");

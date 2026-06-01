@@ -60,6 +60,11 @@ public static class GLPixFormatMap
         return TryGetUploadFormat(pixFormat, out _, out _, out _);
     }
 
+    public static string GetFallbackUploadFormat(string pixFormat)
+    {
+        return "rgba:int8";
+    }
+
     public static bool TryGetPixFormat(InternalFormat internalFormat, out string pixFormat)
     {
         switch (internalFormat)
