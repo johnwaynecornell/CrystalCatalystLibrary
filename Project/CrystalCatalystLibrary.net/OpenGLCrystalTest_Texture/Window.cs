@@ -51,6 +51,15 @@ public class Window
 
     private const string DemoPixFormat = "rgba:float32";
     private const bool DemoStrictFormat = true;
+    
+    // Pre-create once:
+    private readonly SvgSkiaRenderer _overlayRenderer = new()
+    {
+        Size = new SKSize(64, 64),
+        Crop = false
+    };
+
+    private Svg.Skia.SKSvg _overlaySvg;
 
     private const string VertexShaderSource = @"
         #version 330 core
@@ -88,6 +97,78 @@ public class Window
             FragColor = vec4(tex.rgb * pulse, tex.a);
         }
     ";
+
+    private const string svgCrystalReactorGlyph =
+        @"<svg xmlns=""http://www.w3.org/2000/svg"" width=""96"" height=""96"" viewBox=""0 0 96 96"">
+  <defs>
+    <radialGradient id=""coreGlow"" cx=""50%"" cy=""50%"" r=""55%"">
+      <stop offset=""0%"" stop-color=""#ffffff"" stop-opacity=""0.95""/>
+      <stop offset=""22%"" stop-color=""#7df9ff"" stop-opacity=""0.85""/>
+      <stop offset=""58%"" stop-color=""#5b6cff"" stop-opacity=""0.32""/>
+      <stop offset=""100%"" stop-color=""#000000"" stop-opacity=""0""/>
+    </radialGradient>
+
+    <linearGradient id=""crystalStroke"" x1=""10"" y1=""10"" x2=""86"" y2=""86"">
+      <stop offset=""0%"" stop-color=""#00f5ff""/>
+      <stop offset=""45%"" stop-color=""#ffffff""/>
+      <stop offset=""100%"" stop-color=""#ff4fd8""/>
+    </linearGradient>
+
+    <linearGradient id=""bladeFill"" x1=""0"" y1=""0"" x2=""96"" y2=""96"">
+      <stop offset=""0%"" stop-color=""#00eaff"" stop-opacity=""0.82""/>
+      <stop offset=""52%"" stop-color=""#7b61ff"" stop-opacity=""0.55""/>
+      <stop offset=""100%"" stop-color=""#ff3bd4"" stop-opacity=""0.72""/>
+    </linearGradient>
+  </defs>
+
+  <circle cx=""48"" cy=""48"" r=""43"" fill=""url(#coreGlow)""/>
+
+  <g opacity=""0.96"">
+    <path d=""M48 7 L61 35 L89 48 L61 61 L48 89 L35 61 L7 48 L35 35 Z""
+          fill=""url(#bladeFill)""
+          stroke=""url(#crystalStroke)""
+          stroke-width=""2.4""
+          stroke-linejoin=""round""/>
+
+    <path d=""M48 14 L56 39 L82 48 L56 57 L48 82 L40 57 L14 48 L40 39 Z""
+          fill=""#06102b""
+          fill-opacity=""0.42""
+          stroke=""#ffffff""
+          stroke-opacity=""0.48""
+          stroke-width=""1.2""
+          stroke-linejoin=""round""/>
+
+    <circle cx=""48"" cy=""48"" r=""14""
+            fill=""#071331""
+            fill-opacity=""0.78""
+            stroke=""#7df9ff""
+            stroke-width=""2.2""/>
+
+    <circle cx=""48"" cy=""48"" r=""7""
+            fill=""#ffffff""
+            fill-opacity=""0.96""/>
+
+    <path d=""M48 25 C56 34 56 62 48 71 C40 62 40 34 48 25 Z""
+          fill=""#ffffff""
+          fill-opacity=""0.20""/>
+
+    <path d=""M25 48 C34 40 62 40 71 48 C62 56 34 56 25 48 Z""
+          fill=""#ffffff""
+          fill-opacity=""0.16""/>
+
+    <path d=""M31 20 L39 33 M65 63 L76 75 M20 65 L33 57 M63 33 L75 21""
+          fill=""none""
+          stroke=""#ffffff""
+          stroke-opacity=""0.72""
+          stroke-width=""2""
+          stroke-linecap=""round""/>
+
+    <circle cx=""31"" cy=""20"" r=""2.4"" fill=""#00f5ff""/>
+    <circle cx=""76"" cy=""75"" r=""2.4"" fill=""#ff4fd8""/>
+    <circle cx=""20"" cy=""65"" r=""2.1"" fill=""#7df9ff""/>
+    <circle cx=""75"" cy=""21"" r=""2.1"" fill=""#ffffff""/>
+  </g>
+</svg>";
     
     public Window()
     {
@@ -115,6 +196,9 @@ public class Window
         wnd.OnMouseMove = OnMouseMove;
         
         Console.WriteLine("[DEBUG_LOG] Window Constructor finished");
+        
+        _overlaySvg = new Svg.Skia.SKSvg();
+        _overlaySvg = Crystal.SKSvgFromText(svgCrystalReactorGlyph);
     }
     
 
@@ -282,6 +366,30 @@ public class Window
                 canvas.DrawBitmap(sourceBitmap, 0, 0);
                 
                 // Draw the dynamic/animated elements on top using Skia.
+                // 1. In texture svg
+                canvas.Save();
+
+                float t = (float)time;
+                float size = 64.0f;
+                float margin = 10.0f;
+
+                float x = info.Width - size - margin;
+                float y = margin;
+
+                canvas.Translate(x + size * 0.5f, y + size * 0.5f);
+                canvas.RotateDegrees(t * 55.0f);
+                canvas.Translate(-size * 0.5f, -size * 0.5f);
+
+                _overlayRenderer.Size = new SKSize(size, size);
+                _overlayRenderer.Matrix = SKMatrix.CreateScale(
+                    size / 96.0f,
+                    size / 96.0f);
+
+                _overlayRenderer.Render(_overlaySvg, canvas);
+
+                canvas.Restore();
+                
+                // 2. Skia drawing
                 DrawAnimatedCornerSquare(canvas, info, time);
             },
             DemoPixFormat,
