@@ -399,6 +399,8 @@ public class Window
                         
                     PixData pd = _overlayRenderer.RenderPix(_overlaySvg);
                     PixDataSkia.WithBitmapView(pd, (bitmap) => canvas.DrawBitmap(bitmap, 0, 0));
+                    canvas.Flush();
+                    pd.Dispose();
                 }
                 
                 canvas.Restore();
