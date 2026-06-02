@@ -9,7 +9,8 @@ public static class SkiaPixFormatMap
         string pixFormat,
         int width,
         int height,
-        out SKImageInfo info)
+        out SKImageInfo info,
+        SKAlphaType? alphaType = null)
     {
         info = default;
         if (string.IsNullOrWhiteSpace(pixFormat)) return false;
@@ -17,7 +18,7 @@ public static class SkiaPixFormatMap
         string normalized = pixFormat.ToLowerInvariant();
 
         SKColorType colorType;
-        SKAlphaType alphaType = SKAlphaType.Premul;
+        SKAlphaType resolvedAlphaType = alphaType ?? SKAlphaType.Premul;
 
         switch (normalized)
         {
@@ -57,7 +58,7 @@ public static class SkiaPixFormatMap
                 return false;
         }
 
-        info = new SKImageInfo(width, height, colorType, alphaType);
+        info = new SKImageInfo(width, height, colorType, resolvedAlphaType);
         return true;
     }
 
@@ -78,9 +79,10 @@ public static class SkiaPixFormatMap
     public static SKImageInfo GetImageInfo(
         string pixFormat,
         int width,
-        int height)
+        int height,
+        SKAlphaType? alphaType = null)
     {
-        if (TryGetImageInfo(pixFormat, width, height, out var info))
+        if (TryGetImageInfo(pixFormat, width, height, out var info, alphaType))
         {
             return info;
         }

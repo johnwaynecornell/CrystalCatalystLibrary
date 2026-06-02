@@ -186,7 +186,7 @@ public class AnsiSkiaRenderer
         return true;
     }
 
-    public PixData RenderPix(ParsedContent content, bool blinkState, Action<SKBitmap, SKCanvas>? onCanvas = null, Action<SKBitmap, SKCanvas>? postProc = null, string? pixFormatDest = null, bool strict = false)
+    public PixData RenderPix(ParsedContent content, bool blinkState, Action<SKBitmap, SKCanvas>? onCanvas = null, Action<SKBitmap, SKCanvas>? postProc = null, string? pixFormatDest = null, bool strict = false, SKAlphaType? alphaType = null)
     {
         pixFormatDest ??= "bgra:int8";
         var width = (int)Math.Ceiling(content.PixelSize.Width);
@@ -206,7 +206,7 @@ public class AnsiSkiaRenderer
             ? destFormat
             : SkiaPixFormatMap.GetFallbackRenderTargetFormat(destFormat);
 
-        SKImageInfo info = SkiaPixFormatMap.GetImageInfo(renderPixFormat, width, height);
+        SKImageInfo info = SkiaPixFormatMap.GetImageInfo(renderPixFormat, width, height, alphaType);
         int stride = PixFormats.GetBytesPerPixel(renderPixFormat) * width;
         int byteCount = stride * height;
         IntPtr unmanagedPixels = Marshal.AllocHGlobal(byteCount);

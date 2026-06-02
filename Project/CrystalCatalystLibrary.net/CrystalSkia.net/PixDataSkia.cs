@@ -5,7 +5,7 @@ namespace CrystalSkia.net;
 
 public static class PixDataSkia
 {
-    public static bool TryGetImageInfo(PixData pixData, out SKImageInfo info)
+    public static bool TryGetImageInfo(PixData pixData, out SKImageInfo info, SKAlphaType? alphaType = null)
     {
         info = default;
 
@@ -24,12 +24,13 @@ public static class PixDataSkia
             pixFormat,
             pixData.width,
             pixData.height,
-            out info);
+            out info,
+            alphaType);
     }
 
-    public static SKImageInfo GetImageInfo(PixData pixData)
+    public static SKImageInfo GetImageInfo(PixData pixData, SKAlphaType? alphaType = null)
     {
-        if (TryGetImageInfo(pixData, out var info))
+        if (TryGetImageInfo(pixData, out var info, alphaType))
             return info;
 
         string format = pixData.pix_format.ToString() ?? "";
@@ -56,12 +57,12 @@ public static class PixDataSkia
         The PixData must remain valid and unchanged for the lifetime of the returned bitmap.
         using the View patern in this file allows easy management of the PixData pixel buffer.
      */
-    public static SKBitmap CreateBitmapView(PixData pixData)
+    public static SKBitmap CreateBitmapView(PixData pixData, SKAlphaType? alphaType = null)
     {
         if (!pixData)
             throw new ArgumentException("PixData has no pixel buffer.", nameof(pixData));
 
-        SKImageInfo info = GetImageInfo(pixData);
+        SKImageInfo info = GetImageInfo(pixData, alphaType);
         int stride = GetStride(pixData);
 
         var bitmap = new SKBitmap();
@@ -77,38 +78,38 @@ public static class PixDataSkia
         return bitmap;
     }
 
-    public static void WithBitmapView(PixData pixData, Action<SKBitmap> action)
+    public static void WithBitmapView(PixData pixData, Action<SKBitmap> action, SKAlphaType? alphaType = null)
     {
         ArgumentNullException.ThrowIfNull(action);
 
-        using SKBitmap bitmap = CreateBitmapView(pixData);
+        using SKBitmap bitmap = CreateBitmapView(pixData, alphaType);
         action(bitmap);
     }
 
-    public static T WithBitmapView<T>(PixData pixData, Func<SKBitmap, T> func)
+    public static T WithBitmapView<T>(PixData pixData, Func<SKBitmap, T> func, SKAlphaType? alphaType = null)
     {
         ArgumentNullException.ThrowIfNull(func);
 
-        using SKBitmap bitmap = CreateBitmapView(pixData);
+        using SKBitmap bitmap = CreateBitmapView(pixData, alphaType);
         return func(bitmap);
     }
 
-    public static void WithCanvasView(PixData pixData, Action<SKBitmap, SKCanvas> action)
+    public static void WithCanvasView(PixData pixData, Action<SKBitmap, SKCanvas> action, SKAlphaType? alphaType = null)
     {
         ArgumentNullException.ThrowIfNull(action);
 
-        using SKBitmap bitmap = CreateBitmapView(pixData);
+        using SKBitmap bitmap = CreateBitmapView(pixData, alphaType);
         using SKCanvas canvas = new SKCanvas(bitmap);
 
         action(bitmap, canvas);
         canvas.Flush();
     }
 
-    public static T WithCanvasView<T>(PixData pixData, Func<SKBitmap, SKCanvas, T> func)
+    public static T WithCanvasView<T>(PixData pixData, Func<SKBitmap, SKCanvas, T> func, SKAlphaType? alphaType = null)
     {
         ArgumentNullException.ThrowIfNull(func);
 
-        using SKBitmap bitmap = CreateBitmapView(pixData);
+        using SKBitmap bitmap = CreateBitmapView(pixData, alphaType);
         using SKCanvas canvas = new SKCanvas(bitmap);
 
         T result = func(bitmap, canvas);
@@ -117,9 +118,9 @@ public static class PixDataSkia
         return result;
     }
     
-    public static SKBitmap CreateBitmapCopy(PixData pixData)
+    public static SKBitmap CreateBitmapCopy(PixData pixData, SKAlphaType? alphaType = null)
     {
-        using SKBitmap view = CreateBitmapView(pixData);
+        using SKBitmap view = CreateBitmapView(pixData, alphaType);
 
         SKBitmap? copy = view.Copy();
         if (copy == null)
@@ -134,11 +135,12 @@ public static class PixDataSkia
     public static SKBitmap CreateBitmapCopy(
         PixData pixData,
         string fallbackPixFormat,
-        bool strict = false)
+        bool strict = false,
+        SKAlphaType? alphaType = null)
     {
-        if (TryGetImageInfo(pixData, out _))
+        if (TryGetImageInfo(pixData, out _, alphaType))
         {
-            return CreateBitmapCopy(pixData);
+            return CreateBitmapCopy(pixData, alphaType);
         }
 
         if (strict)
@@ -156,7 +158,7 @@ public static class PixDataSkia
 
         try
         {
-            return CreateBitmapCopy(proxy);
+            return CreateBitmapCopy(proxy, alphaType);
         }
         finally
         {
@@ -164,18 +166,18 @@ public static class PixDataSkia
         }
     }
 
-    public static SKBitmap ToBitmap(this PixData pixData)
+    public static SKBitmap ToBitmap(this PixData pixData, SKAlphaType? alphaType = null)
     {
-        return CreateBitmapCopy(pixData);
+        return CreateBitmapCopy(pixData, alphaType);
     }
 
-    public static bool TryCreateBitmapCopy(PixData pixData, out SKBitmap? bitmap)
+    public static bool TryCreateBitmapCopy(PixData pixData, out SKBitmap? bitmap, SKAlphaType? alphaType = null)
     {
         bitmap = null;
 
         try
         {
-            bitmap = CreateBitmapCopy(pixData);
+            bitmap = CreateBitmapCopy(pixData, alphaType);
             return true;
         }
         catch
