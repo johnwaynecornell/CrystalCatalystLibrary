@@ -185,4 +185,168 @@ public static class PixDataSkia
             return false;
         }
     }
+
+    public static SKImage CreateImageCopy(
+        PixData pixData,
+        SKAlphaType? alphaType = null)
+    {
+        using SKBitmap bitmap = CreateBitmapCopy(pixData, alphaType);
+        return SKImage.FromBitmap(bitmap);
+    }
+
+    public static bool TryCreateImageCopy(
+        PixData pixData,
+        out SKImage? image,
+        SKAlphaType? alphaType = null)
+    {
+        image = null;
+        try
+        {
+            image = CreateImageCopy(pixData, alphaType);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static PixData FromBitmap(
+        SKBitmap bitmap,
+        string? pixFormatDest = null,
+        bool strict = false,
+        SKAlphaType? alphaType = null)
+    {
+        return FixedPixDataRenderer.CreateFixed(
+            bitmap.Width,
+            bitmap.Height,
+            (canvas, info) =>
+            {
+                canvas.DrawBitmap(bitmap, 0, 0);
+            },
+            pixFormatDest,
+            strict,
+            alphaType);
+    }
+
+    public static PixData ConvertBySkia(
+        PixData source,
+        SKImageInfo destInfo,
+        string? pixFormatDest = null,
+        bool strict = false,
+        SKAlphaType? sourceAlphaType = null)
+    {
+        using SKImage image = CreateImageCopy(source, sourceAlphaType);
+        using SKBitmap converted = SkiaConvert.ToBitmap(image, destInfo);
+        return FromBitmap(converted, pixFormatDest, strict, destInfo.AlphaType);
+    }
+
+    public static bool TryConvertBySkia(
+        PixData source,
+        SKImageInfo destInfo,
+        out PixData result,
+        string? pixFormatDest = null,
+        bool strict = false,
+        SKAlphaType? sourceAlphaType = null)
+    {
+        try
+        {
+            result = ConvertBySkia(source, destInfo, pixFormatDest, strict, sourceAlphaType);
+            return true;
+        }
+        catch
+        {
+            result = default;
+            return false;
+        }
+    }
+
+    public static PixData ToPremul(
+        PixData source,
+        string? pixFormatDest = null,
+        bool strict = false,
+        SKAlphaType? sourceAlphaType = null)
+    {
+        SKImageInfo srcInfo = GetImageInfo(source, sourceAlphaType);
+        var destInfo = new SKImageInfo(
+            srcInfo.Width,
+            srcInfo.Height,
+            srcInfo.ColorType,
+            SKAlphaType.Premul,
+            srcInfo.ColorSpace);
+
+        return ConvertBySkia(source, destInfo, pixFormatDest, strict, sourceAlphaType);
+    }
+
+    public static PixData ToUnpremul(
+        PixData source,
+        string? pixFormatDest = null,
+        bool strict = false,
+        SKAlphaType? sourceAlphaType = null)
+    {
+        SKImageInfo srcInfo = GetImageInfo(source, sourceAlphaType);
+        var destInfo = new SKImageInfo(
+            srcInfo.Width,
+            srcInfo.Height,
+            srcInfo.ColorType,
+            SKAlphaType.Unpremul,
+            srcInfo.ColorSpace);
+
+        return ConvertBySkia(source, destInfo, pixFormatDest, strict, sourceAlphaType);
+    }
+
+    public static PixData ToOpaque(
+        PixData source,
+        string? pixFormatDest = null,
+        bool strict = false,
+        SKAlphaType? sourceAlphaType = null)
+    {
+        SKImageInfo srcInfo = GetImageInfo(source, sourceAlphaType);
+        var destInfo = new SKImageInfo(
+            srcInfo.Width,
+            srcInfo.Height,
+            srcInfo.ColorType,
+            SKAlphaType.Opaque,
+            srcInfo.ColorSpace);
+
+        return ConvertBySkia(source, destInfo, pixFormatDest, strict, sourceAlphaType);
+    }
+
+    public static bool TryToPremul(
+        PixData source,
+        out PixData result,
+        string? pixFormatDest = null,
+        bool strict = false,
+        SKAlphaType? sourceAlphaType = null)
+    {
+        try
+        {
+            result = ToPremul(source, pixFormatDest, strict, sourceAlphaType);
+            return true;
+        }
+        catch
+        {
+            result = default;
+            return false;
+        }
+    }
+
+    public static bool TryToUnpremul(
+        PixData source,
+        out PixData result,
+        string? pixFormatDest = null,
+        bool strict = false,
+        SKAlphaType? sourceAlphaType = null)
+    {
+        try
+        {
+            result = ToUnpremul(source, pixFormatDest, strict, sourceAlphaType);
+            return true;
+        }
+        catch
+        {
+            result = default;
+            return false;
+        }
+    }
 }
