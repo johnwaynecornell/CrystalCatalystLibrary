@@ -1,4 +1,5 @@
 using SkiaSharp;
+using CrystalCatalystLibrary.net;
 
 namespace CrystalSkia.net;
 
@@ -26,6 +27,14 @@ public static class SkiaPixFormatMap
             case "rgba:int8":
                 colorType = SKColorType.Rgba8888;
                 break;
+            case "rgba:float32":
+                colorType = SKColorType.RgbaF32;
+                break;
+            /*
+            case "rgba:float16":
+                colorType = SKColorType.RgbaF16;
+                break;
+            */
             default:
                 return false;
         }
@@ -41,6 +50,10 @@ public static class SkiaPixFormatMap
 
     public static string GetFallbackRenderTargetFormat(string pixFormat)
     {
+        if (PixFormats.IsFloatFormat(pixFormat))
+        {
+            return "rgba:float32";
+        }
         return "bgra:int8";
     }
 

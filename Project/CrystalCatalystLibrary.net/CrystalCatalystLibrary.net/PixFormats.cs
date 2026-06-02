@@ -46,6 +46,10 @@ public static class PixFormats
             case "int8":
                 bytesPerChannel = 1;
                 break;
+            /*
+            case "float16":
+                bytesPerChannel = 2;
+                break;*/
             case "float32":
                 bytesPerChannel = 4;
                 break;
@@ -72,5 +76,5 @@ public static class PixFormats
     public static int GetExpectedByteLength(string pixFormat, int width, int height) => GetBytesPerPixel(pixFormat) * width * height;
 
     public static bool IsByteFormat(string pixFormat) => TryParse(pixFormat, out var info) && info.ElementType == "int8";
-    public static bool IsFloatFormat(string pixFormat) => TryParse(pixFormat, out var info) && (info.ElementType == "float32" || info.ElementType == "float64");
+    public static bool IsFloatFormat(string pixFormat) => TryParse(pixFormat, out var info) && (/*info.ElementType == "float16" || */ info.ElementType == "float32" || info.ElementType == "float64");
 }

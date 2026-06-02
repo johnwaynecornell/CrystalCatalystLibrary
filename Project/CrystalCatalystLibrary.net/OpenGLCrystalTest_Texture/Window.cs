@@ -41,7 +41,7 @@ public class Window
     
     private bool _initialized = false;
 
-    private const string DemoPixFormat = "rgba:int8";
+    private const string DemoPixFormat = "rgba:float32";
     private const bool DemoStrictFormat = false;
 
     private const string VertexShaderSource = @"
