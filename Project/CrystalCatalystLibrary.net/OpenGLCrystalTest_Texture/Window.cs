@@ -376,17 +376,31 @@ public class Window
                 float x = info.Width - size - margin;
                 float y = margin;
 
-                canvas.Translate(x + size * 0.5f, y + size * 0.5f);
-                canvas.RotateDegrees(t * 55.0f);
-                canvas.Translate(-size * 0.5f, -size * 0.5f);
+                canvas.Translate(x , y );
 
-                _overlayRenderer.Size = new SKSize(size, size);
-                _overlayRenderer.Matrix = SKMatrix.CreateScale(
-                    size / 96.0f,
-                    size / 96.0f);
+                if (true)
+                {
+                    canvas.RotateDegrees(t * 55.0f, size * 0.5f, size * 0.5f);
+                    canvas.Scale(size / 96.0f, size / 96.0f);
 
-                _overlayRenderer.Render(_overlaySvg, canvas);
-
+                    canvas.DrawPicture(_overlaySvg.Picture);
+                }
+                else
+                {
+                    /* The PixData path. Any PixData can be rendered to a bitmap, which can be drawn to the canvas.
+                       This may often be optimized out so this serves as a more generic illustration or model to add post proc to  
+                    */
+                    
+                    _overlayRenderer.Size = new SKSize(96, 96);
+                    SKMatrix mat = SKMatrix.Identity;
+                    mat = mat.PreConcat(SKMatrix.CreateRotationDegrees(t * 55.0f, size * 0.5f, size * 0.5f));
+                    mat = mat.PreConcat(SKMatrix.CreateScale(size / 96.0f, size / 96.0f));
+                    _overlayRenderer.Matrix = mat;
+                        
+                    PixData pd = _overlayRenderer.RenderPix(_overlaySvg);
+                    PixDataSkia.WithBitmapView(pd, (bitmap) => canvas.DrawBitmap(bitmap, 0, 0));
+                }
+                
                 canvas.Restore();
                 
                 // 2. Skia drawing
