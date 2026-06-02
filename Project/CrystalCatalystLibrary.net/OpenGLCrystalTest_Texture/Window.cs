@@ -9,6 +9,14 @@ using CrystalSkia.net;
 
 namespace OpenGLCrystalTest_Texture;
 
+/// <summary>
+/// This example demonstrates how to integrate CrystalSkia, PixData, and OpenGL (via Silk.NET).
+/// It shows:
+/// 1. Creating a PixData-backed texture using Skia.
+/// 2. Converting PixData between formats using Skia.
+/// 3. Uploading PixData to an OpenGL texture.
+/// 4. Efficiently updating an OpenGL texture by drawing on its source PixData using Skia views.
+/// </summary>
 public class Window
 {
     private CrystalWindow wnd;
@@ -42,7 +50,7 @@ public class Window
     private bool _initialized = false;
 
     private const string DemoPixFormat = "rgba:float32";
-    private const bool DemoStrictFormat = false;
+    private const bool DemoStrictFormat = true;
 
     private const string VertexShaderSource = @"
         #version 330 core
@@ -110,6 +118,9 @@ public class Window
     }
     
 
+    /// <summary>
+    /// Initialize OpenGL resources, shaders, and the initial texture.
+    /// </summary>
     private void InitGLResources()
     {
         try
@@ -202,13 +213,25 @@ public class Window
 
         _gl.VertexAttribPointer(1, 2, GLEnum.Float, false, 5 * sizeof(float), (IntPtr)(3 * sizeof(float)));
         _gl.EnableVertexAttribArray(1);
-
-        _pixData = FixedPixDataRenderer.CreateDemoTexture(
+        
+        // Demonstrates high-level PixData creation and conversion:
+        // 1. Create a demo texture in rgba:int8 format using FixedPixDataRenderer.
+        using PixData sourcePixData = FixedPixDataRenderer.CreateDemoTexture(
             DemoTextureWidth,
             DemoTextureHeight,
-            DemoPixFormat,
+            "rgba:int8",
             DemoStrictFormat);
 
+        // 2. Convert the source PixData to a different format (rgba:float32) using Skia.
+        //    This uses Skia's internal rendering engine to remaster the pixels into the target format.
+        _pixData = PixDataSkia.ConvertBySkia(
+            sourcePixData,
+            SkiaPixFormatMap.GetImageInfo(
+                DemoPixFormat,
+                sourcePixData.width,
+                sourcePixData.height));
+        
+        // 3. Create an OpenGL texture directly from the resulting PixData.
         _texture = GLTextureHelper.CreateTexture2DFromPixData(
             _gl,
             _pixData,
@@ -229,6 +252,11 @@ public class Window
         }
     }
     
+    /// <summary>
+    /// Updates the animated part of the texture.
+    /// This demonstrates how to use Skia to draw onto a PixData buffer and then
+    /// update only the modified parts of an OpenGL texture.
+    /// </summary>
     private void UpdateAnimatedTexture(double time)
     {
         if (!_pixData)
@@ -240,21 +268,32 @@ public class Window
 
         _lastTextureUpdateFrame = frame;
 
+        // Create a new temporary PixData with the same format as our main texture buffer.
         using PixData framePixData = FixedPixDataRenderer.CreateFixed(
             _pixData.width,
             _pixData.height,
             (canvas, info) =>
             {
+                // Create a temporary SKBitmap 'view' into our persistent _pixData.
+                // This does NOT copy the pixels; it wraps the existing memory.
                 using var sourceBitmap = PixDataSkia.CreateBitmapView(_pixData);
+                
+                // Draw the static background from our base buffer.
                 canvas.DrawBitmap(sourceBitmap, 0, 0);
+                
+                // Draw the dynamic/animated elements on top using Skia.
                 DrawAnimatedCornerSquare(canvas, info, time);
             },
             DemoPixFormat,
             DemoStrictFormat);
 
+        // Upload the newly rendered frame to the existing OpenGL texture.
         GLTextureHelper.WritePixels(_gl, _texture, framePixData, DemoStrictFormat);
     }
     
+    /// <summary>
+    /// Draws a small animated square in the corner of the Skia canvas.
+    /// </summary>
     private static void DrawAnimatedCornerSquare(SKCanvas canvas, SKImageInfo info, double time)
     {
         const float margin = 12.0f;
@@ -310,6 +349,9 @@ public class Window
     }
 
     
+    /// <summary>
+    /// Main entry point for the window loop.
+    /// </summary>
     public void Run()
     {
         wnd.Show(true);
@@ -357,6 +399,9 @@ public class Window
     {
     }
 
+    /// <summary>
+    /// The main draw loop. Called by the CrystalWindow when a redraw is requested.
+    /// </summary>
     private void OnDraw(CrystalWindow windowHandle)
     {
         wnd.GLMakeCurrent();
