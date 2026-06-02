@@ -16,6 +16,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrystalOpenGL", "CrystalOpe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenGLCrystalTest_Texture", "OpenGLCrystalTest_Texture\OpenGLCrystalTest_Texture.csproj", "{0D2018E4-C5C0-4C0D-ABB6-57AF796E594E}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{2C7B2714-4397-4E70-9E0A-99117D8DE4CD}"
+	ProjectSection(SolutionItems) = preProject
+		Project.md = Project.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
