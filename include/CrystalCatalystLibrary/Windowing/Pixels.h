@@ -8,7 +8,7 @@ using namespace JWCEssentials;
 
 namespace NewAge {
     enum ChannelType {
-        EChannelType_NONE, EChannelType_int8, EChannelType_float32, EChannelType_float64
+        EChannelType_NONE, EChannelType_int8, EChannelType_int16, EChannelType_float32, EChannelType_float64
     };
 
     int ChannelType_bytes(ChannelType value);

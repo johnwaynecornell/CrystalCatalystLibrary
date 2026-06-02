@@ -46,6 +46,9 @@ public static class PixFormats
             case "int8":
                 bytesPerChannel = 1;
                 break;
+            case "int16":
+                bytesPerChannel = 2;
+                break;
             /*
             case "float16":
                 bytesPerChannel = 2;

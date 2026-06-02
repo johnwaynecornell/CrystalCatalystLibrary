@@ -13,6 +13,7 @@ namespace NewAge {
     int ChannelType_bytes(ChannelType value) {
         if (value == EChannelType_NONE) return 0;
         if (value == EChannelType_int8) return 1;
+        if (value == EChannelType_int16) return 2;
         if (value == EChannelType_float32) return 4;
         if (value == EChannelType_float64) return 8;
 
@@ -63,6 +64,7 @@ namespace NewAge {
 
         std::string _channel_type = pix.substr(colon + 1);
         if (_channel_type == "int8") P->channel_type = EChannelType_int8;
+        else if (_channel_type == "int16") P->channel_type = EChannelType_int16;
         else if (_channel_type == "float32") P->channel_type = EChannelType_float32;
         else if (_channel_type == "float64") P->channel_type = EChannelType_float64;
 
@@ -139,6 +141,35 @@ namespace NewAge {
         ((double *)dst)[dest_channel] = ((double *)src)[src_channel];
     }
 
+    void ChannelConvert_int16_int16(P_INSTANCE(PixConversion) This, P_ELEMENTS(void) src, int src_channel, P_ELEMENTS(void) dst, int dest_channel) {
+        ((uint16_t *)dst)[dest_channel] = ((uint16_t *)src)[src_channel];
+    }
+
+    void ChannelConvert_int16_int8(P_INSTANCE(PixConversion) This, P_ELEMENTS(void) src, int src_channel, P_ELEMENTS(void) dst, int dest_channel) {
+        uint8_t s = ((uint8_t *)src)[src_channel];
+        ((uint16_t *)dst)[dest_channel] = (uint16_t)((s << 8) | s);
+    }
+
+    void ChannelConvert_int16_float32(P_INSTANCE(PixConversion) This, P_ELEMENTS(void) src, int src_channel, P_ELEMENTS(void) dst, int dest_channel) {
+        ((uint16_t *)dst)[dest_channel] = (uint16_t)(((float32 *)src)[src_channel] * 65535.0f);
+    }
+
+    void ChannelConvert_int16_float64(P_INSTANCE(PixConversion) This, P_ELEMENTS(void) src, int src_channel, P_ELEMENTS(void) dst, int dest_channel) {
+        ((uint16_t *)dst)[dest_channel] = (uint16_t)(((float64 *)src)[src_channel] * 65535.0);
+    }
+
+    void ChannelConvert_int8_int16(P_INSTANCE(PixConversion) This, P_ELEMENTS(void) src, int src_channel, P_ELEMENTS(void) dst, int dest_channel) {
+        ((uint8_t *)dst)[dest_channel] = (uint8_t)(((uint16_t *)src)[src_channel] >> 8);
+    }
+
+    void ChannelConvert_float32_int16(P_INSTANCE(PixConversion) This, P_ELEMENTS(void) src, int src_channel, P_ELEMENTS(void) dst, int dest_channel) {
+        ((float32 *)dst)[dest_channel] = (float32)((uint16_t *)src)[src_channel] / 65535.0f;
+    }
+
+    void ChannelConvert_float64_int16(P_INSTANCE(PixConversion) This, P_ELEMENTS(void) src, int src_channel, P_ELEMENTS(void) dst, int dest_channel) {
+        ((float64 *)dst)[dest_channel] = (float64)((uint16_t *)src)[src_channel] / 65535.0;
+    }
+
     P_INSTANCE(PixConversion)  PixConversion::get(P_INSTANCE(PixInfo) from, P_INSTANCE(PixInfo) to) {
         P_INSTANCE(PixConversion) conversion  = new PixConversion();
 
@@ -172,6 +203,10 @@ namespace NewAge {
                         cv = ChannelConvert_int8_int8;
                     }
                     break;
+                    case EChannelType_int16: {
+                        cv = ChannelConvert_int8_int16;
+                    }
+                    break;
                     case EChannelType_float32: {
                         cv = ChannelConvert_int8_float32;
                     }
@@ -187,10 +222,39 @@ namespace NewAge {
                 }
             }
             break;
+            case EChannelType_int16: {
+                switch (from->channel_type) {
+                    case EChannelType_int8: {
+                        cv = ChannelConvert_int16_int8;
+                    }
+                    break;
+                    case EChannelType_int16: {
+                        cv = ChannelConvert_int16_int16;
+                    }
+                    break;
+                    case EChannelType_float32: {
+                        cv = ChannelConvert_int16_float32;
+                    }
+                    break;
+                    case EChannelType_float64: {
+                        cv = ChannelConvert_int16_float64;
+                    }
+                    break;
+                    default: {
+
+                    }
+                    break;
+                }
+            }
+            break;
             case EChannelType_float32: {
                 switch (from->channel_type) {
                     case EChannelType_int8: {
                         cv = ChannelConvert_float32_int8;
+                    }
+                    break;
+                    case EChannelType_int16: {
+                        cv = ChannelConvert_float32_int16;
                     }
                     break;
                     case EChannelType_float32: {
@@ -212,6 +276,10 @@ namespace NewAge {
                 switch (from->channel_type) {
                     case EChannelType_int8: {
                         cv = ChannelConvert_float64_int8;
+                    }
+                    break;
+                    case EChannelType_int16: {
+                        cv = ChannelConvert_float64_int16;
                     }
                     break;
                     case EChannelType_float32: {
@@ -255,6 +323,8 @@ namespace NewAge {
                 if (to->channel_list[i] == 'A') {
                     if (to->channel_type == EChannelType_int8) {
                         ((uint8_t*)dst)[i] = 255;
+                    } else if (to->channel_type == EChannelType_int16) {
+                        ((uint16_t*)dst)[i] = 65535;
                     } else if (to->channel_type == EChannelType_float32) {
                         ((float*)dst)[i] = 1.0f;
                     } else if (to->channel_type == EChannelType_float64) {
@@ -263,6 +333,8 @@ namespace NewAge {
                 } else {
                     if (to->channel_type == EChannelType_int8) {
                         ((uint8_t*)dst)[i] = 0;
+                    } else if (to->channel_type == EChannelType_int16) {
+                        ((uint16_t*)dst)[i] = 0;
                     } else if (to->channel_type == EChannelType_float32) {
                         ((float*)dst)[i] = 0.0f;
                     } else if (to->channel_type == EChannelType_float64) {

@@ -27,6 +27,24 @@ public static class SkiaPixFormatMap
             case "rgba:int8":
                 colorType = SKColorType.Rgba8888;
                 break;
+            case "r:int8":
+                colorType = SKColorType.Gray8;
+                break;
+            case "a:int8":
+                colorType = SKColorType.Alpha8;
+                break;
+            case "rg:int8":
+                colorType = SKColorType.Rg88;
+                break;
+            case "rgba:int16":
+                colorType = SKColorType.Rgba16161616;
+                break;
+            case "rg:int16":
+                colorType = SKColorType.Rg1616;
+                break;
+            case "a:int16":
+                colorType = SKColorType.Alpha16;
+                break;
             case "rgba:float32":
                 colorType = SKColorType.RgbaF32;
                 break;

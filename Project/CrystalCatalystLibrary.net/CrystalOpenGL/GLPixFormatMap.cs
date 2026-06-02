@@ -41,6 +41,36 @@ public static class GLPixFormatMap
                 pixelFormat = PixelFormat.Bgr;
                 pixelType = PixelType.UnsignedByte;
                 return true;
+            case "r:int8":
+                internalFormat = InternalFormat.R8;
+                pixelFormat = PixelFormat.Red;
+                pixelType = PixelType.UnsignedByte;
+                return true;
+            case "rg:int8":
+                internalFormat = InternalFormat.RG8;
+                pixelFormat = PixelFormat.RG;
+                pixelType = PixelType.UnsignedByte;
+                return true;
+            case "rgba:int16":
+                internalFormat = InternalFormat.Rgba16;
+                pixelFormat = PixelFormat.Rgba;
+                pixelType = PixelType.UnsignedShort;
+                return true;
+            case "rgb:int16":
+                internalFormat = InternalFormat.Rgb16;
+                pixelFormat = PixelFormat.Rgb;
+                pixelType = PixelType.UnsignedShort;
+                return true;
+            case "rg:int16":
+                internalFormat = InternalFormat.RG16;
+                pixelFormat = PixelFormat.RG;
+                pixelType = PixelType.UnsignedShort;
+                return true;
+            case "r:int16":
+                internalFormat = InternalFormat.R16;
+                pixelFormat = PixelFormat.Red;
+                pixelType = PixelType.UnsignedShort;
+                return true;
             case "rgba:float32":
                 internalFormat = InternalFormat.Rgba32f;
                 pixelFormat = PixelFormat.Rgba;
@@ -101,6 +131,24 @@ public static class GLPixFormatMap
                 return true;
             case InternalFormat.Rgb8:
                 pixFormat = "rgb:int8";
+                return true;
+            case InternalFormat.R8:
+                pixFormat = "r:int8";
+                return true;
+            case InternalFormat.RG8:
+                pixFormat = "rg:int8";
+                return true;
+            case InternalFormat.Rgba16:
+                pixFormat = "rgba:int16";
+                return true;
+            case InternalFormat.Rgb16:
+                pixFormat = "rgb:int16";
+                return true;
+            case InternalFormat.RG16:
+                pixFormat = "rg:int16";
+                return true;
+            case InternalFormat.R16:
+                pixFormat = "r:int16";
                 return true;
             case InternalFormat.Rgba32f:
                 pixFormat = "rgba:float32";
