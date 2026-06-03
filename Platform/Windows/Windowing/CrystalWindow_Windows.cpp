@@ -281,9 +281,9 @@ namespace NewAge
         const char* gl_vendor = (const char*)glGetString(GL_VENDOR);
         const char* gl_renderer = (const char*)glGetString(GL_RENDERER);
 
-        std::cout << mod_header() << " Final OpenGL Version: " << (gl_version ? gl_version : "NULL") << std::endl;
-        std::cout << mod_header() << " Final OpenGL Vendor: " << (gl_vendor ? gl_vendor : "NULL") << std::endl;
-        std::cout << mod_header() << " Final OpenGL Renderer: " << (gl_renderer ? gl_renderer : "NULL") << std::endl;
+        std::cerr << mod_header() << " Final OpenGL Version: " << (gl_version ? gl_version : "NULL") << std::endl;
+        std::cerr << mod_header() << " Final OpenGL Vendor: " << (gl_vendor ? gl_vendor : "NULL") << std::endl;
+        std::cerr << mod_header() << " Final OpenGL Renderer: " << (gl_renderer ? gl_renderer : "NULL") << std::endl;
 
         if (gl_renderer && strstr(gl_renderer, "GDI Generic")) {
             std::cerr << mod_header() << " WARNING: Still using GDI Generic renderer. Acceleration might be missing." << std::endl;
