@@ -20,6 +20,8 @@ public static class GLBridges
     private delegate void TexImage2DDelegate(GL gl, TextureTarget target, int level, InternalFormat internalformat, uint width, uint height, int border, PixelFormat format, PixelType type, IntPtr pixels);
     private delegate void TexSubImage2DDelegate(GL gl, TextureTarget target, int level, int xoffset, int yoffset, uint width, uint height, PixelFormat format, PixelType type, IntPtr pixels);
     private delegate void GetTexImageDelegate(GL gl, TextureTarget target, int level, PixelFormat format, PixelType type, IntPtr pixels);
+    private delegate void TextureSubImage2DDelegate(GL gl, uint texture, int level, int xoffset, int yoffset, uint width, uint height, PixelFormat format, PixelType type, IntPtr pixels);
+    private delegate void GetTextureImageDelegate(GL gl, uint texture, int level, PixelFormat format, PixelType type, uint bufSize, IntPtr pixels);
     private delegate void DrawElementsDelegate(GL gl, PrimitiveType mode, uint count, DrawElementsType type, IntPtr indices);
 
     // Static fields
@@ -31,6 +33,8 @@ public static class GLBridges
     private static readonly TexImage2DDelegate _texImage2D;
     private static readonly TexSubImage2DDelegate _texSubImage2D;
     private static readonly GetTexImageDelegate _getTexImage;
+    private static readonly TextureSubImage2DDelegate _textureSubImage2D;
+    private static readonly GetTextureImageDelegate _getTextureImage;
     private static readonly DrawElementsDelegate _drawElements;
 
     static GLBridges()
@@ -43,6 +47,8 @@ public static class GLBridges
         _texImage2D = CreateDelegate<TexImage2DDelegate>("TexImage2D", typeof(TextureTarget), typeof(int), typeof(InternalFormat), typeof(uint), typeof(uint), typeof(int), typeof(PixelFormat), typeof(PixelType), typeof(void*));
         _texSubImage2D = CreateDelegate<TexSubImage2DDelegate>("TexSubImage2D", typeof(TextureTarget), typeof(int), typeof(int), typeof(int), typeof(uint), typeof(uint), typeof(PixelFormat), typeof(PixelType), typeof(void*));
         _getTexImage = CreateDelegate<GetTexImageDelegate>("GetTexImage", typeof(TextureTarget), typeof(int), typeof(PixelFormat), typeof(PixelType), typeof(void*));
+        _textureSubImage2D = CreateDelegate<TextureSubImage2DDelegate>("TextureSubImage2D", typeof(uint), typeof(int), typeof(int), typeof(int), typeof(uint), typeof(uint), typeof(PixelFormat), typeof(PixelType), typeof(void*));
+        _getTextureImage = CreateDelegate<GetTextureImageDelegate>("GetTextureImage", typeof(uint), typeof(int), typeof(PixelFormat), typeof(PixelType), typeof(uint), typeof(void*));
         _drawElements = CreateDelegate<DrawElementsDelegate>("DrawElements", typeof(PrimitiveType), typeof(uint), typeof(DrawElementsType), typeof(void*));
     }
 
@@ -90,7 +96,9 @@ public static class GLBridges
     public static void DrawBuffers(GL gl, uint n, IntPtr bufs) => _drawBuffers(gl, n, bufs);
     public static void TexImage2D(GL gl, TextureTarget target, int level, InternalFormat internalformat, uint width, uint height, int border, PixelFormat format, PixelType type, IntPtr pixels) => _texImage2D(gl, target, level, internalformat, width, height, border, format, type, pixels);
     public static void TexSubImage2D(GL gl, TextureTarget target, int level, int xoffset, int yoffset, uint width, uint height, PixelFormat format, PixelType type, IntPtr pixels) => _texSubImage2D(gl, target, level, xoffset, yoffset, width, height, format, type, pixels);
+    public static void TextureSubImage2D(GL gl, uint texture, int level, int xoffset, int yoffset, uint width, uint height, PixelFormat format, PixelType type, IntPtr pixels) => _textureSubImage2D(gl, texture, level, xoffset, yoffset, width, height, format, type, pixels);
     public static void GetTexImage(GL gl, TextureTarget target, int level, PixelFormat format, PixelType type, IntPtr pixels) => _getTexImage(gl, target, level, format, type, pixels);
+    public static void GetTextureImage(GL gl, uint texture, int level, PixelFormat format, PixelType type, uint bufSize, IntPtr pixels) => _getTextureImage(gl, texture, level, format, type, bufSize, pixels);
     public static void DrawElements(GL gl, PrimitiveType mode, uint count, DrawElementsType type, IntPtr indices) => _drawElements(gl, mode, count, type, indices);
 
     // Stereo / Buffer Selection

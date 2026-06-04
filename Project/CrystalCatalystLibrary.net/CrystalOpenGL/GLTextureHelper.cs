@@ -72,21 +72,49 @@ public static class GLTextureHelper
             pixData = proxy;
         }
 
-        uint texture = gl.GenTexture();
-        gl.BindTexture(TextureTarget.Texture2D, texture);
-
-        gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-        gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
-        gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-        gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-
-        gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
-
-        GLBridges.TexImage2D(gl, TextureTarget.Texture2D, 0, internalFormat, (uint)pixData.width, (uint)pixData.height, 0, pixelFormat, pixelType, pixData.pix_data);
-
-        if (generateMipmaps)
+        uint texture;
+        if (GLHelper.VersionCompare(gl, 4, 5) >= 0)
         {
-            gl.GenerateMipmap(TextureTarget.Texture2D);
+            gl.CreateTextures(TextureTarget.Texture2D, 1, out texture);
+
+            int levels = 1;
+            if (generateMipmaps)
+            {
+                levels = (int)Math.Floor(Math.Log2(Math.Max(pixData.width, pixData.height))) + 1;
+            }
+            gl.TextureStorage2D(texture, (uint)levels, (GLEnum)internalFormat, (uint)pixData.width, (uint)pixData.height);
+
+            gl.TextureParameter(texture, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+            gl.TextureParameter(texture, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+            gl.TextureParameter(texture, TextureParameterName.TextureMinFilter, (int)(generateMipmaps ? TextureMinFilter.LinearMipmapLinear : TextureMinFilter.Linear));
+            gl.TextureParameter(texture, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+
+            gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
+            GLBridges.TextureSubImage2D(gl, texture, 0, 0, 0, (uint)pixData.width, (uint)pixData.height, pixelFormat, pixelType, pixData.pix_data);
+
+            if (generateMipmaps)
+            {
+                gl.GenerateTextureMipmap(texture);
+            }
+        }
+        else
+        {
+            texture = gl.GenTexture();
+            gl.BindTexture(TextureTarget.Texture2D, texture);
+
+            gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+            gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+            gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)(generateMipmaps ? TextureMinFilter.LinearMipmapLinear : TextureMinFilter.Linear));
+            gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+
+            gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
+
+            GLBridges.TexImage2D(gl, TextureTarget.Texture2D, 0, internalFormat, (uint)pixData.width, (uint)pixData.height, 0, pixelFormat, pixelType, pixData.pix_data);
+
+            if (generateMipmaps)
+            {
+                gl.GenerateMipmap(TextureTarget.Texture2D);
+            }
         }
 
         if (proxy) proxy.Dispose();
@@ -105,7 +133,6 @@ public static class GLTextureHelper
         if (src.width <= 0 || src.height <= 0)
             throw new ArgumentException("PixData width and height must be positive.");
 
-        gl.BindTexture(TextureTarget.Texture2D, texture);
         gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
 
         string formatStr = src.pix_format.ToString();
@@ -128,7 +155,15 @@ public static class GLTextureHelper
             src = proxy;
         }
 
-        GLBridges.TexSubImage2D(gl, TextureTarget.Texture2D, 0, 0, 0, (uint)src.width, (uint)src.height, pixelFormat, pixelType, src.pix_data);
+        if (GLHelper.VersionCompare(gl, 4, 5) >= 0)
+        {
+            GLBridges.TextureSubImage2D(gl, texture, 0, 0, 0, (uint)src.width, (uint)src.height, pixelFormat, pixelType, src.pix_data);
+        }
+        else
+        {
+            gl.BindTexture(TextureTarget.Texture2D, texture);
+            GLBridges.TexSubImage2D(gl, TextureTarget.Texture2D, 0, 0, 0, (uint)src.width, (uint)src.height, pixelFormat, pixelType, src.pix_data);
+        }
 
         if (proxy) proxy.Dispose();
     }
@@ -141,8 +176,16 @@ public static class GLTextureHelper
     /// </summary>
     public static string GetCanonicalPixFormatFromTexture(GL gl, uint texture)
     {
-        gl.BindTexture(TextureTarget.Texture2D, texture);
-        gl.GetTexLevelParameter(TextureTarget.Texture2D, 0, GLEnum.TextureInternalFormat, out int internalFormatInt);
+        int internalFormatInt;
+        if (GLHelper.VersionCompare(gl, 4, 5) >= 0)
+        {
+            gl.GetTextureLevelParameter(texture, 0, GetTextureParameter.TextureInternalFormat, out internalFormatInt);
+        }
+        else
+        {
+            gl.BindTexture(TextureTarget.Texture2D, texture);
+            gl.GetTexLevelParameter(TextureTarget.Texture2D, 0, GLEnum.TextureInternalFormat, out internalFormatInt);
+        }
         
         if (GLPixFormatMap.TryGetPixFormat((InternalFormat)internalFormatInt, out string pixFormat))
         {
@@ -162,9 +205,7 @@ public static class GLTextureHelper
             pixFormatDest = GetCanonicalPixFormatFromTexture(gl, texture);
         }
 
-        gl.BindTexture(TextureTarget.Texture2D, texture);
-        
-        GLTextureHelper.GetTextureDimensions(gl,texture, out int width, out int height);
+        GLTextureHelper.GetTextureDimensions(gl, texture, out int width, out int height);
 
         if (width <= 0 || height <= 0)
             throw new Exception("Failed to retrieve texture dimensions or texture is empty.");
@@ -189,7 +230,15 @@ public static class GLTextureHelper
         IntPtr unmanagedPixels = Marshal.AllocHGlobal(byteCount);
 
         gl.PixelStore(PixelStoreParameter.PackAlignment, 1);
-        GLBridges.GetTexImage(gl, TextureTarget.Texture2D, 0, glFormat, pixelType, unmanagedPixels);
+        if (GLHelper.VersionCompare(gl, 4, 5) >= 0)
+        {
+            GLBridges.GetTextureImage(gl, texture, 0, glFormat, pixelType, (uint)byteCount, unmanagedPixels);
+        }
+        else
+        {
+            gl.BindTexture(TextureTarget.Texture2D, texture);
+            GLBridges.GetTexImage(gl, TextureTarget.Texture2D, 0, glFormat, pixelType, unmanagedPixels);
+        }
 
         var pixData = new PixData
         {

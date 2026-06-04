@@ -64,7 +64,10 @@ public class Window
         wnd = CrystalWindow.Create(800, 600, "Ribbon Art");
         wnd.ApplicationRetain();
 
-        wnd.GLInitVersioned(3, 3);
+        // OpenGLCrystalTest_Ribbon requests OpenGL 4.5 intentionally.
+        // This validates the modern OpenGL path. The render also works with 3.3
+        
+        wnd.GLInitVersioned(4, 5);
         _gl = GL.GetApi(wnd.GLGetProcAddress);
 
         wnd.OnDraw = OnDraw;
