@@ -8,13 +8,23 @@ using System.Runtime.InteropServices;
 
 namespace CrystalSkia.net;
 
+/// <summary>
+/// Renders ANSI-escaped text to Skia canvases or <see cref="PixData"/>.
+/// </summary>
 public class AnsiSkiaRenderer
 {
+    /// <summary>Font size in pixels.</summary>
     public float FontSize { get; set; } = 20;
+    /// <summary>Font family name.</summary>
     public string FontFamily { get; set; } = "Monospace";
+    /// <summary>Default foreground color.</summary>
     public SKColor DefaultFg { get; set; } = SKColors.White;
+    /// <summary>Default background color.</summary>
     public SKColor DefaultBg { get; set; } = SKColors.Transparent;
 
+    /// <summary>
+    /// Represents a single character with its ANSI styling.
+    /// </summary>
     public struct StyledChar
     {
         public char Char;
@@ -29,12 +39,20 @@ public class AnsiSkiaRenderer
         public bool Overline;
     }
 
+    /// <summary>
+    /// Parsed representation of ANSI-encoded content.
+    /// </summary>
     public class ParsedContent
     {
+        /// <summary>Rows of styled characters.</summary>
         public List<List<StyledChar>> Lines { get; } = new();
+        /// <summary>Total size of the rendered content in pixels.</summary>
         public SKSize PixelSize { get; internal set; }
     }
 
+    /// <summary>
+    /// Parses a string containing ANSI escape sequences.
+    /// </summary>
     public ParsedContent Parse(string str)
     {
         return Parse(Encoding.UTF8.GetBytes(str));
@@ -186,6 +204,9 @@ public class AnsiSkiaRenderer
         return true;
     }
 
+    /// <summary>
+    /// Renders parsed content into a <see cref="PixData"/> buffer.
+    /// </summary>
     public PixData RenderPix(ParsedContent content, bool blinkState, Action<SKBitmap, SKCanvas>? onCanvas = null, Action<SKBitmap, SKCanvas>? postProc = null, string? pixFormatDest = null, bool strict = false, SKAlphaType? alphaType = null)
     {
         pixFormatDest ??= "bgra:int8";

@@ -7,14 +7,24 @@ using System.Runtime.InteropServices;
 
 namespace CrystalSkia.net;
 
+/// <summary>
+/// Renders SVG images to Skia canvases or <see cref="PixData"/>.
+/// </summary>
 public class SvgSkiaRenderer
 {
+    /// <summary>Transformation matrix to apply during rendering.</summary>
     public SKMatrix Matrix { get; set; } = SKMatrix.Identity;
+    /// <summary>Whether to crop the output to the SVG's bounds.</summary>
     public bool Crop { get; set; } = true;
+    /// <summary>Explicit size for the output. If null, size is measured from content.</summary>
     public SKSize? Size { get; set; }
         
+    /// <summary>Border padding in pixels.</summary>
     public int Border { get; set; } = 8;
 
+    /// <summary>
+    /// Measures the size of the SVG with current matrix.
+    /// </summary>
     public SKSize Measure(Svg.Skia.SKSvg svg)
     {
         if (svg.Picture == null) return SKSize.Empty;
@@ -54,6 +64,9 @@ public class SvgSkiaRenderer
         return true;
     }
 
+    /// <summary>
+    /// Renders the SVG into a <see cref="PixData"/> buffer.
+    /// </summary>
     public PixData RenderPix(Svg.Skia.SKSvg svg, Action<SKBitmap, SKCanvas>? onCanvas = null, Action<SKBitmap, SKCanvas>? postProc = null, string? pixFormatDest = null, bool strict = false, SKAlphaType? alphaType = null)
     {
         pixFormatDest ??= "bgra:int8";

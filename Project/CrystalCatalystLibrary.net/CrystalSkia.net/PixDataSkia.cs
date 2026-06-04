@@ -3,8 +3,14 @@ using SkiaSharp;
 
 namespace CrystalSkia.net;
 
+/// <summary>
+/// Provides extension methods and utilities for converting between <see cref="PixData"/> and SkiaSharp types.
+/// </summary>
 public static class PixDataSkia
 {
+    /// <summary>
+    /// Attempts to get <see cref="SKImageInfo"/> corresponding to the <see cref="PixData"/> format and dimensions.
+    /// </summary>
     public static bool TryGetImageInfo(PixData pixData, out SKImageInfo info, SKAlphaType? alphaType = null)
     {
         info = default;
@@ -28,6 +34,9 @@ public static class PixDataSkia
             alphaType);
     }
 
+    /// <summary>
+    /// Gets <see cref="SKImageInfo"/> for the <see cref="PixData"/>. Throws if the format is not supported by Skia.
+    /// </summary>
     public static SKImageInfo GetImageInfo(PixData pixData, SKAlphaType? alphaType = null)
     {
         if (TryGetImageInfo(pixData, out var info, alphaType))
@@ -38,6 +47,9 @@ public static class PixDataSkia
             $"PixData format '{format}' cannot be viewed as a Skia bitmap.");
     }
 
+    /// <summary>
+    /// Gets the row stride (bytes per row) for the <see cref="PixData"/>.
+    /// </summary>
     public static int GetStride(PixData pixData)
     {
         if (!pixData)
@@ -51,12 +63,12 @@ public static class PixDataSkia
         return PixFormats.GetBytesPerPixel(pixFormat) * pixData.width;
     }
 
-    /*
-        This function returns a temporary bitmap view of the PixData pixels.
-        The returned bitmap is a view into the PixData pixel buffer and does not own the buffer.
-        The PixData must remain valid and unchanged for the lifetime of the returned bitmap.
-        using the View patern in this file allows easy management of the PixData pixel buffer.
-     */
+    /// <summary>
+    /// Creates an <see cref="SKBitmap"/> that views the <see cref="PixData"/> pixel buffer without copying it.
+    /// </summary>
+    /// <remarks>
+    /// The <see cref="PixData"/> must remain valid for the lifetime of the returned bitmap.
+    /// </remarks>
     public static SKBitmap CreateBitmapView(PixData pixData, SKAlphaType? alphaType = null)
     {
         if (!pixData)
@@ -78,6 +90,9 @@ public static class PixDataSkia
         return bitmap;
     }
 
+    /// <summary>
+    /// Executes an action with a temporary <see cref="SKBitmap"/> view of the <see cref="PixData"/>.
+    /// </summary>
     public static void WithBitmapView(PixData pixData, Action<SKBitmap> action, SKAlphaType? alphaType = null)
     {
         ArgumentNullException.ThrowIfNull(action);
@@ -86,6 +101,9 @@ public static class PixDataSkia
         action(bitmap);
     }
 
+    /// <summary>
+    /// Executes a function with a temporary <see cref="SKBitmap"/> view of the <see cref="PixData"/> and returns its result.
+    /// </summary>
     public static T WithBitmapView<T>(PixData pixData, Func<SKBitmap, T> func, SKAlphaType? alphaType = null)
     {
         ArgumentNullException.ThrowIfNull(func);
@@ -94,6 +112,9 @@ public static class PixDataSkia
         return func(bitmap);
     }
 
+    /// <summary>
+    /// Executes an action with a temporary <see cref="SKCanvas"/> targeting the <see cref="PixData"/>.
+    /// </summary>
     public static void WithCanvasView(PixData pixData, Action<SKBitmap, SKCanvas> action, SKAlphaType? alphaType = null)
     {
         ArgumentNullException.ThrowIfNull(action);
@@ -105,6 +126,9 @@ public static class PixDataSkia
         canvas.Flush();
     }
 
+    /// <summary>
+    /// Executes a function with a temporary <see cref="SKCanvas"/> targeting the <see cref="PixData"/> and returns its result.
+    /// </summary>
     public static T WithCanvasView<T>(PixData pixData, Func<SKBitmap, SKCanvas, T> func, SKAlphaType? alphaType = null)
     {
         ArgumentNullException.ThrowIfNull(func);
@@ -118,6 +142,9 @@ public static class PixDataSkia
         return result;
     }
     
+    /// <summary>
+    /// Creates a new <see cref="SKBitmap"/> by copying the pixels from <see cref="PixData"/>.
+    /// </summary>
     public static SKBitmap CreateBitmapCopy(PixData pixData, SKAlphaType? alphaType = null)
     {
         using SKBitmap view = CreateBitmapView(pixData, alphaType);
@@ -166,6 +193,9 @@ public static class PixDataSkia
         }
     }
 
+    /// <summary>
+    /// Converts <see cref="PixData"/> to an owning <see cref="SKBitmap"/>.
+    /// </summary>
     public static SKBitmap ToBitmap(this PixData pixData, SKAlphaType? alphaType = null)
     {
         return CreateBitmapCopy(pixData, alphaType);
@@ -186,6 +216,9 @@ public static class PixDataSkia
         }
     }
 
+    /// <summary>
+    /// Creates a new <see cref="SKImage"/> by copying the pixels from <see cref="PixData"/>.
+    /// </summary>
     public static SKImage CreateImageCopy(
         PixData pixData,
         SKAlphaType? alphaType = null)
@@ -211,6 +244,9 @@ public static class PixDataSkia
         }
     }
 
+    /// <summary>
+    /// Creates <see cref="PixData"/> from an <see cref="SKBitmap"/>.
+    /// </summary>
     public static PixData FromBitmap(
         SKBitmap bitmap,
         string? pixFormatDest = null,

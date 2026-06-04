@@ -3,8 +3,14 @@ using CrystalCatalystLibrary.net;
 
 namespace CrystalOpenGL;
 
+/// <summary>
+/// Maps Crystal pixel format strings to OpenGL internal formats, pixel formats, and pixel types.
+/// </summary>
 public static class GLPixFormatMap
 {
+    /// <summary>
+    /// Attempts to get OpenGL upload parameters for the specified Crystal pixel format.
+    /// </summary>
     public static bool TryGetUploadFormat(
         string pixFormat,
         out InternalFormat internalFormat,

@@ -5,6 +5,9 @@ using CrystalCatalystLibrary.net;
 
 namespace CrystalSkia.net;
 
+/// <summary>
+/// Utilities for creating <see cref="PixData"/> by rendering directly to unmanaged memory using Skia.
+/// </summary>
 public static class FixedPixDataRenderer
 {
     private static readonly PixData.Pix_data_free SafeFreeDelegate = FreeUnmanagedPixels;
@@ -18,6 +21,9 @@ public static class FixedPixDataRenderer
         return true;
     }
 
+    /// <summary>
+    /// Creates a <see cref="PixData"/> buffer of fixed size by executing a draw action on a Skia canvas.
+    /// </summary>
     public static PixData CreateFixed(
         int width,
         int height,

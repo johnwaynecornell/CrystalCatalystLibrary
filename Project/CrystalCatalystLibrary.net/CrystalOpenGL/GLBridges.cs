@@ -6,6 +6,9 @@ using Silk.NET.OpenGL;
 
 namespace CrystalOpenGL;
 
+/// <summary>
+/// Provides bridges for OpenGL functions that require pointer arguments, using <see cref="IntPtr"/> for compatibility with managed code.
+/// </summary>
 public static class GLBridges
 {
     // Delegates

@@ -5,6 +5,9 @@ using CrystalCatalystLibrary.net;
 
 namespace CrystalOpenGL;
 
+/// <summary>
+/// Provides utility methods for working with OpenGL textures and <see cref="PixData"/>.
+/// </summary>
 public static class GLTextureHelper
 {
     private static readonly PixData.Pix_data_free SafeFreeDelegate = FreeUnmanagedPixels;
@@ -18,12 +21,18 @@ public static class GLTextureHelper
         return true;
     }
     
+    /// <summary>
+    /// Gets the width and height of an OpenGL texture.
+    /// </summary>
     public static void GetTextureDimensions(GL gl, uint texture, out int width, out int height)
     {
         gl.GetTextureLevelParameter(texture, 0, GetTextureParameter.TextureWidth, out width);
         gl.GetTextureLevelParameter(texture, 0, GetTextureParameter.TextureHeight, out height);
     }
 
+    /// <summary>
+    /// Creates a 2D OpenGL texture from the provided <see cref="PixData"/>.
+    /// </summary>
     public static uint CreateTexture2DFromPixData(GL gl, PixData pixData, bool generateMipmaps = false, bool strict = false)
     {
         if (pixData.pix_data == IntPtr.Zero)
@@ -76,6 +85,9 @@ public static class GLTextureHelper
         return texture;
     }
 
+    /// <summary>
+    /// Updates an existing OpenGL texture with data from <see cref="PixData"/>.
+    /// </summary>
     public static void WritePixels(GL gl, uint texture, PixData src, bool strict = false)
     {
         if (src.pix_data == IntPtr.Zero)
@@ -131,6 +143,9 @@ public static class GLTextureHelper
         return "rgba:int8";
     }
 
+    /// <summary>
+    /// Reads pixels from an OpenGL texture into a new <see cref="PixData"/> buffer.
+    /// </summary>
     public static PixData ReadPixels(GL gl, uint texture, string? pixFormatDest = null, bool strict = false)
     {
         if (string.IsNullOrEmpty(pixFormatDest))

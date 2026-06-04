@@ -54,6 +54,9 @@ public struct PixData : IDisposable
     /// </summary>
     public Pix_data_free? pix_data_free;
 
+    /// <summary>
+    /// Frees the pixel data buffer if a cleanup callback was provided and resets the structure.
+    /// </summary>
     public void Dispose()
     {
         if (pix_data != IntPtr.Zero)
@@ -70,6 +73,10 @@ public struct PixData : IDisposable
         pix_format.Dispose();
     }
     
+    /// <summary>
+    /// Implicitly converts PixData to a boolean, returning true if the pixel data pointer is not null.
+    /// </summary>
+    /// <param name="pixdata">The PixData to check.</param>
     public static implicit operator bool(PixData pixdata)
     {
         return pixdata.pix_data != IntPtr.Zero;

@@ -2,8 +2,14 @@ using SkiaSharp;
 
 namespace CrystalSkia.net;
 
+/// <summary>
+/// Provides utility methods for converting <see cref="SKImage"/> to <see cref="SKBitmap"/> with specific attributes.
+/// </summary>
 public static class SkiaConvert
 {
+    /// <summary>
+    /// Converts an <see cref="SKImage"/> to an <see cref="SKBitmap"/> with the specified destination info.
+    /// </summary>
     public static SKBitmap ToBitmap(SKImage source, SKImageInfo destInfo)
     {
         ArgumentNullException.ThrowIfNull(source);

@@ -5,8 +5,14 @@ using System.Runtime.InteropServices;
 
 namespace CrystalOpenGL;
 
+/// <summary>
+/// Provides utilities for rendering to OpenGL textures and capturing the result as <see cref="PixData"/>.
+/// </summary>
 public class GLRenderer
 {
+    /// <summary>
+    /// Renders to a specified OpenGL texture using a provided action.
+    /// </summary>
     public static void RenderToTexture(GL gl, uint texture, Action<GL, uint> action)
     {
         // Bind the texture to query its dimensions
@@ -49,6 +55,9 @@ public class GLRenderer
         gl.DeleteRenderbuffer(rbo);
     }
     
+    /// <summary>
+    /// Renders to a temporary OpenGL texture and returns the result as <see cref="PixData"/>.
+    /// </summary>
     public PixData RenderPix(GL gl, int width, int height, Action<GL, uint> action, string? pixFormatDest = null)
     {
     

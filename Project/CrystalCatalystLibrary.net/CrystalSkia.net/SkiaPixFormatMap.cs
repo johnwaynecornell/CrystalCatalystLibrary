@@ -3,8 +3,14 @@ using CrystalCatalystLibrary.net;
 
 namespace CrystalSkia.net;
 
+/// <summary>
+/// Maps Crystal pixel format strings to SkiaSharp <see cref="SKImageInfo"/> and <see cref="SKColorType"/>.
+/// </summary>
 public static class SkiaPixFormatMap
 {
+    /// <summary>
+    /// Attempts to create <see cref="SKImageInfo"/> for the specified Crystal pixel format and dimensions.
+    /// </summary>
     public static bool TryGetImageInfo(
         string pixFormat,
         int width,
