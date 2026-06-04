@@ -17,63 +17,70 @@ public class GLRenderer
     {
         GLTextureHelper.GetTextureDimensions(gl, texture, out int width, out int height);
             
-        uint fbo;
-        uint rbo;
+        uint fbo = 0;
+        uint rbo = 0;
 
-        if (GLHelper.VersionCompare(gl, 4, 5) >= 0)
+        int previousFbo = GLHelper.GetInteger(gl, GetPName.DrawFramebufferBinding);
+        int previousRbo = GLHelper.GetInteger(gl, GetPName.RenderbufferBinding);
+        int[] previousViewport = new int[4];
+        gl.GetInteger(GetPName.Viewport, previousViewport);
+
+        try
         {
-            gl.CreateFramebuffers(1, out fbo);
-            gl.NamedFramebufferTexture(fbo, FramebufferAttachment.ColorAttachment0, texture, 0);
-
-            gl.CreateRenderbuffers(1, out rbo);
-            gl.NamedRenderbufferStorage(rbo, InternalFormat.Depth24Stencil8, (uint)width, (uint)height);
-            gl.NamedFramebufferRenderbuffer(fbo, FramebufferAttachment.DepthStencilAttachment, RenderbufferTarget.Renderbuffer, rbo);
-
-            if (gl.CheckNamedFramebufferStatus(fbo, FramebufferTarget.Framebuffer) != GLEnum.FramebufferComplete)
+            if (GLHelper.VersionCompare(gl, 4, 5) >= 0)
             {
-                gl.DeleteFramebuffer(fbo);
-                gl.DeleteRenderbuffer(rbo);
-                gl.DeleteTexture(texture);
-                throw new Exception("Framebuffer is not complete");
+                gl.CreateFramebuffers(1, out fbo);
+                gl.NamedFramebufferTexture(fbo, FramebufferAttachment.ColorAttachment0, texture, 0);
+
+                gl.CreateRenderbuffers(1, out rbo);
+                gl.NamedRenderbufferStorage(rbo, InternalFormat.Depth24Stencil8, (uint)width, (uint)height);
+                gl.NamedFramebufferRenderbuffer(fbo, FramebufferAttachment.DepthStencilAttachment, RenderbufferTarget.Renderbuffer, rbo);
+
+                if (gl.CheckNamedFramebufferStatus(fbo, FramebufferTarget.Framebuffer) != GLEnum.FramebufferComplete)
+                {
+                    throw new Exception("Framebuffer is not complete");
+                }
             }
-        }
-        else
-        {
-            // Generate and bind FBO
-            fbo = gl.GenFramebuffer();
+            else
+            {
+                // Generate and bind FBO
+                fbo = gl.GenFramebuffer();
+                gl.BindFramebuffer(FramebufferTarget.Framebuffer, fbo);
+
+                // Attach the existing texture
+                gl.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, texture, 0);
+
+                // Generate and setup RBO for depth and stencil
+                rbo = gl.GenRenderbuffer();
+                gl.BindRenderbuffer(RenderbufferTarget.Renderbuffer, rbo);
+                gl.RenderbufferStorage(RenderbufferTarget.Renderbuffer, InternalFormat.Depth24Stencil8, (uint)width, (uint)height);
+                gl.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthStencilAttachment, RenderbufferTarget.Renderbuffer, rbo);
+
+                if (gl.CheckFramebufferStatus(FramebufferTarget.Framebuffer) != GLEnum.FramebufferComplete)
+                {
+                    throw new Exception("Framebuffer is not complete");
+                }
+            }
+
+            // Set viewport and execute render action
             gl.BindFramebuffer(FramebufferTarget.Framebuffer, fbo);
-
-            // Attach the existing texture
-            gl.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, texture, 0);
-
-            // Generate and setup RBO for depth and stencil
-            rbo = gl.GenRenderbuffer();
-            gl.BindRenderbuffer(RenderbufferTarget.Renderbuffer, rbo);
-            gl.RenderbufferStorage(RenderbufferTarget.Renderbuffer, InternalFormat.Depth24Stencil8, (uint)width, (uint)height);
-            gl.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthStencilAttachment, RenderbufferTarget.Renderbuffer, rbo);
-
-            if (gl.CheckFramebufferStatus(FramebufferTarget.Framebuffer) != GLEnum.FramebufferComplete)
-            {
-                gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-                gl.DeleteFramebuffer(fbo);
-                gl.DeleteRenderbuffer(rbo);
-                gl.DeleteTexture(texture);
-                throw new Exception("Framebuffer is not complete");
-            }
+            gl.Viewport(0, 0, (uint)width, (uint)height);
+            
+            // Execute the render action
+            action(gl, texture);
+            gl.Flush();
         }
+        finally
+        {
+            // Restore state
+            gl.BindFramebuffer(FramebufferTarget.Framebuffer, (uint)previousFbo);
+            gl.BindRenderbuffer(RenderbufferTarget.Renderbuffer, (uint)previousRbo);
+            gl.Viewport(previousViewport[0], previousViewport[1], (uint)previousViewport[2], (uint)previousViewport[3]);
 
-        // Set viewport and execute render action
-        gl.BindFramebuffer(FramebufferTarget.Framebuffer, fbo);
-        gl.Viewport(0, 0, (uint)width, (uint)height);
-        
-        // Execute the render action
-        action(gl, texture);
-        gl.Flush();
-        
-        // Cleanup GL resources
-        gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-        gl.DeleteFramebuffer(fbo);
-        gl.DeleteRenderbuffer(rbo);
+            // Cleanup GL resources
+            if (fbo != 0) gl.DeleteFramebuffer(fbo);
+            if (rbo != 0) gl.DeleteRenderbuffer(rbo);
+        }
     }
     
     /// <summary>
@@ -88,29 +95,43 @@ public class GLRenderer
         CrystalOpenGL.GLPixFormatMap.TryGetUploadFormat(pixFormatDest ?? "", out uploadFormat, out pixelFormat,
             out pixelType);
 
-        uint texture;
-        if (GLHelper.VersionCompare(gl, 4, 5) >= 0)
+        uint texture = 0;
+        try
         {
-            gl.CreateTextures(TextureTarget.Texture2D, 1, out texture);
-            gl.TextureStorage2D(texture, 1, (GLEnum)uploadFormat, (uint)width, (uint)height);
-        }
-        else
-        {
-            // Generate and setup texture
-            texture = gl.GenTexture();
-            gl.BindTexture(TextureTarget.Texture2D, texture);
-            GLBridges.TexImage2D(gl, TextureTarget.Texture2D, 0, uploadFormat, (uint)width, (uint)height, 0, pixelFormat, pixelType, IntPtr.Zero);
-        }
-    
-        RenderToTexture(gl, texture, action);
+            if (GLHelper.VersionCompare(gl, 4, 5) >= 0)
+            {
+                gl.CreateTextures(TextureTarget.Texture2D, 1, out texture);
+                gl.TextureStorage2D(texture, 1, (GLEnum)uploadFormat, (uint)width, (uint)height);
+            }
+            else
+            {
+                int previousTexture = GLHelper.GetInteger(gl, GetPName.TextureBinding2D);
+                try
+                {
+                    // Generate and setup texture
+                    texture = gl.GenTexture();
+                    gl.BindTexture(TextureTarget.Texture2D, texture);
+                    GLBridges.TexImage2D(gl, TextureTarget.Texture2D, 0, uploadFormat, (uint)width, (uint)height, 0, pixelFormat, pixelType, IntPtr.Zero);
+                }
+                finally
+                {
+                    gl.BindTexture(TextureTarget.Texture2D, (uint)previousTexture);
+                }
+            }
         
-        // Read the pixels back into PixData
-        // We read from the texture we just rendered into
-        PixData pix = GLTextureHelper.ReadPixels(gl, texture, pixFormatDest);
-
-        // Cleanup GL resources
-        gl.DeleteTexture(texture);
-
-        return pix;
+            RenderToTexture(gl, texture, action);
+            
+            // Read the pixels back into PixData
+            // We read from the texture we just rendered into
+            return GLTextureHelper.ReadPixels(gl, texture, pixFormatDest);
+        }
+        finally
+        {
+            // Cleanup GL resources
+            if (texture != 0)
+            {
+                gl.DeleteTexture(texture);
+            }
+        }
     }
 }

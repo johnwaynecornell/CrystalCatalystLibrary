@@ -33,9 +33,17 @@ public static class GLTextureHelper
         }
         else
         {
-            gl.BindTexture(TextureTarget.Texture2D, texture);
-            gl.GetTexLevelParameter(TextureTarget.Texture2D, 0, GetTextureParameter.TextureWidth, out width);
-            gl.GetTexLevelParameter(TextureTarget.Texture2D, 0, GetTextureParameter.TextureHeight, out height);
+            int previousTexture = GLHelper.GetInteger(gl, GetPName.TextureBinding2D);
+            try
+            {
+                gl.BindTexture(TextureTarget.Texture2D, texture);
+                gl.GetTexLevelParameter(TextureTarget.Texture2D, 0, GetTextureParameter.TextureWidth, out width);
+                gl.GetTexLevelParameter(TextureTarget.Texture2D, 0, GetTextureParameter.TextureHeight, out height);
+            }
+            finally
+            {
+                gl.BindTexture(TextureTarget.Texture2D, (uint)previousTexture);
+            }
         }
     }
 
@@ -73,48 +81,62 @@ public static class GLTextureHelper
         }
 
         uint texture;
-        if (GLHelper.VersionCompare(gl, 4, 5) >= 0)
+        int previousUnpackAlignment = GLHelper.GetInteger(gl, GetPName.UnpackAlignment);
+        try
         {
-            gl.CreateTextures(TextureTarget.Texture2D, 1, out texture);
-
-            int levels = 1;
-            if (generateMipmaps)
-            {
-                levels = (int)Math.Floor(Math.Log2(Math.Max(pixData.width, pixData.height))) + 1;
-            }
-            gl.TextureStorage2D(texture, (uint)levels, (GLEnum)internalFormat, (uint)pixData.width, (uint)pixData.height);
-
-            gl.TextureParameter(texture, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-            gl.TextureParameter(texture, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
-            gl.TextureParameter(texture, TextureParameterName.TextureMinFilter, (int)(generateMipmaps ? TextureMinFilter.LinearMipmapLinear : TextureMinFilter.Linear));
-            gl.TextureParameter(texture, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-
             gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
-            GLBridges.TextureSubImage2D(gl, texture, 0, 0, 0, (uint)pixData.width, (uint)pixData.height, pixelFormat, pixelType, pixData.pix_data);
-
-            if (generateMipmaps)
+            if (GLHelper.VersionCompare(gl, 4, 5) >= 0)
             {
-                gl.GenerateTextureMipmap(texture);
+                gl.CreateTextures(TextureTarget.Texture2D, 1, out texture);
+
+                int levels = 1;
+                if (generateMipmaps)
+                {
+                    levels = (int)Math.Floor(Math.Log2(Math.Max(pixData.width, pixData.height))) + 1;
+                }
+                gl.TextureStorage2D(texture, (uint)levels, (GLEnum)internalFormat, (uint)pixData.width, (uint)pixData.height);
+
+                gl.TextureParameter(texture, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+                gl.TextureParameter(texture, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+                gl.TextureParameter(texture, TextureParameterName.TextureMinFilter, (int)(generateMipmaps ? TextureMinFilter.LinearMipmapLinear : TextureMinFilter.Linear));
+                gl.TextureParameter(texture, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+
+                GLBridges.TextureSubImage2D(gl, texture, 0, 0, 0, (uint)pixData.width, (uint)pixData.height, pixelFormat, pixelType, pixData.pix_data);
+
+                if (generateMipmaps)
+                {
+                    gl.GenerateTextureMipmap(texture);
+                }
+            }
+            else
+            {
+                int previousTexture = GLHelper.GetInteger(gl, GetPName.TextureBinding2D);
+                try
+                {
+                    texture = gl.GenTexture();
+                    gl.BindTexture(TextureTarget.Texture2D, texture);
+
+                    gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+                    gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+                    gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)(generateMipmaps ? TextureMinFilter.LinearMipmapLinear : TextureMinFilter.Linear));
+                    gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+
+                    GLBridges.TexImage2D(gl, TextureTarget.Texture2D, 0, internalFormat, (uint)pixData.width, (uint)pixData.height, 0, pixelFormat, pixelType, pixData.pix_data);
+
+                    if (generateMipmaps)
+                    {
+                        gl.GenerateMipmap(TextureTarget.Texture2D);
+                    }
+                }
+                finally
+                {
+                    gl.BindTexture(TextureTarget.Texture2D, (uint)previousTexture);
+                }
             }
         }
-        else
+        finally
         {
-            texture = gl.GenTexture();
-            gl.BindTexture(TextureTarget.Texture2D, texture);
-
-            gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-            gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
-            gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)(generateMipmaps ? TextureMinFilter.LinearMipmapLinear : TextureMinFilter.Linear));
-            gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-
-            gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
-
-            GLBridges.TexImage2D(gl, TextureTarget.Texture2D, 0, internalFormat, (uint)pixData.width, (uint)pixData.height, 0, pixelFormat, pixelType, pixData.pix_data);
-
-            if (generateMipmaps)
-            {
-                gl.GenerateMipmap(TextureTarget.Texture2D);
-            }
+            gl.PixelStore(PixelStoreParameter.UnpackAlignment, previousUnpackAlignment);
         }
 
         if (proxy) proxy.Dispose();
@@ -133,39 +155,55 @@ public static class GLTextureHelper
         if (src.width <= 0 || src.height <= 0)
             throw new ArgumentException("PixData width and height must be positive.");
 
-        gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
-
-        string formatStr = src.pix_format.ToString();
-        if (string.IsNullOrEmpty(formatStr)) formatStr = "rgba:int8";
-        string format = PixFormats.Parse(formatStr).PixFormat;
-        PixData proxy = default;
-
-        if (!GLPixFormatMap.TryGetUploadFormat(format, out _, out var pixelFormat, out var pixelType))
+        int previousUnpackAlignment = GLHelper.GetInteger(gl, GetPName.UnpackAlignment);
+        try
         {
-            if (strict)
+            gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
+
+            string formatStr = src.pix_format.ToString();
+            if (string.IsNullOrEmpty(formatStr)) formatStr = "rgba:int8";
+            string format = PixFormats.Parse(formatStr).PixFormat;
+            PixData proxy = default;
+
+            if (!GLPixFormatMap.TryGetUploadFormat(format, out _, out var pixelFormat, out var pixelType))
             {
-                throw new NotSupportedException($"Pixel format '{format}' is not directly supported by OpenGL texture upload and strict mode is enabled.");
+                if (strict)
+                {
+                    throw new NotSupportedException($"Pixel format '{format}' is not directly supported by OpenGL texture upload and strict mode is enabled.");
+                }
+
+                string fallbackFormat = GLPixFormatMap.GetFallbackUploadFormat(format);
+                proxy = Pixels.ConvertPixelsPix(ref src, fallbackFormat);
+                if (!proxy) throw new NotSupportedException($"Format '{format}' is not supported and fallback conversion to '{fallbackFormat}' failed.");
+                
+                GLPixFormatMap.TryGetUploadFormat(fallbackFormat, out _, out pixelFormat, out pixelType);
+                src = proxy;
             }
 
-            string fallbackFormat = GLPixFormatMap.GetFallbackUploadFormat(format);
-            proxy = Pixels.ConvertPixelsPix(ref src, fallbackFormat);
-            if (!proxy) throw new NotSupportedException($"Format '{format}' is not supported and fallback conversion to '{fallbackFormat}' failed.");
-            
-            GLPixFormatMap.TryGetUploadFormat(fallbackFormat, out _, out pixelFormat, out pixelType);
-            src = proxy;
-        }
+            if (GLHelper.VersionCompare(gl, 4, 5) >= 0)
+            {
+                GLBridges.TextureSubImage2D(gl, texture, 0, 0, 0, (uint)src.width, (uint)src.height, pixelFormat, pixelType, src.pix_data);
+            }
+            else
+            {
+                int previousTexture = GLHelper.GetInteger(gl, GetPName.TextureBinding2D);
+                try
+                {
+                    gl.BindTexture(TextureTarget.Texture2D, texture);
+                    GLBridges.TexSubImage2D(gl, TextureTarget.Texture2D, 0, 0, 0, (uint)src.width, (uint)src.height, pixelFormat, pixelType, src.pix_data);
+                }
+                finally
+                {
+                    gl.BindTexture(TextureTarget.Texture2D, (uint)previousTexture);
+                }
+            }
 
-        if (GLHelper.VersionCompare(gl, 4, 5) >= 0)
-        {
-            GLBridges.TextureSubImage2D(gl, texture, 0, 0, 0, (uint)src.width, (uint)src.height, pixelFormat, pixelType, src.pix_data);
+            if (proxy) proxy.Dispose();
         }
-        else
+        finally
         {
-            gl.BindTexture(TextureTarget.Texture2D, texture);
-            GLBridges.TexSubImage2D(gl, TextureTarget.Texture2D, 0, 0, 0, (uint)src.width, (uint)src.height, pixelFormat, pixelType, src.pix_data);
+            gl.PixelStore(PixelStoreParameter.UnpackAlignment, previousUnpackAlignment);
         }
-
-        if (proxy) proxy.Dispose();
     }
 
     /// <summary>
@@ -183,8 +221,16 @@ public static class GLTextureHelper
         }
         else
         {
-            gl.BindTexture(TextureTarget.Texture2D, texture);
-            gl.GetTexLevelParameter(TextureTarget.Texture2D, 0, GLEnum.TextureInternalFormat, out internalFormatInt);
+            int previousTexture = GLHelper.GetInteger(gl, GetPName.TextureBinding2D);
+            try
+            {
+                gl.BindTexture(TextureTarget.Texture2D, texture);
+                gl.GetTexLevelParameter(TextureTarget.Texture2D, 0, GLEnum.TextureInternalFormat, out internalFormatInt);
+            }
+            finally
+            {
+                gl.BindTexture(TextureTarget.Texture2D, (uint)previousTexture);
+            }
         }
         
         if (GLPixFormatMap.TryGetPixFormat((InternalFormat)internalFormatInt, out string pixFormat))
@@ -229,37 +275,66 @@ public static class GLTextureHelper
         int byteCount = PixFormats.GetExpectedByteLength(readFormat, width, height);
         IntPtr unmanagedPixels = Marshal.AllocHGlobal(byteCount);
 
-        gl.PixelStore(PixelStoreParameter.PackAlignment, 1);
-        if (GLHelper.VersionCompare(gl, 4, 5) >= 0)
+        try
         {
-            GLBridges.GetTextureImage(gl, texture, 0, glFormat, pixelType, (uint)byteCount, unmanagedPixels);
-        }
-        else
-        {
-            gl.BindTexture(TextureTarget.Texture2D, texture);
-            GLBridges.GetTexImage(gl, TextureTarget.Texture2D, 0, glFormat, pixelType, unmanagedPixels);
-        }
-
-        var pixData = new PixData
-        {
-            width = width,
-            height = height,
-            pix_format = readFormat,
-            pix_data = unmanagedPixels,
-            pix_data_length = (IntPtr)byteCount,
-            pix_data_free = SafeFreeDelegate
-        };
-
-        if (readFormat != destFormat)
-        {
-            var proxy = Pixels.ConvertPixelsPix(ref pixData, destFormat);
-            if (proxy)
+            int previousPackAlignment = GLHelper.GetInteger(gl, GetPName.PackAlignment);
+            try
             {
-                pixData.Dispose();
-                return proxy;
+                gl.PixelStore(PixelStoreParameter.PackAlignment, 1);
+                if (GLHelper.VersionCompare(gl, 4, 5) >= 0)
+                {
+                    GLBridges.GetTextureImage(gl, texture, 0, glFormat, pixelType, (uint)byteCount, unmanagedPixels);
+                }
+                else
+                {
+                    int previousTexture = GLHelper.GetInteger(gl, GetPName.TextureBinding2D);
+                    try
+                    {
+                        gl.BindTexture(TextureTarget.Texture2D, texture);
+                        GLBridges.GetTexImage(gl, TextureTarget.Texture2D, 0, glFormat, pixelType, unmanagedPixels);
+                    }
+                    finally
+                    {
+                        gl.BindTexture(TextureTarget.Texture2D, (uint)previousTexture);
+                    }
+                }
+            }
+            finally
+            {
+                gl.PixelStore(PixelStoreParameter.PackAlignment, previousPackAlignment);
+            }
+
+            var pixData = new PixData
+            {
+                width = width,
+                height = height,
+                pix_format = readFormat,
+                pix_data = unmanagedPixels,
+                pix_data_length = (IntPtr)byteCount,
+                pix_data_free = SafeFreeDelegate
+            };
+
+            // pixData now owns unmanagedPixels
+            unmanagedPixels = IntPtr.Zero;
+
+            if (readFormat != destFormat)
+            {
+                var proxy = Pixels.ConvertPixelsPix(ref pixData, destFormat);
+                if (proxy)
+                {
+                    pixData.Dispose();
+                    return proxy;
+                }
+            }
+
+            return pixData;
+        }
+        finally
+        {
+            if (unmanagedPixels != IntPtr.Zero)
+            {
+                Marshal.FreeHGlobal(unmanagedPixels);
             }
         }
-
-        return pixData;
     }
 }

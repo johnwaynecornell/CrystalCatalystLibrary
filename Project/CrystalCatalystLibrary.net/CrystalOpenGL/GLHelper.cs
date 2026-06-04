@@ -84,4 +84,13 @@ public static class GLHelper
         GetGLVersion(gl, out var majorA, out var minorA);
         return VersionCompare(majorA, minorA, majorB, minorB);
     }
+
+    /// <summary>
+    /// Gets an integer value from OpenGL.
+    /// </summary>
+    public static int GetInteger(GL gl, GetPName name)
+    {
+        gl.GetInteger(name, out int value);
+        return value;
+    }
 }
