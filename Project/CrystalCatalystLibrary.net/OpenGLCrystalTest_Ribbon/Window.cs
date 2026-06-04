@@ -67,7 +67,13 @@ public class Window
         // OpenGLCrystalTest_Ribbon requests OpenGL 4.5 intentionally.
         // This validates the modern OpenGL path. The render also works with 3.3
         
-        wnd.GLInitVersioned(4, 5);
+        GLOptions opts = GLOptions.Default;
+        opts.major = 4;
+        opts.minor = 5;
+        opts.strict = false;
+        
+        if (!wnd.GLInitAdvanced(opts)) throw new Exception("Failed to initialize OpenGL with advanced options");
+        
         _gl = GL.GetApi(wnd.GLGetProcAddress);
 
         wnd.OnDraw = OnDraw;

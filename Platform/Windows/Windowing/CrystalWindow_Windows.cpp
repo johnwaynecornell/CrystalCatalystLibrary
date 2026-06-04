@@ -118,7 +118,7 @@ namespace NewAge
                 actual_major > options.major ||
                 (actual_major == options.major && actual_minor >= options.minor);
             std::cerr << mod_header() << " OpenGL context already exists: " << actual_major << "." << actual_minor << std::endl;
-            return satisfies_request;
+            return options.strict ? satisfies_request : true;
         }
         std::cerr << mod_header() << " Requested OpenGL version: " << options.major << "." << options.minor << std::endl;
 
@@ -295,9 +295,9 @@ namespace NewAge
 
         int actual_major = 0, actual_minor = 0;
         GLGetVersion(actual_major, actual_minor);
-        if (actual_major < options.major || (actual_major == options.major && actual_minor < options.minor)) {
+        if (options.strict && (actual_major < options.major || (actual_major == options.major && actual_minor < options.minor))) {
             std::cerr << mod_header() << " Error: Created context version (" << actual_major << "." << actual_minor 
-                      << ") is less than requested (" << options.major << "." << options.minor << ")." << std::endl;
+                      << ") is less than requested (" << options.major << "." << options.minor << ") and strict mode is enabled." << std::endl;
             CleanupWGLContext(gl_context);
             ReleaseDC(hwnd, hdc);
             return false;

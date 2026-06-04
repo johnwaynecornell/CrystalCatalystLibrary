@@ -53,13 +53,14 @@ namespace NewAge {
         int32_t major = 3;
         int32_t minor = 3;
         GLProfile profile = GLProfile::Core;
-        bool debug = false;
-        bool forwardCompatible = false;
+        int32_t debug = 0;
+        int32_t forwardCompatible = 0;
         int32_t depthBits = 24;
         int32_t stencilBits = 8;
         int32_t alphaBits = 8;
-        bool doubleBuffer = true;
-        bool stereo = false;
+        int32_t doubleBuffer = 1;
+        int32_t stereo = 0;
+        int32_t strict = 1;
     };
     typedef struct {
         void (*on_draw)(P_INSTANCE(WindowHandle) window_handle);

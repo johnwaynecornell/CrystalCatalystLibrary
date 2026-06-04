@@ -28,9 +28,9 @@ public struct GLOptions
     /// <summary>OpenGL profile.</summary>
     public GLProfile profile;
     /// <summary>Enable debug context.</summary>
-    [MarshalAs(UnmanagedType.U1)] public bool debug;
+    [MarshalAs(UnmanagedType.Bool)] public bool debug;
     /// <summary>Enable forward-compatible context.</summary>
-    [MarshalAs(UnmanagedType.U1)] public bool forwardCompatible;
+    [MarshalAs(UnmanagedType.Bool)] public bool forwardCompatible;
     /// <summary>Bits for depth buffer.</summary>
     public int depthBits;
     /// <summary>Bits for stencil buffer.</summary>
@@ -38,12 +38,14 @@ public struct GLOptions
     /// <summary>Bits for alpha channel.</summary>
     public int alphaBits;
     /// <summary>Enable double buffering.</summary>
-    [MarshalAs(UnmanagedType.U1)] public bool doubleBuffer;
+    [MarshalAs(UnmanagedType.Bool)] public bool doubleBuffer;
     /// <summary>Enable stereoscopic rendering.</summary>
-    [MarshalAs(UnmanagedType.U1)] public bool stereo;
+    [MarshalAs(UnmanagedType.Bool)] public bool stereo;
+    /// <summary>Enable strict version checking.</summary>
+    [MarshalAs(UnmanagedType.Bool)] public bool strict;
 
     /// <summary>
-    /// Gets the default OpenGL options (3.3 Core, 24-bit depth, 8-bit stencil/alpha, double buffered).
+    /// Gets the default OpenGL options (3.3 Core, 24-bit depth, 8-bit stencil/alpha, double buffered, strict).
     /// </summary>
     public static GLOptions Default => new GLOptions
     {
@@ -56,6 +58,7 @@ public struct GLOptions
         stencilBits = 8,
         alphaBits = 8,
         doubleBuffer = true,
-        stereo = false
+        stereo = false,
+        strict = true
     };
 }
