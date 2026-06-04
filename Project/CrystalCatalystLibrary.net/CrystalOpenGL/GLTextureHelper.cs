@@ -26,8 +26,17 @@ public static class GLTextureHelper
     /// </summary>
     public static void GetTextureDimensions(GL gl, uint texture, out int width, out int height)
     {
-        gl.GetTextureLevelParameter(texture, 0, GetTextureParameter.TextureWidth, out width);
-        gl.GetTextureLevelParameter(texture, 0, GetTextureParameter.TextureHeight, out height);
+        if (GLHelper.VersionCompare(gl, 4, 5) >= 0)
+        {
+            gl.GetTextureLevelParameter(texture, 0, GetTextureParameter.TextureWidth, out width);
+            gl.GetTextureLevelParameter(texture, 0, GetTextureParameter.TextureHeight, out height);
+        }
+        else
+        {
+            gl.BindTexture(TextureTarget.Texture2D, texture);
+            gl.GetTexLevelParameter(TextureTarget.Texture2D, 0, GetTextureParameter.TextureWidth, out width);
+            gl.GetTexLevelParameter(TextureTarget.Texture2D, 0, GetTextureParameter.TextureHeight, out height);
+        }
     }
 
     /// <summary>
