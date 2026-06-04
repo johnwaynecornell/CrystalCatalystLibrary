@@ -26,7 +26,7 @@ public static class GLTextureHelper
     /// </summary>
     public static void GetTextureDimensions(GL gl, uint texture, out int width, out int height)
     {
-        if (GLHelper.VersionCompare(gl, 4, 5) >= 0)
+        if (GLHelper.HasDSA(gl))
         {
             gl.GetTextureLevelParameter(texture, 0, GetTextureParameter.TextureWidth, out width);
             gl.GetTextureLevelParameter(texture, 0, GetTextureParameter.TextureHeight, out height);
@@ -85,7 +85,7 @@ public static class GLTextureHelper
         try
         {
             gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
-            if (GLHelper.VersionCompare(gl, 4, 5) >= 0)
+            if (GLHelper.HasDSA(gl))
             {
                 gl.CreateTextures(TextureTarget.Texture2D, 1, out texture);
 
@@ -180,7 +180,7 @@ public static class GLTextureHelper
                 src = proxy;
             }
 
-            if (GLHelper.VersionCompare(gl, 4, 5) >= 0)
+            if (GLHelper.HasDSA(gl))
             {
                 GLBridges.TextureSubImage2D(gl, texture, 0, 0, 0, (uint)src.width, (uint)src.height, pixelFormat, pixelType, src.pix_data);
             }
@@ -215,7 +215,7 @@ public static class GLTextureHelper
     public static string GetCanonicalPixFormatFromTexture(GL gl, uint texture)
     {
         int internalFormatInt;
-        if (GLHelper.VersionCompare(gl, 4, 5) >= 0)
+        if (GLHelper.HasDSA(gl))
         {
             gl.GetTextureLevelParameter(texture, 0, GetTextureParameter.TextureInternalFormat, out internalFormatInt);
         }
@@ -281,7 +281,7 @@ public static class GLTextureHelper
             try
             {
                 gl.PixelStore(PixelStoreParameter.PackAlignment, 1);
-                if (GLHelper.VersionCompare(gl, 4, 5) >= 0)
+                if (GLHelper.HasDSA(gl))
                 {
                     GLBridges.GetTextureImage(gl, texture, 0, glFormat, pixelType, (uint)byteCount, unmanagedPixels);
                 }

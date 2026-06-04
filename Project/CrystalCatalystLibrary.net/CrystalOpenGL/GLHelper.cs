@@ -14,8 +14,14 @@ public static class GLHelper
         public int Major;
         public int Minor;
     }
-
+    
+    private class HasDSAInfo
+    {
+        public bool HasDSA;
+    }
+    
     private static readonly ConditionalWeakTable<GL, VersionInfo> _versionCache = new();
+    private static readonly ConditionalWeakTable<GL, HasDSAInfo?> _hasDSACache = new();
 
     /// <summary>
     /// Draws elements from index data in unmanaged memory.
@@ -23,6 +29,35 @@ public static class GLHelper
     public static void DrawElements(GL gl, PrimitiveType mode, uint count, DrawElementsType type, IntPtr indices)
     {
         GLBridges.DrawElements(gl, mode, count, type, indices);
+    }
+    
+    public static bool HasExtension(GL gl, string extensionName)
+    {
+        gl.GetInteger(GetPName.NumExtensions, out int count);
+
+        for (uint i = 0; i < count; i++)
+        {
+            string? ext = gl.GetStringS(GLEnum.Extensions, i);
+            if (ext == extensionName)
+                return true;
+        }
+
+        return false;
+    }
+    
+    /// <summary>
+    /// Efficiently determines if Direct State Access is available from 4.5 or the GL_ARB_direct_state_access extension 
+    /// </summary>
+
+    public static bool HasDSA(GL gl)
+    {
+        var info = _hasDSACache.GetValue(gl, k =>
+        {
+            return new HasDSAInfo() { HasDSA = (VersionCompare(gl, 4, 5) >= 0) || 
+                                               HasExtension(gl, "GL_ARB_direct_state_access") };
+        });
+
+        return info.HasDSA;
     }
 
     /// <summary>

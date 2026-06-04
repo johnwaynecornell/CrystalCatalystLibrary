@@ -27,7 +27,7 @@ public class GLRenderer
 
         try
         {
-            if (GLHelper.VersionCompare(gl, 4, 5) >= 0)
+            if (GLHelper.HasDSA(gl))
             {
                 gl.CreateFramebuffers(1, out fbo);
                 gl.NamedFramebufferTexture(fbo, FramebufferAttachment.ColorAttachment0, texture, 0);
@@ -98,7 +98,7 @@ public class GLRenderer
         uint texture = 0;
         try
         {
-            if (GLHelper.VersionCompare(gl, 4, 5) >= 0)
+            if (GLHelper.HasDSA(gl))
             {
                 gl.CreateTextures(TextureTarget.Texture2D, 1, out texture);
                 gl.TextureStorage2D(texture, 1, (GLEnum)uploadFormat, (uint)width, (uint)height);

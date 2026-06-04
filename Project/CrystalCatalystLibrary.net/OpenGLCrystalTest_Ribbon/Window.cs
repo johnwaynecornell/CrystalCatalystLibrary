@@ -75,6 +75,8 @@ public class Window
         if (!wnd.GLInitAdvanced(opts)) throw new Exception("Failed to initialize OpenGL with advanced options");
         
         _gl = GL.GetApi(wnd.GLGetProcAddress);
+        
+        Console.Error.WriteLine(GLHelper.HasDSA(_gl) ? "Direct State Access available" : "Direct State Access not available");
 
         wnd.OnDraw = OnDraw;
         wnd.OnResize = OnResize;
