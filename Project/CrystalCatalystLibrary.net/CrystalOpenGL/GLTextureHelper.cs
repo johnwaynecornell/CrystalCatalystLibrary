@@ -17,6 +17,12 @@ public static class GLTextureHelper
         }
         return true;
     }
+    
+    public static void GetTextureDimensions(GL gl, uint texture, out int width, out int height)
+    {
+        gl.GetTextureLevelParameter(texture, 0, GetTextureParameter.TextureWidth, out width);
+        gl.GetTextureLevelParameter(texture, 0, GetTextureParameter.TextureHeight, out height);
+    }
 
     public static uint CreateTexture2DFromPixData(GL gl, PixData pixData, bool generateMipmaps = false, bool strict = false)
     {
@@ -133,9 +139,8 @@ public static class GLTextureHelper
         }
 
         gl.BindTexture(TextureTarget.Texture2D, texture);
-
-        gl.GetTexLevelParameter(TextureTarget.Texture2D, 0, GLEnum.TextureWidth, out int width);
-        gl.GetTexLevelParameter(TextureTarget.Texture2D, 0, GLEnum.TextureHeight, out int height);
+        
+        GLTextureHelper.GetTextureDimensions(gl,texture, out int width, out int height);
 
         if (width <= 0 || height <= 0)
             throw new Exception("Failed to retrieve texture dimensions or texture is empty.");

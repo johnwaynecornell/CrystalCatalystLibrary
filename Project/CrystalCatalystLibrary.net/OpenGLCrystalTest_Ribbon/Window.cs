@@ -274,7 +274,7 @@ public class Window
 
         double time = wnd.uptimeSeconds();
         
-        using var pix = _glRenderer.RenderPix(_gl, _width, _height, (gl) =>
+        using var pix = _glRenderer.RenderPix(_gl, _width, _height, (gl, texture) =>
         {
             gl.ClearColor(0.05f, 0.05f, 0.1f, 1.0f);
             gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
