@@ -22,6 +22,7 @@ public static class GLHelper
     
     private static readonly ConditionalWeakTable<GL, VersionInfo> _versionCache = new();
     private static readonly ConditionalWeakTable<GL, HasDSAInfo?> _hasDSACache = new();
+    private static readonly ConditionalWeakTable<GL, string[]> _extensionStringCache = new();
 
     /// <summary>
     /// Draws elements from index data in unmanaged memory.
@@ -31,18 +32,44 @@ public static class GLHelper
         GLBridges.DrawElements(gl, mode, count, type, indices);
     }
     
+    /// <summary>
+    /// returns true if the specified extension is available
+    /// </summary>
+    
     public static bool HasExtension(GL gl, string extensionName)
     {
-        gl.GetInteger(GetPName.NumExtensions, out int count);
-
-        for (uint i = 0; i < count; i++)
+        string[] extensions = GetExtensions(gl);
+        for (int i = 0; i < extensions.Length; i++)
         {
-            string? ext = gl.GetStringS(GLEnum.Extensions, i);
-            if (ext == extensionName)
+            if (string.Equals(extensions[i], extensionName, StringComparison.Ordinal))
+            {
                 return true;
+            }
         }
-
         return false;
+    }
+
+    /// <summary>
+    /// Returns a cached GL extension string array     
+    /// </summary>
+    
+    public static string[] GetExtensions(GL gl)
+    {
+        return _extensionStringCache.GetValue(gl, k =>
+        {
+            gl.GetInteger(GetPName.NumExtensions, out int count);
+            string[] R = new string[count];
+
+            for (uint i = 0; i < count; i++)
+            {
+                string? ext = gl.GetStringS(GLEnum.Extensions, i);
+                R[i] = ext;
+            }
+
+            return R;
+        });
+
+
     }
     
     /// <summary>
@@ -51,6 +78,9 @@ public static class GLHelper
 
     public static bool HasDSA(GL gl)
     {
+        // DSA is core in OpenGL 4.5, but may be available earlier through
+        // GL_ARB_direct_state_access. Prefer feature detection over version-only checks.
+
         var info = _hasDSACache.GetValue(gl, k =>
         {
             return new HasDSAInfo() { HasDSA = (VersionCompare(gl, 4, 5) >= 0) || 
