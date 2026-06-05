@@ -1,0 +1,11 @@
+## Parameters
+- Repository name: CrystalCatalystLibrary
+- Primary purpose: Managed and native support library for cross-platform rendering, OpenGL helpers, and Crystal/NewAge ecosystem integration.
+- Main languages/runtimes: C#, C/C++, .NET, OpenGL
+- Target platforms: Windows and Linux
+- Primary solution/project files: <discover from repository>
+- Special focus areas: _EXPORT_ native entry points, managed rendering classes, OpenGL helpers, platform-specific interop, tests
+- Reference depth: deep
+- File path style: repo-relative only
+- Export marker: _EXPORT_
+- Existing Reference.md policy: create
