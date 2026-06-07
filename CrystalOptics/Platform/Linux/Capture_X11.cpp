@@ -156,9 +156,10 @@ DisplayInfo Capture_GetDisplayInfo(int32_t index) {
 
 PixData Capture_Desktop() {
     if (is_wayland_session()) {
-        // Wayland: XGetImage is blocked by the compositor. Full Wayland portal
-        // support (wlr-screencopy / XDG portal) is a future addition.
-        // Attempting XWayland fallback via DISPLAY if set.
+        // Wayland: try the XDG portal first.
+        PixData r = Capture_Portal();
+        if (r) return r;
+        // Portal unavailable — attempt XWayland fallback.
         if (!std::getenv("DISPLAY")) return PixData{};
     }
 
@@ -176,7 +177,12 @@ PixData Capture_Desktop() {
 }
 
 PixData Capture_Display(int32_t index) {
-    if (is_wayland_session() && !std::getenv("DISPLAY")) return PixData{};
+    if (is_wayland_session()) {
+        // Portal captures the full screen; use it and note display selection is not supported.
+        PixData r = Capture_Portal();
+        if (r) return r;
+        if (!std::getenv("DISPLAY")) return PixData{};
+    }
 
     Display* dpy = XOpenDisplay(nullptr);
     if (!dpy) return PixData{};
@@ -206,7 +212,11 @@ PixData Capture_Display(int32_t index) {
 }
 
 PixData Capture_ActiveWindow() {
-    if (is_wayland_session() && !std::getenv("DISPLAY")) return PixData{};
+    if (is_wayland_session()) {
+        PixData r = Capture_Portal();
+        if (r) return r;
+        if (!std::getenv("DISPLAY")) return PixData{};
+    }
 
     Display* dpy = XOpenDisplay(nullptr);
     if (!dpy) return PixData{};

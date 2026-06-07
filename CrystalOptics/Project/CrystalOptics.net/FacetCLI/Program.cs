@@ -12,6 +12,7 @@ using CrystalCatalyst.Optics.FacetCLI;
 string? verb      = null;
 int     display   = 0;
 bool    desktop   = false;
+bool    portal    = false;
 bool    activeWin = false;
 int[]?  bounds    = null;
 string  format    = "webp";
@@ -35,6 +36,9 @@ for (int i = 1; i < argv.Length; i++)
             break;
         case "--desktop":
             desktop = true;
+            break;
+        case "--portal":
+            portal = true;
             break;
         case "--active-window":
             activeWin = true;
@@ -83,7 +87,8 @@ if (verb == "list-displays")
 }
 
 // verb == "capture"
-using PixData pix = desktop      ? ScreenCapture.CaptureDesktop()
+using PixData pix = portal       ? ScreenCapture.CapturePortal()
+                  : desktop      ? ScreenCapture.CaptureDesktop()
                   : activeWin    ? ScreenCapture.CaptureActiveWindow()
                   :                ScreenCapture.CaptureDisplay(display);
 
@@ -92,10 +97,10 @@ if (!pix)
     var wayland = Environment.GetEnvironmentVariable("WAYLAND_DISPLAY");
     var session = Environment.GetEnvironmentVariable("XDG_SESSION_TYPE");
     if (!string.IsNullOrEmpty(wayland) || session == "wayland")
-        Fail("Capture failed. Wayland compositors block XGetImage.\n" +
-             "  Try: XDG_SESSION_TYPE=x11 FacetCLI capture --desktop\n" +
-             "  Or launch your session with X11 instead of Wayland.\n" +
-             "  Full Wayland portal support is planned.");
+        Fail("Capture failed on Wayland.\n" +
+             "  The XDG portal was attempted but unavailable or cancelled.\n" +
+             "  Ensure xdg-desktop-portal and a backend are running.\n" +
+             "  You can also try: XDG_SESSION_TYPE=x11 FacetCLI capture --desktop");
     else
         Fail("Capture returned no data. The display server may not support framebuffer reads.");
 }
@@ -129,7 +134,7 @@ static int Fail(string message)
     Console.Error.WriteLine($"[FacetCLI] ERROR: {message}");
     Console.Error.WriteLine();
     Console.Error.WriteLine("Usage:");
-    Console.Error.WriteLine("  FacetCLI capture [--display N] [--desktop] [--active-window]");
+    Console.Error.WriteLine("  FacetCLI capture [--display N] [--desktop] [--portal] [--active-window]");
     Console.Error.WriteLine("           [--bounds x,y,w,h]");
     Console.Error.WriteLine("           [--format webp|png|jpeg] [--quality 1-100] [--grayscale]");
     Console.Error.WriteLine("           [--out base64|stdout|file] [--out-file PATH]");

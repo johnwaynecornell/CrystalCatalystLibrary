@@ -51,6 +51,12 @@ namespace CrystalOptics {
     // Returned PixData format: "bgra:int8". Caller must Dispose/free.
     _OPTICS_EXPORT_ PixData Capture_ActiveWindow();
 
+    // Captures via the XDG Desktop Portal (Wayland-safe).
+    // Works on GNOME, KDE, and any compositor shipping the portal.
+    // Requires dbus-1. May briefly show a compositor permission dialog.
+    // Returns empty PixData if the portal is unavailable or the request fails.
+    _OPTICS_EXPORT_ PixData Capture_Portal();
+
 }
 
 #endif // CRYSTALOPTICS_CAPTUREAPI_H
