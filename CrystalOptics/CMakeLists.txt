@@ -14,6 +14,8 @@ include($ENV{NewAge}/include/JWCEssentials/JWCEssentials.cmake)
 
 add_library(CrystalOptics SHARED)
 
+newage_configure_native_paths(CrystalOptics)
+
 include(Platform/${CRYSTAL_PLATFORM}/Platform.cmake)
 
 target_sources(CrystalOptics PUBLIC

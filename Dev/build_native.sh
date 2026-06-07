@@ -78,3 +78,4 @@ fi
 NEWAGE_BUILD_FRESH="$FRESH"
 NEWAGE_BUILD_CLEAN="$CLEAN"
 newage_native_build_directory .
+newage_native_build_directory CrystalOptics
