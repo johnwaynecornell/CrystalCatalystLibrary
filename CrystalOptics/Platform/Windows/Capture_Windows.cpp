@@ -96,4 +96,9 @@ PixData Capture_ActiveWindow() {
     return gdi_capture(r.left, r.top, r.right - r.left, r.bottom - r.top);
 }
 
+// No portal on Windows — delegate to the full desktop GDI capture.
+PixData Capture_Portal() {
+    return Capture_Desktop();
+}
+
 } // namespace CrystalOptics

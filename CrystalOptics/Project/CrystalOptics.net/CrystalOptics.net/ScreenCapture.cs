@@ -38,6 +38,14 @@ public static class ScreenCapture
     public static PixData CaptureActiveWindow()
         => Imports.Capture_ActiveWindow();
 
+    /// <summary>
+    /// Capture via the XDG Desktop Portal — works on Wayland (GNOME, KDE, wlroots).
+    /// May briefly show a compositor permission dialog. Returns empty PixData if
+    /// the portal is unavailable or the request is cancelled.
+    /// </summary>
+    public static PixData CapturePortal()
+        => Imports.Capture_Portal();
+
     public static class Imports
     {
         [DllImport("CrystalOptics")]
@@ -54,5 +62,8 @@ public static class ScreenCapture
 
         [DllImport("CrystalOptics")]
         public static extern PixData Capture_ActiveWindow();
+
+        [DllImport("CrystalOptics")]
+        public static extern PixData Capture_Portal();
     }
 }
