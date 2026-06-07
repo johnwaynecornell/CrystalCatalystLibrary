@@ -87,6 +87,16 @@ if (verb == "list-displays")
 }
 
 // verb == "capture"
+
+// Detect Wayland — the native layer auto-routes through the portal, which
+// returns the full virtual desktop. We track this so we can offset bounds.
+bool onWayland = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY"))
+              || Environment.GetEnvironmentVariable("XDG_SESSION_TYPE") == "wayland";
+
+// fullDesktopResult: the captured image covers the entire virtual desktop,
+// so any display/window targeting must be resolved as an offset into it.
+bool fullDesktopResult = portal || desktop || (onWayland && !desktop);
+
 using PixData pix = portal       ? ScreenCapture.CapturePortal()
                   : desktop      ? ScreenCapture.CaptureDesktop()
                   : activeWin    ? ScreenCapture.CaptureActiveWindow()
@@ -94,9 +104,7 @@ using PixData pix = portal       ? ScreenCapture.CapturePortal()
 
 if (!pix)
 {
-    var wayland = Environment.GetEnvironmentVariable("WAYLAND_DISPLAY");
-    var session = Environment.GetEnvironmentVariable("XDG_SESSION_TYPE");
-    if (!string.IsNullOrEmpty(wayland) || session == "wayland")
+    if (onWayland)
         Fail("Capture failed on Wayland.\n" +
              "  The XDG portal was attempted but unavailable or cancelled.\n" +
              "  Ensure xdg-desktop-portal and a backend are running.\n" +
@@ -105,7 +113,43 @@ if (!pix)
         Fail("Capture returned no data. The display server may not support framebuffer reads.");
 }
 
-byte[] encoded = ImageProcessor.Process(pix, format, quality, grayscale, bounds);
+// Compute the base rect: where in the image does the requested target start?
+// X11 display/window captures are already cropped to the target (base = 0,0).
+// Portal/desktop captures are full virtual desktop, so we resolve the offset.
+int baseX = 0, baseY = 0, baseW = pix.width, baseH = pix.height;
+
+if (fullDesktopResult && !desktop)
+{
+    if (!activeWin)
+    {
+        // Display-targeted capture: offset into the full desktop image.
+        var info = ScreenCapture.GetDisplayInfo(display);
+        if (info.Width > 0 && info.Height > 0)
+        {
+            baseX = info.X; baseY = info.Y;
+            baseW = info.Width; baseH = info.Height;
+        }
+    }
+    // activeWin + portal: window position unknown from managed side — use full desktop.
+}
+
+// Resolve --bounds as relative to the base rect, then clip to image dimensions.
+int[]? effectiveBounds = null;
+if (bounds != null)
+{
+    int bx = Math.Clamp(baseX + bounds[0], 0, pix.width  - 1);
+    int by = Math.Clamp(baseY + bounds[1], 0, pix.height - 1);
+    int bw = Math.Clamp(bounds[2], 1, pix.width  - bx);
+    int bh = Math.Clamp(bounds[3], 1, pix.height - by);
+    effectiveBounds = new[] { bx, by, bw, bh };
+}
+else if (fullDesktopResult && !desktop && (baseX != 0 || baseY != 0 || baseW != pix.width || baseH != pix.height))
+{
+    // Auto-crop to the target display region within the full desktop image.
+    effectiveBounds = new[] { baseX, baseY, baseW, baseH };
+}
+
+byte[] encoded = ImageProcessor.Process(pix, format, quality, grayscale, effectiveBounds);
 
 switch (outMode)
 {
