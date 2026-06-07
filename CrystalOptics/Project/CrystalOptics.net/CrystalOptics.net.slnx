@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="CrystalOptics.net/CrystalOptics.net.csproj" />
+  <Project Path="FacetCLI/FacetCLI.csproj" />
+</Solution>

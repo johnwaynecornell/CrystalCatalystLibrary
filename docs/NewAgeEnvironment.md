@@ -86,6 +86,9 @@ Native projects may require:
 
 On Windows, this may include Visual Studio Build Tools, CMake, Git, and a Bash provider such as Git Bash or MSYS2.
 
+On Linux common X11 headers may include 'libx11-dev libxcb-dev libxext-dev libxinerama-dev libxrandr-dev libxi-dev libxcursor-dev libxrender-dev libxft-dev libxfixes-dev libxdamage-dev libxcomposite-dev
+'
+
 Repository-Specific Notes
 -------------------------
 
