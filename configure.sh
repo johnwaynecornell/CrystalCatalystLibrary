@@ -72,4 +72,10 @@ newage_register_directory \
     "$NewAge/include/$REPO_REL_PATH" \
     required
 
+newage_register_directory \
+    "$REPO_ROOT/CrystalOptics/include/CrystalOptics" \
+    "$NewAge/include/CrystalOptics" \
+    required
+
+
 newage_log "Workspace setup complete."
