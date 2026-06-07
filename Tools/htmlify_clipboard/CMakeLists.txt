@@ -2,6 +2,8 @@
 
  set(CMAKE_CXX_STANDARD 17)
 
+ project(htmlify_clipboard)
+
  include($ENV{NewAge}/include/JWCEssentials/JWCEssentials.cmake)
 
  add_executable(htmlify_clipboard
