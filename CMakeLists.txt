@@ -62,6 +62,7 @@ target_link_libraries(CrystalCatalystLibrary PUBLIC ${LIBJWCEssentials})
 
 add_subdirectory(Test)
 add_subdirectory(Tools/clipboard_html)
+add_subdirectory(CrystalOptics)
 
 shuttle(CrystalCatalystLibrary lib)
  
