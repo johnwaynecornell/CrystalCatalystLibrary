@@ -49,8 +49,6 @@ initPlatformConfig()
          Platform.cpp
          include/CrystalCatalystLibrary/Platform.h
 
-         include/CrystalCatalystLibrary/Windowing/ScreenCapture.h
-
      ${PLATFORM_SOURCES})
 
  add_definitions(-DBUILD_CRYSTALCATALYSTLIBRARY)
