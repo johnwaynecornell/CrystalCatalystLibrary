@@ -33,6 +33,8 @@ set(PLATFORM_SOURCES
         Platform/Windows/CrystalApplication_Windows.cpp
         Platform/Windows/CrystalApplication_Windows.h
 
+        Platform/Windows/Windowing/ScreenCapture_Windows.cpp
+
         Platform/Windows/Fonts/Fonts.cpp
         Platform/Windows/Fonts/Fonts.h
 )

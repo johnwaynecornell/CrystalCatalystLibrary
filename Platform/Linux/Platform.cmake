@@ -32,10 +32,24 @@ set(PLATFORM_SOURCES
         Platform/Linux/CrystalApplication_X11.cpp
         Platform/Linux/CrystalApplication_X11.h
 
+        Platform/Linux/Windowing/ScreenCapture_X11.cpp
+
         Platform/Linux/Fonts/Fonts.cpp
         Platform/Linux/Fonts/Fonts.h
 )
 
-target_link_libraries(CrystalCatalystLibrary PUBLIC  pthread X11 GL Xcursor)
+# Detect XRandR for multi-monitor display enumeration
+find_package(PkgConfig QUIET)
+if(PkgConfig_FOUND)
+    pkg_check_modules(XRANDR xrandr)
+endif()
+
+if(XRANDR_FOUND)
+    add_definitions(-DHAVE_XRANDR)
+    target_link_libraries(CrystalCatalystLibrary PUBLIC pthread X11 GL Xcursor ${XRANDR_LIBRARIES})
+    target_include_directories(CrystalCatalystLibrary PRIVATE ${XRANDR_INCLUDE_DIRS})
+else()
+    target_link_libraries(CrystalCatalystLibrary PUBLIC pthread X11 GL Xcursor)
+endif()
 
 #include_directories(${CMAKE_CURRENT_LIST_DIR})
