@@ -261,10 +261,14 @@ public class AnsiSkiaRenderer
                 if (sc.Blink && !blinkState) { }
                 else
                 {
-                    SKColor fg = sc.Reverse ? sc.Bg : sc.Fg;
-                    SKColor bg = sc.Reverse ? sc.Fg : sc.Bg;
-                    if (fg == SKColors.Transparent) fg = DefaultFg;
+                    SKColor fg, bg;
 
+                    fg = sc.Reverse ? sc.Bg : sc.Fg;
+                    bg = sc.Reverse ? sc.Fg : sc.Bg;
+                    
+                    if (fg == SKColors.Transparent)
+                        fg = new SKColor((byte)( 0xFF - bg.Red), (byte)(0xFF - bg.Green), (byte)(0xFF - bg.Blue), bg.Alpha);
+                    
                     paint.Color = fg;
                     
                     float charWidth = font.MeasureText(sc.Glyph.ToString());
