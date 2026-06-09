@@ -16,18 +16,115 @@ public class AnsiSkiaRenderer
     /// <summary>Font size in pixels.</summary>
     public float FontSize { get; set; } = 20;
     /// <summary>Font family name.</summary>
-    public string FontFamily { get; set; } = "Monospace";
+    public string FontFamily { get; set; } = "DejaVu Sans Mono";
     /// <summary>Default foreground color.</summary>
     public SKColor DefaultFg { get; set; } = SKColors.White;
     /// <summary>Default background color.</summary>
     public SKColor DefaultBg { get; set; } = SKColors.Transparent;
 
+    public Dictionary<String, SKTypeface> TypefaceCache = new();
+
+    public SKTypeface GetTypeface(string family)
+    {
+        if (!TypefaceCache.TryGetValue(family, out var typeface))
+        {
+            typeface = SKTypeface.FromFamilyName(family);
+            TypefaceCache[family] = typeface;
+        }
+        return typeface;
+    }
+    
+    public bool HasFontFamilyAndGlyph(String family, String glyph)
+    {
+        using (SKTypeface typeface = GetTypeface(family))
+        {
+            // If the names do not match, the exact font family wasn't found
+            // and SkiaSharp used a fallback instead.
+            bool isAvailable = typeface.FamilyName.Equals(family, StringComparison.OrdinalIgnoreCase);
+    
+            if (isAvailable)
+            {
+                using var font = new SKFont(typeface, 16f);
+
+                // Check if the font family has the glyph for a specific string or codepoint
+                return font.ContainsGlyphs(glyph); 
+            }
+        }
+
+        return false;
+    }
+
+    private static readonly string[] FallbackFamilies =
+    {
+        // Good broad text/math Unicode fallbacks
+        "DejaVu Sans Mono",
+        "Noto Sans Mono",
+        "Noto Sans",
+        "Noto Serif",
+        "Noto Sans Symbols",
+        "Noto Sans Symbols 2",
+        "STIX Two Math",
+        "Cambria Math",
+
+        // Emoji fallbacks last
+        "Noto Color Emoji",
+        "Segoe UI Emoji",
+        "Apple Color Emoji",
+        "DejaVu Sans",
+    };
+    
+    public Dictionary<string, string> FamilyCache = new Dictionary<string, string>();
+
+    public string FontFamilyForGlyph(string glyph)
+    {
+        if (!FamilyCache.TryGetValue(glyph, out string family))
+        {
+            family = FontFamily;
+
+            if (glyph == " " || HasFontFamilyAndGlyph(FontFamily, glyph))
+            {
+                family = FontFamily;
+            }
+            else
+            {
+                foreach (string fam in FallbackFamilies)
+                {
+                    if (HasFontFamilyAndGlyph(fam, glyph))
+                    {
+                        family = fam;
+                        break;
+                    }
+                }
+            }
+
+            FamilyCache[glyph] = family;
+        }
+
+        return family;
+    }
+    
+    private readonly Dictionary<(SKTypeface face, float size, bool bold, bool italic), SKFont> FontCache = new();
+    
+    public SKFont GetFont(SKTypeface face, float size, bool bold, bool italic)
+    {
+        if (!FontCache.TryGetValue((face, size, bold, italic), out var font))
+        {
+            font = new SKFont(face, size);// { Bold = bold, Oblique = italic };
+            font.Embolden = bold;
+            font.SkewX = italic ? -0.25f : 0;
+
+            FontCache[(face, size, bold, italic)] = font;
+        }
+
+        return font;
+    }
+    
     /// <summary>
     /// Represents a single character with its ANSI styling.
     /// </summary>
     public struct StyledChar
     {
-        public char Char;
+        public string Glyph;
         public SKColor Fg;
         public SKColor Bg;
         public bool Bold;
@@ -67,19 +164,19 @@ public class AnsiSkiaRenderer
         var switches = new Dictionary<string, bool>();
 
         var sniffer = new AnsiEffectSniffer();
-        sniffer.Char = c =>
+        sniffer.Glyph = c =>
         {
-            if (c == '\n')
+            if (c == "\n")
             {
                 content.Lines.Add(currentLine);
                 currentLine = new List<StyledChar>();
             }
-            else if (c == '\r') { }
+            else if (c == "\r") { }
             else
             {
                 currentLine.Add(new StyledChar
                 {
-                    Char = c,
+                    Glyph = c,
                     Fg = currentFg,
                     Bg = currentBg,
                     Bold = switches.GetValueOrDefault("bold"),
@@ -124,9 +221,6 @@ public class AnsiSkiaRenderer
 
     private SKSize Measure(ParsedContent content)
     {
-        using var typeface = SKTypeface.FromFamilyName(FontFamily);
-        using var font = new SKFont(typeface, FontSize);
-
         float maxWidth = 0;
         float height = 0;
         float lineSpacing = 5;
@@ -136,8 +230,10 @@ public class AnsiSkiaRenderer
             float lineWidth = 0;
             foreach (var sc in line)
             {
-                font.Embolden = sc.Bold;
-                lineWidth += font.MeasureText(sc.Char.ToString());
+                var typeface = GetTypeface(FontFamilyForGlyph(sc.Glyph));
+                var font = GetFont(typeface, FontSize, sc.Bold, sc.Italic);
+                
+                lineWidth += font.MeasureText(sc.Glyph.ToString());
             }
             maxWidth = Math.Max(maxWidth, lineWidth);
             height += FontSize + lineSpacing;
@@ -153,14 +249,15 @@ public class AnsiSkiaRenderer
         float lineSpacing = 5;
 
         using var paint = new SKPaint { IsAntialias = true };
-        using var typeface = SKTypeface.FromFamilyName(FontFamily);
-        using var font = new SKFont(typeface, FontSize);
 
         foreach (var line in content.Lines)
         {
             float curX = x;
             foreach (var sc in line)
             {
+                var typeface = GetTypeface(FontFamilyForGlyph(sc.Glyph));
+                var font = GetFont(typeface, FontSize, sc.Bold, sc.Italic);
+                
                 if (sc.Blink && !blinkState) { }
                 else
                 {
@@ -169,10 +266,8 @@ public class AnsiSkiaRenderer
                     if (fg == SKColors.Transparent) fg = DefaultFg;
 
                     paint.Color = fg;
-                    font.Embolden = sc.Bold;
-                    font.SkewX = sc.Italic ? -0.25f : 0;
-
-                    float charWidth = font.MeasureText(sc.Char.ToString());
+                    
+                    float charWidth = font.MeasureText(sc.Glyph.ToString());
 
                     if (bg != SKColors.Transparent)
                     {
@@ -180,13 +275,13 @@ public class AnsiSkiaRenderer
                         canvas.DrawRect(curX, y - FontSize, charWidth, FontSize + lineSpacing, bgPaint);
                     }
 
-                    canvas.DrawText(sc.Char.ToString(), curX, y, font, paint);
+                    canvas.DrawText(sc.Glyph.ToString(), curX, y, font, paint);
 
                     if (sc.Underline) canvas.DrawLine(curX, y + 2, curX + charWidth, y + 2, paint);
                     if (sc.Overline) canvas.DrawLine(curX, y - FontSize, curX + charWidth, y - FontSize, paint);
                     if (sc.Crossed) canvas.DrawLine(curX, y - FontSize / 2, curX + charWidth, y - FontSize / 2, paint);
                 }
-                curX += font.MeasureText(sc.Char.ToString());
+                curX += font.MeasureText(sc.Glyph.ToString());
             }
             y += FontSize + lineSpacing;
         }

@@ -1,4 +1,4 @@
-[31mhello[5m!!![25;39m This is a CrystalCatalyst dotnet app
+∑😃 [31mhello[5m!!![25;39m This is a CrystalCatalyst dotnet app
 [107;34mIt is designed as a [5mSimple Example[25;39;49;49m
 If you click [35m[OK][32m or [35m[Confirm][39m I will echo back
-[36mThis proves my utility as a simple dialog[39m
+[36mThis proves my utility as a simple dialog.[39m
