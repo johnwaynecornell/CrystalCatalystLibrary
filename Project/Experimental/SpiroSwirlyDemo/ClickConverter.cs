@@ -30,8 +30,8 @@ public class ClickConverter
             bool rc = false;
             if (time <= this.time + 1)
             {
-                double xx = Math.Pow(Math.Abs(x - this.x), 2);
-                double yy = Math.Pow(Math.Abs(y - this.y), 2);
+                double xx = Math.Pow(x - this.x, 2);
+                double yy = Math.Pow(y - this.y, 2);
                 double l = Math.Sqrt(xx + yy);
                 rc = l < 10;
             }
