@@ -76,7 +76,7 @@ namespace SpiroSwirlyDemo
                 wnd.PresentPix(ref screen);
             };
             
-            wnd.OnMouseDown = (handle, button, i, i1) =>
+            ClickConverter click = new ClickConverter( (handle, button, x, y) =>
             {
                 if (wnd.OnDraw == plainDraw)
                 {
@@ -87,8 +87,11 @@ namespace SpiroSwirlyDemo
                     wnd.OnDraw = fancyDraw;
                 }
                 else wnd.OnDraw = plainDraw;
-            };
-
+            });
+            
+            wnd.OnMouseDown = click.OnMouseDown;
+            wnd.OnMouseUp = click.OnMouseUp;
+            
             wnd.OnDraw = plainDraw;
             
             double lastTime = -1;
