@@ -35,6 +35,8 @@ namespace CrystalCatalyst.SkiaScene.Experimental
             {
                 child.Render(canvas, context);
             }
+            
+            canvas.Restore();
         }
     }
 }
