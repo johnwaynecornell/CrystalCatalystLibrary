@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrystalCatalyst.SkiaScene.E
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WheelDemo", "WheelDemo\WheelDemo.csproj", "{B49AAF23-183A-4ED6-8A9E-99D8E6836A9A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpiroSwirlyDemo", "SpiroSwirlyDemo\SpiroSwirlyDemo.csproj", "{57884479-3ADC-4158-A03F-078BEBFC7FFC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{B49AAF23-183A-4ED6-8A9E-99D8E6836A9A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B49AAF23-183A-4ED6-8A9E-99D8E6836A9A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B49AAF23-183A-4ED6-8A9E-99D8E6836A9A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{57884479-3ADC-4158-A03F-078BEBFC7FFC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{57884479-3ADC-4158-A03F-078BEBFC7FFC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{57884479-3ADC-4158-A03F-078BEBFC7FFC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{57884479-3ADC-4158-A03F-078BEBFC7FFC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
