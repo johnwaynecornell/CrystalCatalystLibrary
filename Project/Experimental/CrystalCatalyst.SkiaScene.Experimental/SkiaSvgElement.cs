@@ -1,7 +1,6 @@
 using System.Text;
 using CrystalSkia.net;
 using SkiaSharp;
-using Svg.Skia;
 using SKSvg = Svg.Skia.SKSvg;
 
 namespace CrystalCatalyst.SkiaScene.Experimental

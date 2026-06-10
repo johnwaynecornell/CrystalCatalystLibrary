@@ -14,6 +14,7 @@
     <PackageReference Include="SkiaSharp.Svg" Version="1.60.0" />
     <PackageReference Include="Svg.Skia" Version="5.0.0" />
   </ItemGroup>
+
   <!-- Reference the main CrystalCatalyst library so experimental elements can reuse core types -->
   <ItemGroup>
     <Reference Include="$(MyReferencePath)\JWCEssentials.net.dll" />
