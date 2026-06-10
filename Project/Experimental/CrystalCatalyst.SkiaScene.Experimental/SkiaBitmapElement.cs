@@ -11,7 +11,7 @@ namespace CrystalCatalyst.SkiaScene.Experimental
 
         public override void Render(SKCanvas canvas, RenderContext context)
         {
-            if (!Visible)
+            if (!Visible || Opacity <= 0f || Bitmap == null)
                 return;
 
             canvas.Save();
@@ -19,7 +19,7 @@ namespace CrystalCatalyst.SkiaScene.Experimental
             var m = ToSKMatrix(Transform);
             canvas.Concat(ref m);
 
-            if (Opacity >= 0f && Bitmap != null) canvas.DrawBitmap(Bitmap, 0, 0);
+            canvas.DrawBitmap(Bitmap, 0, 0);
 
             foreach (var child in Children)
             {

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Numerics;
 using SkiaSharp;
 
-
 namespace CrystalCatalyst.SkiaScene.Experimental
 {
     /// <summary>
@@ -36,8 +35,17 @@ namespace CrystalCatalyst.SkiaScene.Experimental
         /// </summary>
         public List<SkiaElement> Children { get; } = new List<SkiaElement>();
 
+        /// <summary>
+        /// Optional callback invoked during the update pass.  Use this to inject custom
+        /// animation logic without subclassing every element.  The parameters are:
+        /// <list type="bullet">
+        ///   <item><description>The element being updated.</description></item>
+        ///   <item><description>Time delta in seconds.</description></item>
+        ///   <item><description>The current animation context.</description></item>
+        /// </list>
+        /// </summary>
         public Action<SkiaElement, double, AnimationContext>? OnUpdate { get; set; } = null;
-        
+
         /// <summary>
         /// Update the element for the next frame.  Override to animate or update state.
         /// </summary>
@@ -45,8 +53,11 @@ namespace CrystalCatalyst.SkiaScene.Experimental
         /// <param name="context">Animation context containing global state.</param>
         public virtual void Update(double dt, AnimationContext context)
         {
+            // Invoke any user-provided update callback before updating children.
+            // This allows the element to adjust its own transform or other state prior to
+            // propagating the update down the hierarchy.
             OnUpdate?.Invoke(this, dt, context);
-            
+
             foreach (var child in Children)
             {
                 child.Update(dt, context);

@@ -34,7 +34,8 @@ namespace CrystalCatalyst.SkiaScene.Experimental
 
         public override void Render(SKCanvas canvas, RenderContext context)
         {
-            if (!Visible)
+            if (!Visible || Opacity <= 0f)
+                return;
 
             canvas.Save();
 
@@ -43,7 +44,7 @@ namespace CrystalCatalyst.SkiaScene.Experimental
 
             EnsureParsed();
 
-            if (Opacity >= 0f && _parsed?.Picture != null)
+            if (_parsed?.Picture != null)
             {
                 canvas.DrawPicture(_parsed.Picture);
             }

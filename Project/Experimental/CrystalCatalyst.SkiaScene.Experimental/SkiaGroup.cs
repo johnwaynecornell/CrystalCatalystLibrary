@@ -9,7 +9,7 @@ namespace CrystalCatalyst.SkiaScene.Experimental
     {
         public override void Render(SKCanvas canvas, RenderContext context)
         {
-            if (!Visible)
+            if (!Visible || Opacity <= 0f)
                 return;
 
             canvas.Save();

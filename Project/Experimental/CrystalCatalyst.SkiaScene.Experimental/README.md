@@ -17,7 +17,7 @@ The goal of this experiment is to explore whether CrystalCatalyst should eventua
 This project is not wired into the normal `build_managed.sh` pipeline.  To build it manually, run something like:
 
 ```sh
-dotnet build Project/Experimental/CrystalCatalyst.SkiaScene.Experimental/CrystalCatalyst.SkiaScene.Experimental.csproj
+dotnet build Projects/CrystalCatalystSkiaScene.Experimental/CrystalCatalystSkiaScene.Experimental.csproj
 ```
 
 For convenience, a simple `Dev/build_manual.sh` script is included in this directory.  This script invokes `dotnet build` for you.

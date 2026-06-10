@@ -16,27 +16,39 @@ namespace CrystalCatalyst.SkiaScene.Experimental
 
         public override void Render(SKCanvas canvas, RenderContext context)
         {
-            if (!Visible)
+            // Respect visibility and opacity skip rules.
+            if (!Visible || Opacity <= 0f)
                 return;
 
             canvas.Save();
+            try
+            {
+                // Apply local transform
+                var m = ToSKMatrix(Transform);
+                canvas.Concat(ref m);
 
-            var m = ToSKMatrix(Transform);
-            canvas.Concat(ref m);
-            
-            if (PixData)
-                using (var bitmap = CrystalSkia.net.PixDataSkia.CreateBitmapView(PixData))
+                // Draw PixData if available by creating a transient bitmap view via CrystalSkia.
+                if (PixData != null)
                 {
-                    if (Opacity >= 0f && bitmap != null)
+                    // The CrystalSkia.net.PixDataSkia.CreateBitmapView method returns an SKBitmap wrapper
+                    // over the PixData buffer without copying.  Dispose the bitmap after use.
+                    using var bitmap = CrystalSkia.net.PixDataSkia.CreateBitmapView(PixData);
+                    if (bitmap != null)
+                    {
                         canvas.DrawBitmap(bitmap, 0, 0);
+                    }
                 }
 
-            foreach (var child in Children)
-            {
-                child.Render(canvas, context);
+                // Render children
+                foreach (var child in Children)
+                {
+                    child.Render(canvas, context);
+                }
             }
-            
-            canvas.Restore();
+            finally
+            {
+                canvas.Restore();
+            }
         }
     }
 }
