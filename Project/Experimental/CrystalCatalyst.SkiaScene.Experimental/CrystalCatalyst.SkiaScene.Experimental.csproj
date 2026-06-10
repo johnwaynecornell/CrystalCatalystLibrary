@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>CrystalCatalyst.SkiaScene.Experimental</RootNamespace>
+  </PropertyGroup>
+  <PropertyGroup>
+    <MyReferencePath>$(NewAge)\DotNet\Libs\lib\$(Configuration)\$(TargetFramework)</MyReferencePath>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" Version="[3.119.2,4.0.0)" />
+    <PackageReference Include="SkiaSharp.Svg" Version="1.60.0" />
+    <PackageReference Include="Svg.Skia" Version="5.0.0" />
+  </ItemGroup>
+  <!-- Reference the main CrystalCatalyst library so experimental elements can reuse core types -->
+  <ItemGroup>
+    <Reference Include="$(MyReferencePath)\JWCEssentials.net.dll" />
+    <Reference Include="$(MyReferencePath)\CrystalCatalystLibrary.net.dll" />
+    <Reference Include="$(MyReferencePath)\CrystalSkia.net.dll" />
+  </ItemGroup>
+</Project>
