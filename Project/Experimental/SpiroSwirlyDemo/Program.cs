@@ -38,7 +38,7 @@ namespace SpiroSwirlyDemo
                 height = newHeight;
             };
             
-            wnd.OnDraw = handle =>
+            CrystalWindow.Delegate_on_draw plainDraw = le =>
             {
                 var pix = FixedPixDataRenderer.CreateFixed(width, height, (canvas, info) =>
                 {
@@ -51,6 +51,46 @@ namespace SpiroSwirlyDemo
                 pix.Dispose();
             };
 
+            PixData screen = new PixData();
+            CrystalWindow.Delegate_on_draw fancyDraw = le =>
+            {
+                if (!screen || screen.width != width || screen.height != height)
+                {
+                    screen.Dispose();
+                    screen = FixedPixDataRenderer.CreateFixed(width, height, (canvas, info) => canvas.Clear(SKColors.Navy));
+                }
+                
+                CrystalSkia.net.PixDataSkia.WithCanvasView(screen, (bitmap, canvas) =>
+                {
+                    canvas.Translate(width / 2, height / 2);
+                    SvgSpiroSwirlyDemo.Render(sceen, canvas);
+                    
+                    canvas.ResetMatrix();
+                    using (var paint = new SKPaint())
+                    {
+                        paint.Color = new SKColor(0, 0, 128, 30); // Navy with small alpha (~12%)
+                        canvas.DrawRect(0, 0, width, height, paint);
+                    }
+                });
+                
+                wnd.PresentPix(ref screen);
+            };
+            
+            wnd.OnMouseDown = (handle, button, i, i1) =>
+            {
+                if (wnd.OnDraw == plainDraw)
+                {
+                    screen.Dispose();
+                    screen = FixedPixDataRenderer.CreateFixed(width, height,
+                        (canvas, info) => canvas.Clear(SKColors.Navy));
+
+                    wnd.OnDraw = fancyDraw;
+                }
+                else wnd.OnDraw = plainDraw;
+            };
+
+            wnd.OnDraw = plainDraw;
+            
             double lastTime = -1;
             
             wnd.OnIdle = (w) =>
