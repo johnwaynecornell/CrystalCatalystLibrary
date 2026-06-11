@@ -98,11 +98,12 @@ namespace SpiroSwirlyDemo
                         
                     });
                 }
-                
+
                 if (!screen || screen.width != width || screen.height != height)
                 {
                     screen.Dispose();
-                    screen = Pixels.ConvertPixelsPix(ref background, background.pix_format.ToString());
+                    
+                    screen = PixDataSkia.FromBitmap(PixDataSkia.CreateBitmapView(background));
                 }
                 
                 CrystalSkia.net.PixDataSkia.WithCanvasView(screen, (bitmap, canvas) =>
@@ -134,8 +135,8 @@ namespace SpiroSwirlyDemo
                 if (wnd.OnDraw == plainDraw)
                 {
                     screen.Dispose();
-                    screen = FixedPixDataRenderer.CreateFixed(width, height,
-                        (canvas, info) => canvas.Clear(SKColors.Navy));
+                    //screen = FixedPixDataRenderer.CreateFixed(width, height,
+                    //    (canvas, info) => canvas.Clear(SKColors.Navy));
 
                     wnd.OnDraw = fancyDraw;
                 }
