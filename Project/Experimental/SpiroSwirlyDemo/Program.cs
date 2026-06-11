@@ -78,6 +78,8 @@ namespace SpiroSwirlyDemo
             
             ClickConverter click = new ClickConverter( (handle, button, x, y) =>
             {
+                if (button != (int)CrystalMouseButton.Left) return;
+                
                 if (wnd.OnDraw == plainDraw)
                 {
                     screen.Dispose();
