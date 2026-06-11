@@ -22,7 +22,7 @@ namespace CrystalCatalyst.SkiaScene.Experimental.Demos
         /// </summary>
         public SvgSpiroSwirlyDemo()
         {
-            var scene = new SkiaScene();
+            var scene = this;
 
             // Root group that holds all orbiting arms.  Its transform can be
             // adjusted to reposition the entire swirl if desired.
