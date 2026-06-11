@@ -51,26 +51,77 @@ namespace SpiroSwirlyDemo
                 pix.Dispose();
             };
 
+            PixData background = new PixData();
+            
             PixData screen = new PixData();
             CrystalWindow.Delegate_on_draw fancyDraw = le =>
             {
+                if (!background || background.width != width || background.height != height)
+                {
+                    background.Dispose();
+                    background = FixedPixDataRenderer.CreateFixed(width, height, (canvas, info) =>
+                    {
+                        canvas.Clear(SKColors.Navy);
+                        
+                        // Create a textury bluish pattern
+                        using (var paint = new SKPaint())
+                        {
+                            // Create a shader with a noise-like pattern
+                            var colors = new SKColor[]
+                            {
+                                SKColors.Aqua,
+                                new SKColor(20, 40, 140),    // Medium blue
+                                new SKColor(40, 40, 180),    
+                                new SKColor(30, 60, 160)     // Lighter blue
+                            };
+
+                            var positions = new float[] { 0f, 0.33f, 0.66f, 1f };
+
+                            // Create turbulence shader for texture
+                            var turbulence = SKShader.CreatePerlinNoiseTurbulence(
+                                baseFrequencyX: 0.05f,
+                                baseFrequencyY: 0.05f,
+                                numOctaves: 4,
+                                seed: 0);
+
+                            // Combine with gradient for color variation
+                            var gradient = SKShader.CreateLinearGradient(
+                                new SKPoint(0, 0),
+                                new SKPoint(width, height),
+                                colors,
+                                positions,
+                                SKShaderTileMode.Mirror);
+
+                            paint.Shader = SKShader.CreateCompose(gradient, turbulence, SKBlendMode.Multiply);
+                            canvas.DrawRect(0, 0, width, height, paint);
+                        }
+                        
+                    });
+                }
+                
                 if (!screen || screen.width != width || screen.height != height)
                 {
                     screen.Dispose();
-                    screen = FixedPixDataRenderer.CreateFixed(width, height, (canvas, info) => canvas.Clear(SKColors.Navy));
+                    screen = Pixels.ConvertPixelsPix(ref background, background.pix_format.ToString());
                 }
                 
                 CrystalSkia.net.PixDataSkia.WithCanvasView(screen, (bitmap, canvas) =>
                 {
                     canvas.Translate(width / 2, height / 2);
                     demo.Render(canvas);
+
                     
+                    canvas.Save();
                     canvas.ResetMatrix();
+                    
                     using (var paint = new SKPaint())
                     {
-                        paint.Color = new SKColor(0, 0, 128, 30); // Navy with small alpha (~12%)
-                        canvas.DrawRect(0, 0, width, height, paint);
+                        paint.Color = new SKColor(255, 255, 255, 30); // White with alpha 30
+                        PixDataSkia.WithBitmapView(background, skBitmap => canvas.DrawBitmap(skBitmap, 0, 0, paint));
                     }
+                    
+                    canvas.Restore();
+                    
                 });
                 
                 wnd.PresentPix(ref screen);
