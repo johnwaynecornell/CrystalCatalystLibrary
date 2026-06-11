@@ -103,7 +103,7 @@ namespace SpiroSwirlyDemo
                 {
                     screen.Dispose();
                     
-                    screen = PixDataSkia.FromBitmap(PixDataSkia.CreateBitmapView(background));
+                    screen = Pixels.CopyOrConvertPix(ref background, "");
                 }
                 
                 CrystalSkia.net.PixDataSkia.WithCanvasView(screen, (bitmap, canvas) =>
@@ -124,6 +124,7 @@ namespace SpiroSwirlyDemo
                     canvas.Restore();
                     
                 });
+                
                 
                 wnd.PresentPix(ref screen);
             };

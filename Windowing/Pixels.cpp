@@ -353,7 +353,35 @@ namespace NewAge {
         return true;
     }
 
-    PixData Pixels_ConvertPixelsPix(P_INSTANCE(PixData) pix, utf8_string_struct pixformat_dest) {
+    PixData Pixels_CopyOrConvertPix(P_INSTANCE(PixData) pix, utf8_string_struct pixformat_dest) {
+        return Pixels_CopyOrConvert(pix->pix_format, pixformat_dest,pix->pix_data, pix->pix_data_length, pix->width, pix->height);
+    }
+
+    PixData Pixels_CopyOrConvert(utf8_string_struct pixformat, utf8_string_struct pixformat_dest, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height)
+    {
+        PixData Ret = {};
+
+        if (!pixdata || !pixformat || !pixformat_dest) {
+            Ret.pix_format = (char*)"error";
+            return Ret;
+        }
+
+        if (pixformat_dest.c_str == nullptr || pixformat_dest.c_str[0] == 0 || strcmp(pixformat_dest.c_str, pixformat.c_str) == 0) {
+            Ret.pix_format = pixformat;
+            Ret.pix_data = new uint8_t[pixdata_length];
+            memcpy(Ret.pix_data, pixdata, pixdata_length);
+            Ret.pix_data_length = pixdata_length;
+            Ret.width = width;
+            Ret.height = height;
+            Ret.pix_data_free = pix_free;
+            return Ret;
+        }
+        return Pixels_ConvertPixels(pixformat, pixformat_dest, pixdata, pixdata_length, width, height);
+    }
+
+
+    PixData Pixels_ConvertPixelsPix(P_INSTANCE(PixData) pix, utf8_string_struct pixformat_dest)
+    {
         return Pixels_ConvertPixels(pix->pix_format, pixformat_dest,pix->pix_data, pix->pix_data_length, pix->width, pix->height);
     }
 
