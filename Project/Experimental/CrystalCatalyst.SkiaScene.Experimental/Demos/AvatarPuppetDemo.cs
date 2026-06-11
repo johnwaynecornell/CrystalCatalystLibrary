@@ -11,13 +11,8 @@ namespace CrystalCatalyst.SkiaScene.Experimental.Demos
     /// retained-mode scene graph can articulate named body parts using parent/child
     /// relationships and the <see cref="SkiaElement.OnUpdate"/> hook for animation.
     /// </summary>
-    public static class AvatarPuppetDemo
+    public class AvatarPuppetDemo : SkiaPresence
     {
-        // Persistent animation context.  Maintains the total elapsed time and frame
-        // count across calls to Update().  The demo methods are static so
-        // the context is also static.
-        private static AnimationContext _context = new AnimationContext();
-
         /// <summary>
         /// Create a scene containing a simple articulated avatar composed of a
         /// body, head, arms and legs.  Each limb is attached via a pivot group
@@ -25,9 +20,9 @@ namespace CrystalCatalyst.SkiaScene.Experimental.Demos
         /// avatar moves horizontally and the body bobs up and down to simulate
         /// walking.  Limb motions are phase-shifted to create a natural gait.
         /// </summary>
-        public static SkiaScene CreateScene()
+        public AvatarPuppetDemo()
         {
-            var scene = new SkiaScene();
+            var scene = this;
 
             // Root group for the entire avatar.  This will translate across the
             // canvas to simulate movement.  All other parts are children of this
@@ -156,36 +151,6 @@ namespace CrystalCatalyst.SkiaScene.Experimental.Demos
 
             // Add the avatar root to the scene
             scene.Elements.Add(avatarRoot);
-            return scene;
-        }
-
-        /// <summary>
-        /// Update the scene using the persistent animation context.  Advances
-        /// time by dt and updates all elements.  Clients should call this once
-        /// per frame.
-        /// </summary>
-        public static void Update(SkiaScene scene, double dt)
-        {
-            if (scene == null)
-                return;
-            if (dt < 0)
-                dt = 0;
-            _context.Advance(dt);
-            scene.Update(dt, _context);
-        }
-
-        /// <summary>
-        /// Render the scene onto the provided canvas.  The render context
-        /// includes the total elapsed time for elements that may need it.
-        /// Viewport dimensions are omitted for simplicity.
-        /// </summary>
-        public static void Render(SkiaScene scene, SKCanvas canvas)
-        {
-            if (scene == null || canvas == null)
-                return;
-            var rc = new RenderContext { TotalSeconds = _context.TotalSeconds };
-            
-            scene.Render(canvas, rc);
         }
     }
 }

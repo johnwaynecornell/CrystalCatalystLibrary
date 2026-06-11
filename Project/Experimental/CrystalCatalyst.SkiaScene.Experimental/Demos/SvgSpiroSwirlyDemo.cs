@@ -12,20 +12,15 @@ namespace CrystalCatalyst.SkiaScene.Experimental.Demos
     /// demonstrates nested transforms, procedural animation via <see cref="SkiaElement.OnUpdate"/>, and
     /// the reuse of <see cref="SkiaSvgElement"/> as leaf nodes.
     /// </summary>
-    public static class SvgSpiroSwirlyDemo
+    public class SvgSpiroSwirlyDemo : SkiaPresence
     {
-        // Persistent animation context for the demo.  This stores the total elapsed
-        // time and frame count.  Because the demo methods are static, this
-        // context is also static.
-        private static AnimationContext _context = new AnimationContext();
-
         /// <summary>
         /// Create a scene containing several orbiting SVG motifs.  Each orbiting
         /// group rotates around the center or last at its own speed and radius.  The
         /// child SVG also spins around its own center at a secondary speed to
         /// create a layered swirl effect.
         /// </summary>
-        public static SkiaScene CreateScene()
+        public SvgSpiroSwirlyDemo()
         {
             var scene = new SkiaScene();
 
@@ -102,7 +97,7 @@ namespace CrystalCatalyst.SkiaScene.Experimental.Demos
             }
 
             // Optionally, add a central SVG motif for visual interest.  This
-            // remains static at the origin but could also spin if desired.
+            // remains at the origin but could also spin if desired.
             var centerSvg = new SkiaSvgElement
             {
                 Identifier = "CenterSvg",
@@ -119,34 +114,6 @@ namespace CrystalCatalyst.SkiaScene.Experimental.Demos
 
             // Add the root group to the scene
             scene.Elements.Add(root);
-            return scene;
-        }
-
-        /// <summary>
-        /// Update the scene using a persistent animation context.  Call this
-        /// method once per frame to advance the animation.
-        /// </summary>
-        public static void Update(SkiaScene scene, double dt)
-        {
-            if (scene == null)
-                return;
-            if (dt < 0)
-                dt = 0;
-            _context.Advance(dt);
-            scene.Update(dt, _context);
-        }
-
-        /// <summary>
-        /// Render the scene onto the provided canvas.  The render context
-        /// carries the total elapsed time so that elements can access it if
-        /// needed.  Viewport dimensions are omitted for simplicity.
-        /// </summary>
-        public static void Render(SkiaScene scene, SKCanvas canvas)
-        {
-            if (scene == null || canvas == null)
-                return;
-            var rc = new RenderContext { TotalSeconds = _context.TotalSeconds };
-            scene.Render(canvas, rc);
         }
     }
 }

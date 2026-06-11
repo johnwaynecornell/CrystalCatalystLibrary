@@ -14,7 +14,7 @@ namespace TestWindow
     class Program
     {
         [STAThread]
-        static void Main(string[] args)
+        static void  Main(string[] args)
         {
             Application.Init(args);
             
@@ -26,7 +26,7 @@ namespace TestWindow
             wnd.ApplicationRetain();
             wnd.Show(true);
 
-            SkiaScene sceen = AvatarPuppetDemo.CreateScene();
+            AvatarPuppetDemo demo = new AvatarPuppetDemo();
 
             bool running = true;
             wnd.OnClose = (w) =>
@@ -46,7 +46,7 @@ namespace TestWindow
                 var pix = FixedPixDataRenderer.CreateFixed(width, height, (canvas, info) =>
                 {
                     canvas.Translate(0, height / 2);
-                    AvatarPuppetDemo.Render(sceen, canvas);
+                    demo.Render(canvas);
                 });
                     
                 wnd.PresentPix(ref pix);
@@ -64,7 +64,7 @@ namespace TestWindow
                 if (lastTime < 0)
                 {
                     lastTime = time;
-                    AvatarPuppetDemo.Update(sceen, 0);
+                    demo.Update(0);
                     wnd.QueueRedraw();
                 }
                 else dt = time - lastTime;
@@ -73,7 +73,7 @@ namespace TestWindow
                 {
                     lastTime = time;
                     
-                    AvatarPuppetDemo.Update(sceen, dt);
+                    demo.Update(dt);
                     wnd.QueueRedraw();
                 }
             };

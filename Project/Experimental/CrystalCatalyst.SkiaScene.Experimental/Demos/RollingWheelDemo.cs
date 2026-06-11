@@ -6,13 +6,9 @@ namespace CrystalCatalyst.SkiaScene.Experimental.Demos
     /// <summary>
     /// A simple rolling wheel demo skeleton for the experimental Skia scene system.
     /// </summary>
-    public static class RollingWheelDemo
+    public class RollingWheelDemo  : SkiaPresence
     {
-        // Maintain a single animation context across updates so that time and frame count
-        // accumulate correctly when using the demo.  This is static because the demo
-        // methods are also static and do not manage instance state.
-        private static AnimationContext _context = new AnimationContext();
-
+        
         /// <summary>
         /// Create a scene containing a simple cart with two wheels that roll as the cart
         /// moves across the canvas.  The wheels are drawn procedurally using
@@ -21,9 +17,9 @@ namespace CrystalCatalyst.SkiaScene.Experimental.Demos
         /// transforms are expressed using <see cref="Matrix3x2"/> so that the
         /// composition remains fast and easily composable.
         /// </summary>
-        public static SkiaScene CreateScene()
+        public RollingWheelDemo()
         {
-            var scene = new SkiaScene();
+            var scene = this;
 
             // Create a parent group to represent the cart.  This group will translate
             // across the scene as time advances.  Child wheel groups will be positioned
@@ -139,51 +135,6 @@ namespace CrystalCatalyst.SkiaScene.Experimental.Demos
 
             // Add the cart to the scene
             scene.Elements.Add(cart);
-            return scene;
-        }
-
-        /// <summary>
-        /// Update the scene using a persistent animation context.  This advances
-        /// the context by the given time delta and applies all update callbacks
-        /// to the scene's elements.  Clients should call this once per frame.
-        /// </summary>
-        /// <param name="scene">The scene to update.</param>
-        /// <param name="dt">Time delta in seconds.</param>
-        public static void Update(SkiaScene scene, double dt)
-        {
-            if (scene == null)
-            {
-                return;
-            }
-            if (dt < 0)
-            {
-                dt = 0;
-            }
-            // Advance total time and frame count
-            _context.Advance(dt);
-            // Update the scene using the accumulated context
-            scene.Update(dt, _context);
-        }
-
-        /// <summary>
-        /// Render the scene onto the provided canvas.  The render context uses the
-        /// animation context's total elapsed time to allow elements access to the
-        /// global time value if needed.  The viewport dimensions may be left
-        /// unspecified; they are provided here only for completeness.
-        /// </summary>
-        /// <param name="scene">The scene to render.</param>
-        /// <param name="canvas">The Skia canvas to render into.</param>
-        public static void Render(SkiaScene scene, SKCanvas canvas)
-        {
-            if (scene == null || canvas == null)
-            {
-                return;
-            }
-            var rc = new RenderContext
-            {
-                TotalSeconds = _context.TotalSeconds
-            };
-            scene.Render(canvas, rc);
         }
     }
 }

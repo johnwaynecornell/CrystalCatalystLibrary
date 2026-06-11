@@ -11,7 +11,7 @@ namespace SpiroSwirlyDemo
     class Program
     {
         [STAThread]
-        static void Main(string[] args)
+        static void  Main(string[] args)
         {
             Application.Init(args);
             
@@ -23,8 +23,8 @@ namespace SpiroSwirlyDemo
             wnd.ApplicationRetain();
             wnd.Show(true);
 
-            SkiaScene sceen = SvgSpiroSwirlyDemo.CreateScene();
-
+            SvgSpiroSwirlyDemo demo = new SvgSpiroSwirlyDemo();
+            
             bool running = true;
             wnd.OnClose = (w) =>
             {
@@ -44,7 +44,7 @@ namespace SpiroSwirlyDemo
                 {
                     canvas.Clear(SKColors.Navy);
                     canvas.Translate(width / 2, height / 2);
-                    SvgSpiroSwirlyDemo.Render(sceen, canvas);
+                    demo.Render(canvas);
                 });
                     
                 wnd.PresentPix(ref pix);
@@ -63,7 +63,7 @@ namespace SpiroSwirlyDemo
                 CrystalSkia.net.PixDataSkia.WithCanvasView(screen, (bitmap, canvas) =>
                 {
                     canvas.Translate(width / 2, height / 2);
-                    SvgSpiroSwirlyDemo.Render(sceen, canvas);
+                    demo.Render(canvas);
                     
                     canvas.ResetMatrix();
                     using (var paint = new SKPaint())
@@ -107,7 +107,7 @@ namespace SpiroSwirlyDemo
                 if (lastTime < 0)
                 {
                     lastTime = time;
-                    SvgSpiroSwirlyDemo.Update(sceen, 0);
+                    demo.Update(0);
                     wnd.QueueRedraw();
                 }
                 else dt = time - lastTime;
@@ -116,7 +116,7 @@ namespace SpiroSwirlyDemo
                 {
                     lastTime = time;
                     
-                    SvgSpiroSwirlyDemo.Update(sceen, dt);
+                    demo.Update(dt);
                     wnd.QueueRedraw();
                 }
             };
