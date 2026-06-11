@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WheelDemo", "WheelDemo\Whee
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpiroSwirlyDemo", "SpiroSwirlyDemo\SpiroSwirlyDemo.csproj", "{57884479-3ADC-4158-A03F-078BEBFC7FFC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AvatarPuppetDemo", "AvatarPuppetDemo\AvatarPuppetDemo.csproj", "{16DD39F3-7A44-4BEA-8C3C-D6DC19F30614}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{57884479-3ADC-4158-A03F-078BEBFC7FFC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{57884479-3ADC-4158-A03F-078BEBFC7FFC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{57884479-3ADC-4158-A03F-078BEBFC7FFC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{16DD39F3-7A44-4BEA-8C3C-D6DC19F30614}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{16DD39F3-7A44-4BEA-8C3C-D6DC19F30614}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{16DD39F3-7A44-4BEA-8C3C-D6DC19F30614}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{16DD39F3-7A44-4BEA-8C3C-D6DC19F30614}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
