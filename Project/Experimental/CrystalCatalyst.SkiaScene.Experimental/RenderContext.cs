@@ -24,5 +24,10 @@ namespace CrystalCatalyst.SkiaScene.Experimental
         /// derived from the <see cref="AnimationContext"/> when updating the scene.
         /// </summary>
         public double TotalSeconds { get; set; }
+
+        /// <summary>
+        /// Whether to render debug information like element bounds and origins.
+        /// </summary>
+        public bool DebugMode { get; set; }
     }
 }

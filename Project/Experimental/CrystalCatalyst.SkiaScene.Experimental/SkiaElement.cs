@@ -31,6 +31,11 @@ namespace CrystalCatalyst.SkiaScene.Experimental
         public float Opacity { get; set; } = 1.0f;
 
         /// <summary>
+        /// Optional local bounds of the element for debug rendering or hit testing.
+        /// </summary>
+        public SKRect? LocalBounds { get; set; }
+
+        /// <summary>
         /// Child elements of this element.
         /// </summary>
         public List<SkiaElement> Children { get; } = new List<SkiaElement>();
@@ -70,6 +75,36 @@ namespace CrystalCatalyst.SkiaScene.Experimental
         /// <param name="canvas">Skia canvas to draw into.</param>
         /// <param name="context">Render context containing global state.</param>
         public abstract void Render(SKCanvas canvas, RenderContext context);
+
+        /// <summary>
+        /// Draws debug information for the element, such as its local origin and bounds.
+        /// </summary>
+        protected virtual void DrawDebug(SKCanvas canvas, RenderContext context)
+        {
+            if (!context.DebugMode) return;
+
+            // Draw local origin (X-axis in red, Y-axis in green)
+            using var originPaint = new SKPaint { StrokeWidth = 2, IsAntialias = true };
+            
+            originPaint.Color = SKColors.Red;
+            canvas.DrawLine(0, 0, 10, 0, originPaint);
+            
+            originPaint.Color = SKColors.Green;
+            canvas.DrawLine(0, 0, 0, 10, originPaint);
+
+            // Draw local bounds if available
+            if (LocalBounds.HasValue)
+            {
+                using var boundsPaint = new SKPaint
+                {
+                    Color = SKColors.Magenta.WithAlpha(128),
+                    Style = SKPaintStyle.Stroke,
+                    StrokeWidth = 1,
+                    PathEffect = SKPathEffect.CreateDash(new float[] { 4, 4 }, 0)
+                };
+                canvas.DrawRect(LocalBounds.Value, boundsPaint);
+            }
+        }
 
         /// <summary>
         /// Convert a <see cref="Matrix3x2"/> into an <see cref="SKMatrix"/> for Skia.

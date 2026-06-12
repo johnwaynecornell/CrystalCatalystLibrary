@@ -19,6 +19,9 @@ namespace CrystalCatalyst.SkiaScene.Experimental
             var m = ToSKMatrix(Transform);
             canvas.Concat(ref m);
 
+            // Draw debug info
+            DrawDebug(canvas, context);
+
             canvas.DrawBitmap(Bitmap, 0, 0);
 
             foreach (var child in Children)

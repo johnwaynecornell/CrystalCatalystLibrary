@@ -33,6 +33,9 @@ namespace CrystalCatalyst.SkiaScene.Experimental
                 var m = ToSKMatrix(Transform);
                 canvas.Concat(ref m);
 
+                // Draw debug info
+                DrawDebug(canvas, context);
+
                 // Invoke custom draw callback if provided
                 OnRender?.Invoke(canvas, this, context);
 

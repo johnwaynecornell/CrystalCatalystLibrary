@@ -41,6 +41,9 @@ namespace CrystalCatalyst.SkiaScene.Experimental
             var m = ToSKMatrix(Transform);
             canvas.Concat(ref m);
 
+            // Draw debug info
+            DrawDebug(canvas, context);
+
             EnsureParsed();
 
             if (_parsed?.Picture != null)
