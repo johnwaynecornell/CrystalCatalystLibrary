@@ -18,7 +18,7 @@ namespace SpiroSwirlyDemo
             int width = 800;
             int height = 600;
             
-            var wnd = CrystalWindow.Create(width, height, "Wheel Demo");
+            var wnd = CrystalWindow.Create(width, height, "Spiro Swirly Demo");
             
             wnd.ApplicationRetain();
             wnd.Show(true);
