@@ -138,13 +138,14 @@ namespace NewAge {
             for (P_INSTANCE(HandleNode)  node = window_head.next; !CloseSignalled && node != nullptr; node = node->next) {
                 auto* callbacks = &node->handle->crystal_window->callbacks;
 
-                if (node->handle->crystal_window->ready)
+                if (node->handle->crystal_window->ready && !node->handle->crystal_window->is_closed)
                     if (callbacks->on_idle) {
                         callbacks->on_idle(node->handle);
                     }
             }
 
             HasMessage();
+            if (retain_count == 0) SignalClose();
         }
 
         return 0;
