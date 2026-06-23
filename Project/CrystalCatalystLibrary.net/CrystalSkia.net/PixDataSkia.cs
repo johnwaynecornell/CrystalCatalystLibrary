@@ -89,6 +89,46 @@ public static class PixDataSkia
 
         return bitmap;
     }
+    
+    /// <summary>
+    /// Creates a <see cref="PixData"/> that views the <see cref="SKBitmap"/> pixel buffer without copying it.
+    /// </summary>
+    /// <remarks>
+    /// The <see cref="SKBitmap"/> must remain valid for the lifetime of the returned <see cref="PixData"/>.
+    /// </remarks>
+    public static PixData CreatePixDataView(SKBitmap bitmap)
+    {
+        if (bitmap == null)
+            throw new ArgumentNullException(nameof(bitmap));
+
+        if (bitmap.IsEmpty)
+            throw new ArgumentException("Bitmap is empty.", nameof(bitmap));
+
+        return new PixData
+        {
+            width = bitmap.Width,
+            height = bitmap.Height,
+            pix_format = SkiaPixFormatMap.GetPixFormat(bitmap.ColorType),
+            pix_data = bitmap.GetPixels(),
+            pix_data_length = (IntPtr)bitmap.ByteCount
+            
+        };
+    }
+
+    public static void WithPixDataView(SKBitmap bitmap, Action<PixData> action)
+    {
+        ArgumentNullException.ThrowIfNull(bitmap);
+        ArgumentNullException.ThrowIfNull(action);
+        PixData pixData = CreatePixDataView(bitmap);
+        try
+        {
+            action(pixData);
+        }
+        finally
+        {
+            pixData.Dispose();
+        }
+    }
 
     /// <summary>
     /// Executes an action with a temporary <see cref="SKBitmap"/> view of the <see cref="PixData"/>.
@@ -199,6 +239,14 @@ public static class PixDataSkia
     public static SKBitmap ToBitmap(this PixData pixData, SKAlphaType? alphaType = null)
     {
         return CreateBitmapCopy(pixData, alphaType);
+    }
+
+    /// <summary>
+    /// Creates a <see cref="PixData"/> view of the <see cref="SKBitmap"/>.
+    /// </summary>
+    public static PixData ToPixDataView(this SKBitmap bitmap)
+    {
+        return CreatePixDataView(bitmap);
     }
 
     public static bool TryCreateBitmapCopy(PixData pixData, out SKBitmap? bitmap, SKAlphaType? alphaType = null)

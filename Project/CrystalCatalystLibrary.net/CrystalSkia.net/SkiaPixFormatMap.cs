@@ -68,6 +68,59 @@ public static class SkiaPixFormatMap
         return true;
     }
 
+    /// <summary>
+    /// Attempts to get the Crystal pixel format string for the specified Skia color type.
+    /// </summary>
+    public static bool TryGetPixFormat(SKColorType colorType, out string pixFormat)
+    {
+        pixFormat = string.Empty;
+        switch (colorType)
+        {
+            case SKColorType.Bgra8888:
+                pixFormat = "bgra:int8";
+                break;
+            case SKColorType.Rgba8888:
+                pixFormat = "rgba:int8";
+                break;
+            case SKColorType.Gray8:
+                pixFormat = "r:int8";
+                break;
+            case SKColorType.Alpha8:
+                pixFormat = "a:int8";
+                break;
+            case SKColorType.Rg88:
+                pixFormat = "rg:int8";
+                break;
+            case SKColorType.Rgba16161616:
+                pixFormat = "rgba:int16";
+                break;
+            case SKColorType.Rg1616:
+                pixFormat = "rg:int16";
+                break;
+            case SKColorType.Alpha16:
+                pixFormat = "a:int16";
+                break;
+            case SKColorType.RgbaF32:
+                pixFormat = "rgba:float32";
+                break;
+            default:
+                return false;
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// Gets the Crystal pixel format string for the specified Skia color type. Throws if not supported.
+    /// </summary>
+    public static string GetPixFormat(SKColorType colorType)
+    {
+        if (TryGetPixFormat(colorType, out var pixFormat))
+        {
+            return pixFormat;
+        }
+        throw new NotSupportedException($"Skia color type '{colorType}' is not supported by PixData.");
+    }
+
     public static bool IsRenderTargetSupported(string pixFormat)
     {
         return TryGetImageInfo(pixFormat, 1, 1, out _);
