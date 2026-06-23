@@ -3,7 +3,7 @@ using JWCEssentials.net;
 
 namespace CrystalCatalystLibrary.net;
 
-public class Pixels
+public partial class Pixels
 {
     public static PixData CopyOrConvertPix(ref PixData pix, string pixformat_dest = "")
     {
@@ -25,7 +25,6 @@ public class Pixels
     
     public static PixData ConvertPixelsPix(ref PixData pix, string pixformat_dest)
     {
-
         utf8_string_struct param_pixformat_dest = pixformat_dest;
         var Ret = Imports.Pixels_ConvertPixelsPix(ref pix, ref param_pixformat_dest);
         return Ret;
@@ -39,6 +38,16 @@ public class Pixels
         var Ret = Imports.Pixels_ConvertPixels(ref param_pixformat, ref param_pixformat_dest, pixdata, pixdata_length,
             width, height);
         return Ret;
+    }
+
+    public static void CopyTo(ref PixData pix, IntPtr pixdata)
+    {
+        Imports.Pixels_CopyTo(ref pix, pixdata);
+    }
+
+    public static void CopyFrom(ref PixData pix, IntPtr pixdata)
+    {
+        Imports.Pixels_CopyTo(ref pix, pixdata);
     }
 
 
@@ -59,5 +68,13 @@ public class Pixels
         [DllImport("CrystalCatalystLibrary")]
         public static extern PixData Pixels_ConvertPixels(ref utf8_string_struct pixformat,
             ref utf8_string_struct pixformat_dest, IntPtr pixdata, IntPtr pixdata_length, int width, int height);
+        //void Pixels_CopyTo(P_INSTANCE(PixData) pix, P_ELEMENTS(void)  pixdata);
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern void Pixels_CopyTo(ref PixData pix, IntPtr pixdata);
+
+        //void Pixels_CopyFrom(P_INSTANCE(PixData) pix, P_ELEMENTS(void)  pixdata);
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern void Pixels_CopyFrom(ref PixData pix, IntPtr pixdata);
+
     }
 }

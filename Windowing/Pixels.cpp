@@ -449,4 +449,54 @@ namespace NewAge {
 
         return Ret;
     }
+    
+    _EXPORT_ void Pixels_CopyTo(P_INSTANCE(PixData) pix, P_ELEMENTS(void)  pixdata)
+    {
+        if (!pix)
+        {
+            throw std::runtime_error("Pixels_CopyTo: pix parameter is null");
+        }
+
+        if (!pix->pix_data)
+        {
+            throw std::runtime_error("Pixels_CopyTo: pix->pix_data is null");
+        }
+
+        if (pix->pix_data_length <= 0)
+        {
+            throw std::runtime_error("Pixels_CopyTo: pix->pix_data_length is invalid");
+        }
+
+        if (!pixdata)
+        {
+            throw std::runtime_error("Pixels_CopyTo: pixdata parameter is null");
+        }
+
+        memcpy(pixdata, pix->pix_data, pix->pix_data_length);
+    }
+
+    _EXPORT_ void Pixels_CopyFrom(P_INSTANCE(PixData) pix, P_ELEMENTS(void)  pixdata)
+    {
+        if (!pix)
+        {
+            throw std::runtime_error("Pixels_CopyFrom: pix parameter is null");
+        }
+
+        if (!pix->pix_data)
+        {
+            throw std::runtime_error("Pixels_CopyFrom: pix->pix_data is null");
+        }
+
+        if (pix->pix_data_length <= 0)
+        {
+            throw std::runtime_error("Pixels_CopyFrom: pix->pix_data_length is invalid");
+        }
+
+        if (!pixdata)
+        {
+            throw std::runtime_error("Pixels_CopyFrom: pixdata parameter is null");
+        }
+
+        memcpy(pix->pix_data, pixdata, pix->pix_data_length);
+    }
 }
