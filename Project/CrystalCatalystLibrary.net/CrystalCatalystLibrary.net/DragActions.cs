@@ -1,4 +1,4 @@
-namespace CrystalCatalystLibrary;
+namespace CrystalCatalystLibrary.net;
 
 /// <summary>
 /// Specifies the allowed operations for drag-and-drop actions.
