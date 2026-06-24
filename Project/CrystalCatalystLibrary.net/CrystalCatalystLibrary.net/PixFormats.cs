@@ -125,5 +125,5 @@ public static class PixFormats
     /// <summary>
     /// Checks if the format uses intger elements.
     /// </summary>
-    public static bool IsIntegerFormat(string pixFormat) => !IsFloatFormat(pixFormat);
+    public static bool IsIntegerFormat(string pixFormat) =>  TryParse(pixFormat, out var info) && ( info.ElementType == "int8" || info.ElementType == "int16");
 }
