@@ -121,4 +121,9 @@ public static class PixFormats
     /// Checks if the format uses floating-point elements.
     /// </summary>
     public static bool IsFloatFormat(string pixFormat) => TryParse(pixFormat, out var info) && (/*info.ElementType == "float16" || */ info.ElementType == "float32" || info.ElementType == "float64");
+    
+    /// <summary>
+    /// Checks if the format uses intger elements.
+    /// </summary>
+    public static bool IsIntegerFormat(string pixFormat) => !IsFloatFormat(pixFormat);
 }
