@@ -40,17 +40,16 @@ public partial class Pixels
         return Ret;
     }
 
-    public static void CopyTo(ref PixData pix, IntPtr pixdata)
+    public static void CopyTo(ref PixData pixFrom, IntPtr pixdataTo)
     {
-        Imports.Pixels_CopyTo(ref pix, pixdata);
+        Imports.Pixels_CopyTo(ref pixFrom, pixdataTo);
     }
 
-    public static void CopyFrom(ref PixData pix, IntPtr pixdata)
+    public static void CopyFrom(ref PixData pixTo, IntPtr pixdataFrom)
     {
-        Imports.Pixels_CopyTo(ref pix, pixdata);
+        Imports.Pixels_CopyTo(ref pixTo, pixdataFrom);
     }
-
-
+    
     public class Imports
     {
         [DllImport("CrystalCatalystLibrary")]
@@ -68,13 +67,13 @@ public partial class Pixels
         [DllImport("CrystalCatalystLibrary")]
         public static extern PixData Pixels_ConvertPixels(ref utf8_string_struct pixformat,
             ref utf8_string_struct pixformat_dest, IntPtr pixdata, IntPtr pixdata_length, int width, int height);
-        //void Pixels_CopyTo(P_INSTANCE(PixData) pix, P_ELEMENTS(void)  pixdata);
+        //void Pixels_CopyTo(P_INSTANCE(PixData) pixFrom, P_ELEMENTS(void)  pixdataTo);
         [DllImport("CrystalCatalystLibrary")]
-        public static extern void Pixels_CopyTo(ref PixData pix, IntPtr pixdata);
+        public static extern void Pixels_CopyTo(ref PixData pixFrom, IntPtr pixdataTo);
 
-        //void Pixels_CopyFrom(P_INSTANCE(PixData) pix, P_ELEMENTS(void)  pixdata);
+        //void Pixels_CopyFrom(P_INSTANCE(PixData) pixTo, P_ELEMENTS(void)  pixdataFrom);
         [DllImport("CrystalCatalystLibrary")]
-        public static extern void Pixels_CopyFrom(ref PixData pix, IntPtr pixdata);
+        public static extern void Pixels_CopyFrom(ref PixData pixTo, IntPtr pixdataFrom);
 
     }
 }

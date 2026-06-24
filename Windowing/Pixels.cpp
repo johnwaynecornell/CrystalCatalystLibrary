@@ -450,53 +450,53 @@ namespace NewAge {
         return Ret;
     }
     
-    _EXPORT_ void Pixels_CopyTo(P_INSTANCE(PixData) pix, P_ELEMENTS(void)  pixdata)
+    _EXPORT_ void Pixels_CopyTo(P_INSTANCE(PixData) pixFrom, P_ELEMENTS(void)  pixdataTo)
     {
-        if (!pix)
+        if (!pixFrom)
         {
             throw std::runtime_error("Pixels_CopyTo: pix parameter is null");
         }
 
-        if (!pix->pix_data)
+        if (!pixFrom->pix_data)
         {
             throw std::runtime_error("Pixels_CopyTo: pix->pix_data is null");
         }
 
-        if (pix->pix_data_length <= 0)
+        if (pixFrom->pix_data_length <= 0)
         {
             throw std::runtime_error("Pixels_CopyTo: pix->pix_data_length is invalid");
         }
 
-        if (!pixdata)
+        if (!pixdataTo)
         {
             throw std::runtime_error("Pixels_CopyTo: pixdata parameter is null");
         }
 
-        memcpy(pixdata, pix->pix_data, pix->pix_data_length);
+        memcpy(pixdataTo, pixFrom->pix_data, pixFrom->pix_data_length);
     }
 
-    _EXPORT_ void Pixels_CopyFrom(P_INSTANCE(PixData) pix, P_ELEMENTS(void)  pixdata)
+    _EXPORT_ void Pixels_CopyFrom(P_INSTANCE(PixData) pixTo, P_ELEMENTS(void)  pixdataFrom)
     {
-        if (!pix)
+        if (!pixTo)
         {
             throw std::runtime_error("Pixels_CopyFrom: pix parameter is null");
         }
 
-        if (!pix->pix_data)
+        if (!pixTo->pix_data)
         {
             throw std::runtime_error("Pixels_CopyFrom: pix->pix_data is null");
         }
 
-        if (pix->pix_data_length <= 0)
+        if (pixTo->pix_data_length <= 0)
         {
             throw std::runtime_error("Pixels_CopyFrom: pix->pix_data_length is invalid");
         }
 
-        if (!pixdata)
+        if (!pixdataFrom)
         {
             throw std::runtime_error("Pixels_CopyFrom: pixdata parameter is null");
         }
 
-        memcpy(pix->pix_data, pixdata, pix->pix_data_length);
+        memcpy(pixTo->pix_data, pixdataFrom, pixTo->pix_data_length);
     }
 }

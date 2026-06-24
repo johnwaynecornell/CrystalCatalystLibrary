@@ -47,8 +47,8 @@ namespace NewAge {
     _EXPORT_ PixData Pixels_ConvertPixelsPix(P_INSTANCE(PixData) pix, utf8_string_struct pixformat_dest);
     _EXPORT_ PixData Pixels_ConvertPixels(utf8_string_struct pixformat, utf8_string_struct pixformat_dest, P_ELEMENTS(void)  pixdata, size_t pixdata_length, int32_t width, int32_t height);
 
-    _EXPORT_ void Pixels_CopyTo(P_INSTANCE(PixData) pix, P_ELEMENTS(void)  pixdata);
-    _EXPORT_ void Pixels_CopyFrom(P_INSTANCE(PixData) pix, P_ELEMENTS(void)  pixdata);
+    _EXPORT_ void Pixels_CopyTo(P_INSTANCE(PixData) pixFrom, P_ELEMENTS(void)  pixdataTo);
+    _EXPORT_ void Pixels_CopyFrom(P_INSTANCE(PixData) pixTo, P_ELEMENTS(void)  pixdataFrom);
 }
 
 #endif //PLATFORM_H
