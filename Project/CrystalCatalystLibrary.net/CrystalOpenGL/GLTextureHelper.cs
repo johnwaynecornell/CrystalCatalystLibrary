@@ -84,13 +84,17 @@ public static class GLTextureHelper
             pixData = proxy;
         }
 
-        uint texture = CreateTexture2D(gl, pixData.width, pixData.height, internalFormat, pixelFormat, pixelType);
+        uint texture = CreateTexture2D(
+            gl,
+            pixData.width,
+            pixData.height,
+            internalFormat,
+            pixelFormat,
+            pixelType,
+            generateMipmaps);
 
         if (GLHelper.HasDSA(gl))
         {
-            gl.TextureParameter(texture, TextureParameterName.TextureMinFilter,
-                (int)(generateMipmaps ? TextureMinFilter.LinearMipmapLinear : TextureMinFilter.Linear));
-
             GLBridges.TextureSubImage2D(gl, texture, 0, 0, 0, (uint)pixData.width, (uint)pixData.height, pixelFormat,
                 pixelType, pixData.pix_data);
 
@@ -105,11 +109,9 @@ public static class GLTextureHelper
             try
             {
                 gl.BindTexture(TextureTarget.Texture2D, texture);
-                gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter,
-                    (int)(generateMipmaps ? TextureMinFilter.LinearMipmapLinear : TextureMinFilter.Linear));
-
-                GLBridges.TexImage2D(gl, TextureTarget.Texture2D, 0, internalFormat, (uint)pixData.width,
-                    (uint)pixData.height, 0, pixelFormat, pixelType, pixData.pix_data);
+         
+                GLBridges.TexSubImage2D(gl, TextureTarget.Texture2D, 0, 0, 0, (uint)pixData.width, (uint)pixData.height, pixelFormat,
+                    pixelType, pixData.pix_data);
 
                 if (generateMipmaps)
                 {
@@ -133,7 +135,7 @@ public static class GLTextureHelper
         int height,
         InternalFormat internalFormat,
         PixelFormat format,
-        PixelType dataType)
+        PixelType dataType, bool generateMipmaps = false)
     {
         ArgumentNullException.ThrowIfNull(gl);
 
@@ -149,16 +151,21 @@ public static class GLTextureHelper
         {
             gl.CreateTextures(TextureTarget.Texture2D, 1, out texture);
 
+            int levels = generateMipmaps
+                ? (int)Math.Floor(Math.Log2(Math.Max(width, height))) + 1
+                : 1;
+            
             gl.TextureStorage2D(
                 texture,
-                1,
+                (uint)levels,
                 (GLEnum)internalFormat,
                 (uint)width,
                 (uint)height);
 
             gl.TextureParameter(texture, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
             gl.TextureParameter(texture, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
-            gl.TextureParameter(texture, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+            gl.TextureParameter(texture, TextureParameterName.TextureMinFilter,
+                (int)(generateMipmaps ? TextureMinFilter.LinearMipmapLinear : TextureMinFilter.Linear));
             gl.TextureParameter(texture, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
 
             return texture;
@@ -175,8 +182,8 @@ public static class GLTextureHelper
                 (int)TextureWrapMode.ClampToEdge);
             gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT,
                 (int)TextureWrapMode.ClampToEdge);
-            gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter,
-                (int)TextureMinFilter.Linear);
+            gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, 
+                (int)(generateMipmaps ? TextureMinFilter.LinearMipmapLinear : TextureMinFilter.Linear));
             gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter,
                 (int)TextureMagFilter.Linear);
 

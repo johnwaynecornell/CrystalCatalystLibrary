@@ -71,11 +71,23 @@ public static class GLHelper
 
 
     }
+
+    
+    /// <summary>
+    /// Override the cached value for HasDSA enabling forcing false for debugging purposes clearing the cache if state null
+    /// </summary>
+
+    public static void HasDSA_Override(GL gl, bool ? state)
+    {
+        _hasDSACache.Remove(gl);
+        if (state == null) return;
+        _hasDSACache.Add(gl, new HasDSAInfo() { HasDSA = state.Value });
+        
+    }
     
     /// <summary>
     /// Efficiently determines if Direct State Access is available from 4.5 or the GL_ARB_direct_state_access extension 
     /// </summary>
-
     public static bool HasDSA(GL gl)
     {
         // DSA is core in OpenGL 4.5, but may be available earlier through
