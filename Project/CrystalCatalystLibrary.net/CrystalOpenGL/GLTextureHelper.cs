@@ -50,7 +50,8 @@ public static class GLTextureHelper
     /// <summary>
     /// Creates a 2D OpenGL texture from the provided <see cref="PixData"/>.
     /// </summary>
-    public static uint CreateTexture2DFromPixData(GL gl, PixData pixData, bool generateMipmaps = false, bool strict = false)
+    public static uint CreateTexture2DFromPixData(GL gl, PixData pixData, bool generateMipmaps = false,
+        bool strict = false)
     {
         if (pixData.pix_data == IntPtr.Zero)
             throw new ArgumentException("PixData.pix_data is zero.");
@@ -67,81 +68,136 @@ public static class GLTextureHelper
         {
             if (strict)
             {
-                throw new NotSupportedException($"Pixel format '{format}' is not directly supported by OpenGL texture upload and strict mode is enabled.");
+                throw new NotSupportedException(
+                    $"Pixel format '{format}' is not directly supported by OpenGL texture upload and strict mode is enabled.");
             }
 
             string fallbackFormat = GLPixFormatMap.GetFallbackUploadFormat(format);
             proxy = Pixels.ConvertPixelsPix(ref pixData, fallbackFormat);
-            if (!proxy) throw new NotSupportedException($"Format '{format}' is not supported and fallback conversion to '{fallbackFormat}' failed.");
-            
+            if (!proxy)
+                throw new NotSupportedException(
+                    $"Format '{format}' is not supported and fallback conversion to '{fallbackFormat}' failed.");
+
             if (!GLPixFormatMap.TryGetUploadFormat(fallbackFormat, out internalFormat, out pixelFormat, out pixelType))
                 throw new Exception($"Unexpected: {fallbackFormat} not found in GLPixFormatMap");
-            
+
             pixData = proxy;
         }
 
-        uint texture;
-        int previousUnpackAlignment = GLHelper.GetInteger(gl, GetPName.UnpackAlignment);
-        try
+        uint texture = CreateTexture2D(gl, pixData.width, pixData.height, internalFormat, pixelFormat, pixelType);
+
+        if (GLHelper.HasDSA(gl))
         {
-            gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
-            if (GLHelper.HasDSA(gl))
+            gl.TextureParameter(texture, TextureParameterName.TextureMinFilter,
+                (int)(generateMipmaps ? TextureMinFilter.LinearMipmapLinear : TextureMinFilter.Linear));
+
+            GLBridges.TextureSubImage2D(gl, texture, 0, 0, 0, (uint)pixData.width, (uint)pixData.height, pixelFormat,
+                pixelType, pixData.pix_data);
+
+            if (generateMipmaps)
             {
-                gl.CreateTextures(TextureTarget.Texture2D, 1, out texture);
-
-                int levels = 1;
-                if (generateMipmaps)
-                {
-                    levels = (int)Math.Floor(Math.Log2(Math.Max(pixData.width, pixData.height))) + 1;
-                }
-                gl.TextureStorage2D(texture, (uint)levels, (GLEnum)internalFormat, (uint)pixData.width, (uint)pixData.height);
-
-                gl.TextureParameter(texture, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-                gl.TextureParameter(texture, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
-                gl.TextureParameter(texture, TextureParameterName.TextureMinFilter, (int)(generateMipmaps ? TextureMinFilter.LinearMipmapLinear : TextureMinFilter.Linear));
-                gl.TextureParameter(texture, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-
-                GLBridges.TextureSubImage2D(gl, texture, 0, 0, 0, (uint)pixData.width, (uint)pixData.height, pixelFormat, pixelType, pixData.pix_data);
-
-                if (generateMipmaps)
-                {
-                    gl.GenerateTextureMipmap(texture);
-                }
-            }
-            else
-            {
-                int previousTexture = GLHelper.GetInteger(gl, GetPName.TextureBinding2D);
-                try
-                {
-                    texture = gl.GenTexture();
-                    gl.BindTexture(TextureTarget.Texture2D, texture);
-
-                    gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-                    gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
-                    gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)(generateMipmaps ? TextureMinFilter.LinearMipmapLinear : TextureMinFilter.Linear));
-                    gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-
-                    GLBridges.TexImage2D(gl, TextureTarget.Texture2D, 0, internalFormat, (uint)pixData.width, (uint)pixData.height, 0, pixelFormat, pixelType, pixData.pix_data);
-
-                    if (generateMipmaps)
-                    {
-                        gl.GenerateMipmap(TextureTarget.Texture2D);
-                    }
-                }
-                finally
-                {
-                    gl.BindTexture(TextureTarget.Texture2D, (uint)previousTexture);
-                }
+                gl.GenerateTextureMipmap(texture);
             }
         }
-        finally
+        else
         {
-            gl.PixelStore(PixelStoreParameter.UnpackAlignment, previousUnpackAlignment);
+            int previousTexture = GLHelper.GetInteger(gl, GetPName.TextureBinding2D);
+            try
+            {
+                gl.BindTexture(TextureTarget.Texture2D, texture);
+                gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter,
+                    (int)(generateMipmaps ? TextureMinFilter.LinearMipmapLinear : TextureMinFilter.Linear));
+
+                GLBridges.TexImage2D(gl, TextureTarget.Texture2D, 0, internalFormat, (uint)pixData.width,
+                    (uint)pixData.height, 0, pixelFormat, pixelType, pixData.pix_data);
+
+                if (generateMipmaps)
+                {
+                    gl.GenerateMipmap(TextureTarget.Texture2D);
+                }
+            }
+            finally
+            {
+                gl.BindTexture(TextureTarget.Texture2D, (uint)previousTexture);
+            }
         }
 
         if (proxy) proxy.Dispose();
-        
+
         return texture;
+    }
+
+    public static uint CreateTexture2D(
+        GL gl,
+        int width,
+        int height,
+        InternalFormat internalFormat,
+        PixelFormat format,
+        PixelType dataType)
+    {
+        ArgumentNullException.ThrowIfNull(gl);
+
+        if (width <= 0)
+            throw new ArgumentOutOfRangeException(nameof(width), width, "Texture width must be positive.");
+
+        if (height <= 0)
+            throw new ArgumentOutOfRangeException(nameof(height), height, "Texture height must be positive.");
+
+        uint texture;
+
+        if (GLHelper.HasDSA(gl))
+        {
+            gl.CreateTextures(TextureTarget.Texture2D, 1, out texture);
+
+            gl.TextureStorage2D(
+                texture,
+                1,
+                (GLEnum)internalFormat,
+                (uint)width,
+                (uint)height);
+
+            gl.TextureParameter(texture, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+            gl.TextureParameter(texture, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+            gl.TextureParameter(texture, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+            gl.TextureParameter(texture, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+
+            return texture;
+        }
+
+        int previousTexture = GLHelper.GetInteger(gl, GetPName.TextureBinding2D);
+
+        try
+        {
+            texture = gl.GenTexture();
+            gl.BindTexture(TextureTarget.Texture2D, texture);
+
+            gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS,
+                (int)TextureWrapMode.ClampToEdge);
+            gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT,
+                (int)TextureWrapMode.ClampToEdge);
+            gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter,
+                (int)TextureMinFilter.Linear);
+            gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter,
+                (int)TextureMagFilter.Linear);
+
+            GLBridges.TexImage2D(
+                gl,
+                TextureTarget.Texture2D,
+                0,
+                internalFormat,
+                (uint)width,
+                (uint)height,
+                0,
+                format,
+                dataType,
+                IntPtr.Zero);
+
+            return texture;
+        }
+        finally
+        {
+            gl.BindTexture(TextureTarget.Texture2D, (uint)previousTexture);
+        }
     }
 
     /// <summary>
