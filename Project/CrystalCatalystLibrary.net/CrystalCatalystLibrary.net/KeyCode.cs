@@ -1,0 +1,145 @@
+namespace CrystalCatalystLibrary.net;
+
+public enum KeyCode
+{
+    // Modifier Keys
+    Shift_Left = 0xFFE1,
+    Shift_Right = 0xFFE2,
+    Control_Left = 0xFFE3,
+    Control_Right = 0xFFE4,
+    Alt_Left = 0xFFE9,
+    Alt_Right = 0xFFEA,
+    Super_Left = 0xFFEB,
+    Super_Right = 0xFFEC,
+    Meta_Left = 0xFFE7,
+    Meta_Right = 0xFFE8,
+
+    // Navigation Keys
+    Left = 0xFF51,
+    Up = 0xFF52,
+    Right = 0xFF53,
+    Down = 0xFF54,
+    Home = 0xFF50,
+    End = 0xFF57,
+    PageUp = 0xFF55,
+    PageDown = 0xFF56,
+
+    // Editing Keys
+    BackSpace = 0xFF08,
+    Delete = 0xFFFF,
+    Insert = 0xFF63,
+
+    // Special Keys
+    Enter = 0xFF0D,
+    Return = 0xFF0D,
+    Escape = 0xFF1B,
+    Tab = 0xFF09,
+    Space = 0x0020,
+
+    // Function Keys
+    F1 = 0xFFBE,
+    F2 = 0xFFBF,
+    F3 = 0xFFC0,
+    F4 = 0xFFC1,
+    F5 = 0xFFC2,
+    F6 = 0xFFC3,
+    F7 = 0xFFC4,
+    F8 = 0xFFC5,
+    F9 = 0xFFC6,
+    F10 = 0xFFC7,
+    F11 = 0xFFC8,
+    F12 = 0xFFC9,
+
+    // Alphanumeric Keys
+    A = 0x0061,
+    B = 0x0062,
+    C = 0x0063,
+    D = 0x0064,
+    E = 0x0065,
+    F = 0x0066,
+    G = 0x0067,
+    H = 0x0068,
+    I = 0x0069,
+    J = 0x006A,
+    K = 0x006B,
+    L = 0x006C,
+    M = 0x006D,
+    N = 0x006E,
+    O = 0x006F,
+    P = 0x0070,
+    Q = 0x0071,
+    R = 0x0072,
+    S = 0x0073,
+    T = 0x0074,
+    U = 0x0075,
+    V = 0x0076,
+    W = 0x0077,
+    X = 0x0078,
+    Y = 0x0079,
+    Z = 0x007A,
+
+    // Number Keys
+    Key_0 = 0x0030,
+    Key_1 = 0x0031,
+    Key_2 = 0x0032,
+    Key_3 = 0x0033,
+    Key_4 = 0x0034,
+    Key_5 = 0x0035,
+    Key_6 = 0x0036,
+    Key_7 = 0x0037,
+    Key_8 = 0x0038,
+    Key_9 = 0x0039,
+
+    // Keypad Keys
+    KP_0 = 0xFFB0,
+    KP_1 = 0xFFB1,
+    KP_2 = 0xFFB2,
+    KP_3 = 0xFFB3,
+    KP_4 = 0xFFB4,
+    KP_5 = 0xFFB5,
+    KP_6 = 0xFFB6,
+    KP_7 = 0xFFB7,
+    KP_8 = 0xFFB8,
+    KP_9 = 0xFFB9,
+    KP_Left = 0xFF96,
+    KP_Up = 0xFF97,
+    KP_Right = 0xFF98,
+    KP_Down = 0xFF99,
+    KP_Home = 0xFF95,
+    KP_End = 0xFF9C,
+    KP_PageUp = 0xFF9A,
+    KP_PageDown = 0xFF9B,
+    KP_Insert = 0xFF9E,
+    KP_Delete = 0xFF9F,
+    KP_Enter = 0xFF8D,
+    KP_Multiply = 0xFFAA,
+    KP_Add = 0xFFAB,
+    KP_Separator = 0xFFAC,
+    KP_Subtract = 0xFFAD,
+    KP_Decimal = 0xFFAE,
+    KP_Divide = 0xFFAF,
+
+    // Punctuation and Symbols
+    Minus = 0x002D,
+    Equal = 0x003D,
+    BracketLeft = 0x005B,
+    BracketRight = 0x005D,
+    Semicolon = 0x003B,
+    Apostrophe = 0x0027,
+    Grave = 0x0060,
+    Backslash = 0x005C,
+    Comma = 0x002C,
+    Period = 0x002E,
+    Slash = 0x002F,
+
+    // Lock Keys
+    CapsLock = 0xFFE5,
+    NumLock = 0xFF7F,
+    ScrollLock = 0xFF14,
+
+    // System Keys
+    Print = 0xFF61,
+    Pause = 0xFF13,
+    Menu = 0xFF67
+
+}

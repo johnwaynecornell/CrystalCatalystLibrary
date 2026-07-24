@@ -18,8 +18,7 @@ public static class PixDataSkia
         if (!pixData)
             return false;
 
-        if (pixData.width <= 0 || pixData.height <= 0)
-            return false;
+        //if (pixData.width <= 0 || pixData.height <= 0) return false;
 
         string? formatString = pixData.pix_format.ToString();
         if (string.IsNullOrWhiteSpace(formatString))

@@ -60,6 +60,7 @@ public:
     virtual void RegisterDragTarget();
     virtual void DragStart(P_INSTANCE(DragDropData) data, int32_t x, int32_t y);
 
+    virtual void Activate();
 
     /* INTERNAL */
     HRESULT __stdcall QueryInterface(REFIID iid, P_ELEMENTS(void) * ppvObject);

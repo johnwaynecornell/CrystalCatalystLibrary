@@ -813,6 +813,11 @@ public class CrystalWindow : IDisposable
     {
         Imports.CrystalWindow_Show(Handle, restore);
     }
+    
+    public void Activate()
+    {
+        Imports.CrystalWindow_Activate(Handle);
+    }
 
     public void Close()
     {
@@ -1278,6 +1283,10 @@ public class CrystalWindow : IDisposable
         public static extern bool CrystalWindow_SetMessageHandler(IntPtr window_handle,
             ref utf8_string_struct handler_name, IntPtr handler);
 
+        // void CrystalWindow_Activate(P_INSTANCE WindowHandle window_handle)
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern bool CrystalWindow_Activate(IntPtr window_handle);
+        
         // double CrystalWindow_uptimeSeconds(P_INSTANCE WindowHandle window_handle)
         [DllImport("CrystalCatalystLibrary")]
         public static extern double CrystalWindow_uptimeSeconds(IntPtr window_handle);

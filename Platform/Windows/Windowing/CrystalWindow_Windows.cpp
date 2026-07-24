@@ -850,6 +850,20 @@ namespace NewAge
         }
     }
 
+    void CrystalWindow_Windows::Activate()
+    {
+        // 1. Restore the window if it was minimized
+        ShowWindow(hwnd, SW_RESTORE);
+
+        // 2. Bring the window to the top of the Z-order
+        SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+        SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+
+        // 3. Force the window to be the foreground window and active
+        SetForegroundWindow(hwnd);
+        SetActiveWindow(hwnd);
+    }
+
     ULONG __stdcall CrystalWindow_Windows::AddRef()
     {
         return InterlockedIncrement(&m_cRef);

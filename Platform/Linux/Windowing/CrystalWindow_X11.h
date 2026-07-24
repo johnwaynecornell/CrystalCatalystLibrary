@@ -66,6 +66,8 @@ namespace NewAge {
         void RegisterDragTarget() override;
         void DragStart(P_INSTANCE(DragDropData) data, int32_t x, int32_t y) override;
 
+        virtual void Activate();
+
         /* INTERNAL */
         virtual bool handle_xevent(P_INSTANCE(XEvent)  event);
         virtual bool handle_drop_xevents(P_INSTANCE(XEvent)  event);

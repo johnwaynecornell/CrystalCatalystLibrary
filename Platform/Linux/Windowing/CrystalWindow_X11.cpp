@@ -531,6 +531,37 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
         std::cerr << mod_header() << "Mouse pointer released" << std::endl;
     }
 
+    void CrystalWindow_X11::Activate() {
+            // 1. Get the atomic ID for the EWMH active window protocol
+            Atom net_active_win = XInternAtom(display, "_NET_ACTIVE_WINDOW", False);
+
+            XEvent event;
+            memset(&event, 0, sizeof(event));
+
+            // 2. Construct the client message event
+            event.type = ClientMessage;
+            event.xclient.window = window;
+            event.xclient.message_type = net_active_win;
+            event.xclient.format = 32;       // Data is in 32-bit long format
+
+            // EWMH Source indication: 1 = Application, 2 = Pager/Taskbar
+            event.xclient.data.l[0] = 1;
+            // Timestamp (CurrentTime is 0, passing a real X server timestamp is better)
+            event.xclient.data.l[1] = 0;
+            // Currently active window (0 means none/ignored)
+            event.xclient.data.l[2] = 0;
+
+            // 3. Send event to the Root Window so the Window Manager intercepts it
+            Window root = DefaultRootWindow(display);
+            XSendEvent(display, root, False,
+                       SubstructureNotifyMask | SubstructureRedirectMask, &event);
+
+            // Flush the output buffer to make sure it sends immediately
+            XFlush(display);
+
+
+    }
+
 #ifndef GLX_CONTEXT_MAJOR_VERSION_ARB
 #define GLX_CONTEXT_MAJOR_VERSION_ARB           0x2091
 #define GLX_CONTEXT_MINOR_VERSION_ARB           0x2092

@@ -146,8 +146,7 @@ namespace NewAge {
 
     _EXPORT_ double CrystalWindow_uptimeSeconds(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ void   CrystalWindow_uptimeReset(P_INSTANCE(WindowHandle) window_handle);
-
-
+    _EXPORT_ void   CrystalWindow_Activate(P_INSTANCE(WindowHandle) window_handle);
 
 
     class CrystalWindow {
@@ -218,6 +217,8 @@ namespace NewAge {
 
         virtual void ApplicationRetain();
         virtual void ApplicationRelease();
+
+        virtual void Activate() = 0;
     };
 
     typedef struct WindowHandle

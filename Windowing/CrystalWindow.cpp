@@ -210,6 +210,11 @@ namespace NewAge {
         window_handle->crystal_window->GetTitle(title);
     }
 
+    void CrystalWindow_Activate(P_INSTANCE(WindowHandle) window_handle)
+    {
+        window_handle->crystal_window->Activate();
+    }
+
     P_INSTANCE(WindowCallbacks)  get_callbacks(P_INSTANCE(WindowHandle)  handle);
 
     bool lookup_message_handler(P_INSTANCE(WindowHandle) window_handle, utf8_string_struct handler_name, P_ELEMENTS(void) *&handler_ptr) {

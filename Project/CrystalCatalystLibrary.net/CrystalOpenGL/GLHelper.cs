@@ -74,7 +74,7 @@ public static class GLHelper
 
     
     /// <summary>
-    /// Override the cached value for HasDSA enabling forcing false for debugging purposes clearing the cache if state null
+    /// Override the cached value for HasDSA enabling forcing false for debugging purposes, clearing the cache if state null
     /// </summary>
 
     public static void HasDSA_Override(GL gl, bool ? state)
