@@ -650,8 +650,8 @@ namespace NewAge
                     ::SetCursor(wnd->current_hCursor);
                     return TRUE;
                 }
-            }
-            break;
+            }        
+            return DefWindowProc(hwnd, uMsg, wParam, lParam);            
         case WM_PAINT: {
                 PAINTSTRUCT ps;
                 HDC hdc = BeginPaint(hwnd, &ps);
