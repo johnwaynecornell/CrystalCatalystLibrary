@@ -4,24 +4,10 @@ using JWCEssentials.net;
 
 namespace CrystalCatalystLibrary.net;
 
-public class SubMutex : IDisposable
+public partial class SubMutex : IDisposable
 {
-    // Thread-safe tracker mapping the native IntPtr to our managed wrapper.
-    // We use WeakReference so we don't cause memory leaks if the user drops the reference.
-    private static readonly ConcurrentDictionary<IntPtr, WeakReference<SubMutex>> InstanceCache = new();
-
-    // Tracks whether this specific instance has been disposed
-    private bool _disposed;
-    public IntPtr Handle;
-    public bool hasClosed;
-
-    public SubMutex(IntPtr Handle)
-    {
-        this.Handle = Handle;
-    }
-
     /// <summary>
-    ///     Cleans up the native resource and removes it from the cache.
+    /// Cleans up the native resource and removes it from the cache.
     /// </summary>
     public void Dispose()
     {
@@ -49,9 +35,17 @@ public class SubMutex : IDisposable
         }
     }
 
+    // Thread-safe tracker mapping the native IntPtr to our managed wrapper.
+    // We use WeakReference so we don't cause memory leaks if the user drops the reference.
+    private static readonly ConcurrentDictionary<IntPtr, WeakReference<SubMutex>> InstanceCache =
+        new ConcurrentDictionary<IntPtr, WeakReference<SubMutex>>();
+
+    // Tracks whether this specific instance has been disposed
+    private bool _disposed = false;
+
     /// <summary>
-    ///     This cast method should be called by the generated code right after a native "Create" function
-    ///     returns a new IntPtr, OR when a native callback passes an IntPtr back to C#.
+    /// This cast method should be called by the generated code right after a native "Create" function 
+    /// returns a new IntPtr, OR when a native callback passes an IntPtr back to C#.
     /// </summary>
     public static explicit operator SubMutex(IntPtr handle)
     {
@@ -59,7 +53,9 @@ public class SubMutex : IDisposable
 
         // Try to find an existing alive wrapper
         if (InstanceCache.TryGetValue(handle, out var weakRef) && weakRef.TryGetTarget(out var existingContext))
+        {
             return existingContext;
+        }
 
         // If we didn't find one, or it was garbage collected, create a new one
         var newContext = new SubMutex(handle);
@@ -68,36 +64,45 @@ public class SubMutex : IDisposable
         return newContext;
     }
 
+    public IntPtr Handle;
+
+    public SubMutex(IntPtr Handle)
+    {
+        this.Handle = Handle;
+    }
+
     public static bool Size(out IntPtr sz)
     {
-        var Ret = Imports.SubMutex_Size(out sz);
+        bool Ret = (bool)Imports.SubMutex_Size(out sz);
         return Ret;
     }
 
     public bool Init(string name)
     {
         utf8_string_struct param_name = name;
-        var Ret = Imports.SubMutex_Init(Handle, ref param_name);
+        bool Ret = (bool)Imports.SubMutex_Init(Handle, ref param_name);
         return Ret;
     }
+
+    public bool hasClosed = false;
 
     public bool Close()
     {
         if (hasClosed) return false;
         hasClosed = true;
-        var Ret = Imports.SubMutex_Close(Handle);
+        bool Ret = (bool)Imports.SubMutex_Close(Handle);
         return Ret;
     }
 
     public bool Lock()
     {
-        var Ret = Imports.SubMutex_Lock(Handle);
+        bool Ret = (bool)Imports.SubMutex_Lock(Handle);
         return Ret;
     }
 
     public bool Unlock()
     {
-        var Ret = Imports.SubMutex_Unlock(Handle);
+        bool Ret = (bool)Imports.SubMutex_Unlock(Handle);
         return Ret;
     }
 
@@ -122,5 +127,6 @@ public class SubMutex : IDisposable
         // bool SubMutex_Unlock(P_INSTANCE void spiderMutex)
         [DllImport("CrystalCatalystLibrary")]
         public static extern bool SubMutex_Unlock(IntPtr spiderMutex);
+
     }
 }

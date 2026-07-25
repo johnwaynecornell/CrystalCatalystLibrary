@@ -3,146 +3,133 @@ using System.Runtime.InteropServices;
 using JWCEssentials.net;
 
 namespace CrystalCatalystLibrary.net;
-
-public class DataInterchange : IDisposable
+public partial class DataInterchange : IDisposable
 {
-    // Thread-safe tracker mapping the native IntPtr to our managed wrapper.
-    // We use WeakReference so we don't cause memory leaks if the user drops the reference.
-    private static readonly ConcurrentDictionary<IntPtr, WeakReference<DataInterchange>> InstanceCache = new();
-
-    // Tracks whether this specific instance has been disposed
-    private bool _disposed;
-    public IntPtr Handle;
-    public bool hasClosed;
-
-    public DataInterchange(IntPtr Handle)
-    {
-        this.Handle = Handle;
-    }
-
     /// <summary>
-    ///     Cleans up the native resource and removes it from the cache.
+    /// Cleans up the native resource and removes it from the cache.
     /// </summary>
     public void Dispose()
     {
-        Dispose(true);
-        GC.SuppressFinalize(this);
+    Dispose(true);
+    GC.SuppressFinalize(this);
     }
 
-    protected virtual void Dispose(bool disposing)
+    protected virtual void Dispose(bool disposing){
+    if (!_disposed)
     {
-        if (!_disposed)
-        {
-            if (Handle != IntPtr.Zero)
-            {
-                // 1. Remove from our tracking dictionary
-                InstanceCache.TryRemove(Handle, out _);
+    if (Handle != IntPtr.Zero)
+    {
+    // 1. Remove from our tracking dictionary
+    InstanceCache.TryRemove(Handle, out _);
 
-                // 2. Call the native destroy function generated in the Imports class
-                // (Assuming you mapped the destroy function in your generator)
-                Free();
-                // 3. Clear the handle so we don't double-free
-                Handle = IntPtr.Zero;
-            }
-
-            _disposed = true;
-        }
+    // 2. Call the native destroy function generated in the Imports class
+    // (Assuming you mapped the destroy function in your generator)
+    Free();
+    // 3. Clear the handle so we don't double-free
+    Handle = IntPtr.Zero;
     }
+
+    _disposed = true;
+    }
+    }
+    // Thread-safe tracker mapping the native IntPtr to our managed wrapper.
+    // We use WeakReference so we don't cause memory leaks if the user drops the reference.
+    private static readonly ConcurrentDictionary<IntPtr, WeakReference<DataInterchange>> InstanceCache = 
+    new ConcurrentDictionary<IntPtr, WeakReference<DataInterchange>>();
+
+    // Tracks whether this specific instance has been disposed
+    private bool _disposed = false;
 
     /// <summary>
-    ///     This cast method should be called by the generated code right after a native "Create" function
-    ///     returns a new IntPtr, OR when a native callback passes an IntPtr back to C#.
+    /// This cast method should be called by the generated code right after a native "Create" function 
+    /// returns a new IntPtr, OR when a native callback passes an IntPtr back to C#.
     /// </summary>
-    public static explicit operator DataInterchange(IntPtr handle)
+    public static explicit operator DataInterchange(IntPtr handle)           
     {
-        if (handle == IntPtr.Zero) throw new NullReferenceException("IntPtr cannot be null");
+    if (handle == IntPtr.Zero) throw new NullReferenceException("IntPtr cannot be null");
 
-        // Try to find an existing alive wrapper
-        if (InstanceCache.TryGetValue(handle, out var weakRef) && weakRef.TryGetTarget(out var existingContext))
-            return existingContext;
-
-        // If we didn't find one, or it was garbage collected, create a new one
-        var newContext = new DataInterchange(handle);
-        InstanceCache[handle] = new WeakReference<DataInterchange>(newContext);
-
-        return newContext;
+    // Try to find an existing alive wrapper
+    if (InstanceCache.TryGetValue(handle, out var weakRef) && weakRef.TryGetTarget(out var existingContext))
+    {
+    return existingContext;
     }
 
+    // If we didn't find one, or it was garbage collected, create a new one
+    var newContext = new DataInterchange(handle);
+    InstanceCache[handle] = new WeakReference<DataInterchange>(newContext);
+
+    return newContext;
+    }
+    public IntPtr Handle;
+    public DataInterchange(IntPtr Handle)
+    {
+        this.Handle= Handle;
+    }
     public static DataInterchange Create()
     {
-        var Ret = (DataInterchange)Imports.DataInterchange_Create();
+        DataInterchange Ret = ( DataInterchange ) Imports.DataInterchange_Create();
         return Ret;
     }
-
+    public bool hasClosed = false;
     public void Free()
     {
         if (hasClosed) return;
         hasClosed = true;
         Imports.DataInterchange_Free(Handle);
     }
-
-    public IntPtr FormatAdd(string format)
+    public IntPtr FormatAdd(string  format)
     {
         utf8_string_struct param_format = format;
-        var Ret = Imports.DataInterchange_FormatAdd(Handle, ref param_format);
+        IntPtr Ret = ( IntPtr ) Imports.DataInterchange_FormatAdd(Handle,  ref param_format);
         return Ret;
     }
-
-    public bool FormatExists(string format)
+    public bool FormatExists(string  format)
     {
         utf8_string_struct param_format = format;
-        var Ret = Imports.DataInterchange_FormatExists(Handle, ref param_format);
+        bool Ret = ( bool ) Imports.DataInterchange_FormatExists(Handle,  ref param_format);
         return Ret;
     }
-
     public IntPtr FormatEnum()
     {
-        var Ret = Imports.DataInterchange_FormatEnum(Handle);
+        IntPtr Ret = ( IntPtr ) Imports.DataInterchange_FormatEnum(Handle);
         return Ret;
     }
-
-    public static IntPtr FormatEnumNext(IntPtr node)
+    public static IntPtr FormatEnumNext(IntPtr  node)
     {
-        var Ret = Imports.DataInterchange_FormatEnumNext(node);
+        IntPtr Ret = ( IntPtr ) Imports.DataInterchange_FormatEnumNext((IntPtr)node);
         return Ret;
     }
-
-    public static void FormatEnumText(IntPtr node, out string text)
+    public static void FormatEnumText(IntPtr  node, out string  text)
     {
         utf8_string_struct param_text;
-        Imports.DataInterchange_FormatEnumText(node, out param_text);
+        Imports.DataInterchange_FormatEnumText((IntPtr)node,  out param_text);
         text = param_text;
     }
-
-    public IntPtr ItemsFormatRemove(IntPtr node)
+    public IntPtr ItemsFormatRemove(IntPtr  node)
     {
-        var Ret = Imports.DataInterchange_ItemsFormatRemove(Handle, node);
+        IntPtr Ret = ( IntPtr ) Imports.DataInterchange_ItemsFormatRemove(Handle, (IntPtr)node);
         return Ret;
     }
-
     public bool isClipboard()
     {
-        var Ret = Imports.DataInterchange_isClipboard(Handle);
+        bool Ret = ( bool ) Imports.DataInterchange_isClipboard(Handle);
         return Ret;
     }
-
-    public void Select(string format)
+    public void Select(string  format)
     {
         utf8_string_struct param_format = format;
-        Imports.DataInterchange_Select(Handle, ref param_format);
+        Imports.DataInterchange_Select(Handle,  ref param_format);
     }
-
-    public void SelectionReveal(out string format, out IntPtr data, out IntPtr size)
+    public void SelectionReveal(out string  format, out IntPtr  data, out IntPtr  size)
     {
         utf8_string_struct param_format;
-        Imports.DataInterchange_SelectionReveal(Handle, out param_format, out data, out size);
+        Imports.DataInterchange_SelectionReveal(Handle,  out param_format, out data, out size);
         format = param_format;
     }
-
-    public void SelectionSet(string format, IntPtr data, IntPtr size)
+    public void SelectionSet(string  format, IntPtr  data, IntPtr  size)
     {
         utf8_string_struct param_format = format;
-        Imports.DataInterchange_SelectionSet(Handle, ref param_format, data, size);
+        Imports.DataInterchange_SelectionSet(Handle,  ref param_format, (IntPtr)data, (IntPtr)size);
     }
 
     public class Imports
@@ -189,12 +176,11 @@ public class DataInterchange : IDisposable
 
         // void DataInterchange_SelectionReveal(P_INSTANCE DataInterchange drag, P_OUT utf8_string_struct format, P_OUT P_INSTANCE void data, P_OUT size_t size)
         [DllImport("CrystalCatalystLibrary")]
-        public static extern void DataInterchange_SelectionReveal(IntPtr drag, out utf8_string_struct format,
-            out IntPtr data, out IntPtr size);
+        public static extern void DataInterchange_SelectionReveal(IntPtr drag, out utf8_string_struct format, out IntPtr data, out IntPtr size);
 
         // void DataInterchange_SelectionSet(P_INSTANCE DataInterchange drag, utf8_string_struct format, P_INSTANCE void data, size_t size)
         [DllImport("CrystalCatalystLibrary")]
-        public static extern void DataInterchange_SelectionSet(IntPtr drag, ref utf8_string_struct format, IntPtr data,
-            IntPtr size);
+        public static extern void DataInterchange_SelectionSet(IntPtr drag, ref utf8_string_struct format, IntPtr data, IntPtr size);
+
     }
 }

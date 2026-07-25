@@ -2,8 +2,7 @@ using System.Runtime.InteropServices;
 using JWCEssentials.net;
 
 namespace CrystalCatalystLibrary.net;
-
-public class Application
+public partial class Application
 {
     public static void Init(string[] args)
     {
@@ -13,41 +12,34 @@ public class Application
 
         Imports.Application_Init(ref _args);
     }
-
     public static int Run()
     {
-        var Ret = Imports.Application_Run();
+        int Ret = ( int ) Imports.Application_Run();
         return Ret;
     }
-
     public static void SignalClose()
     {
         Imports.Application_SignalClose();
     }
-
     public static int ArgumentCount()
     {
-        var Ret = Imports.Application_ArgumentCount();
+        int Ret = ( int ) Imports.Application_ArgumentCount();
         return Ret;
     }
-
-    public static string Argument(int index)
+    public static string Argument(int  index)
     {
-        var Ret = (string)Imports.Application_Argument(index);
+        string Ret = ( string ) Imports.Application_Argument((int)index);
         return Ret;
     }
-
-    public static void ArgumentRemove(int index)
+    public static void ArgumentRemove(int  index)
     {
-        Imports.Application_ArgumentRemove(index);
+        Imports.Application_ArgumentRemove((int)index);
     }
-
-    public static void WindowAdd(CrystalWindow window_handle)
+    public static void WindowAdd(CrystalWindow  window_handle)
     {
         Imports.Application_WindowAdd(window_handle.Handle);
     }
-
-    public static void WindowRemove(CrystalWindow window_handle)
+    public static void WindowRemove(CrystalWindow  window_handle)
     {
         Imports.Application_WindowRemove(window_handle.Handle);
     }
@@ -85,5 +77,6 @@ public class Application
         // void Application_WindowRemove(P_INSTANCE WindowHandle window_handle)
         [DllImport("CrystalCatalystLibrary")]
         public static extern void Application_WindowRemove(IntPtr window_handle);
+
     }
 }
