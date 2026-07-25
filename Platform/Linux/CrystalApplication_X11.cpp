@@ -93,7 +93,7 @@ namespace NewAge {
         }
 
         XSetWindowAttributes swa;
-        swa.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | StructureNotifyMask;
+        swa.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | StructureNotifyMask | EnterWindowMask | LeaveWindowMask;
         
         Window win;
         if (visual_info) {
@@ -125,7 +125,7 @@ namespace NewAge {
         XStoreName(globalDisplay, win, title);
         XMapWindow(globalDisplay, win);
 
-        XSelectInput(globalDisplay, win, ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | StructureNotifyMask | PropertyChangeMask);
+        XSelectInput(globalDisplay, win, ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | StructureNotifyMask | PropertyChangeMask | EnterWindowMask | LeaveWindowMask);
         XFlush(globalDisplay);  // Ensure commands are sent to the X server
 
         auto* window_structure = new CrystalWindow_X11();
@@ -187,7 +187,7 @@ namespace NewAge {
         XStoreName(globalDisplay, win, title);
         XMapWindow(globalDisplay, win);
 
-        XSelectInput(globalDisplay, win, ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | StructureNotifyMask | PropertyChangeMask);
+        XSelectInput(globalDisplay, win, ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | StructureNotifyMask | PropertyChangeMask | EnterWindowMask | LeaveWindowMask);
         XFlush(globalDisplay);  // Ensure commands are sent to the X server
 
         Atom net_wm_state = XInternAtom(globalDisplay, "_NET_WM_STATE", False);

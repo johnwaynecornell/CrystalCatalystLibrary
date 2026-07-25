@@ -147,6 +147,14 @@ void on_mouse_up(P_INSTANCE(WindowHandle) window_handle, int32_t button, int32_t
     //std::cerr << mod_header() << "Mouse up event: button " << button << " at (" << x << ", " << y << ")" << std::endl;
 }
 
+void on_mouse_enter(P_INSTANCE(WindowHandle) window_handle) {
+    std::cerr << mod_header() << "Mouse enter event" << std::endl;
+}
+
+void on_mouse_leave(P_INSTANCE(WindowHandle) window_handle) {
+    std::cerr << mod_header() << "Mouse leave event" << std::endl;
+}
+
 void on_resize(P_INSTANCE(WindowHandle) window_handle, int32_t width, int32_t height) {
     std::cerr << mod_header() << "Resize event: (" << width << ", " << height << ")" << std::endl;
     window_width = width;
@@ -366,6 +374,8 @@ int32_t main(int32_t argc, P_ELEMENTS(char *)  argv) {
     CrystalWindow_SetMessageHandler(window_handle, "on_mouse_move", (P_INSTANCE(void))on_mouse_move);
     CrystalWindow_SetMessageHandler(window_handle, "on_mouse_down", (P_INSTANCE(void))on_mouse_down);
     CrystalWindow_SetMessageHandler(window_handle, "on_mouse_up", (P_INSTANCE(void))on_mouse_up);
+    CrystalWindow_SetMessageHandler(window_handle, "on_mouse_enter", (P_INSTANCE(void))on_mouse_enter);
+    CrystalWindow_SetMessageHandler(window_handle, "on_mouse_leave", (P_INSTANCE(void))on_mouse_leave);
     CrystalWindow_SetMessageHandler(window_handle, "on_resize", (P_INSTANCE(void))on_resize);
     CrystalWindow_SetMessageHandler(window_handle, "on_close", (P_INSTANCE(void))on_close);
     CrystalWindow_SetMessageHandler(window_handle, "on_focus_in", (P_INSTANCE(void))on_focus_in);

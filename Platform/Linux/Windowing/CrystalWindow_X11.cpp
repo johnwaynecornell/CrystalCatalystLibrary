@@ -406,6 +406,16 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
                     callbacks.on_mouse_move(myHandle, event->xmotion.x, event->xmotion.y);
                 }
             return true;
+            case EnterNotify:
+                if (callbacks.on_mouse_enter) {
+                    callbacks.on_mouse_enter(myHandle);
+                }
+            return true;
+            case LeaveNotify:
+                if (callbacks.on_mouse_leave) {
+                    callbacks.on_mouse_leave(myHandle);
+                }
+            return true;
             case ButtonPress:
                 if (callbacks.on_mouse_down) {
                     callbacks.on_mouse_down(myHandle, event->xbutton.button, event->xbutton.x, event->xbutton.y);

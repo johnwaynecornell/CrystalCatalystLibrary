@@ -232,6 +232,10 @@ namespace NewAge {
             handler_ptr = (P_OUT(P_INSTANCE(void)) )&callbacks->on_mouse_down;
         else if (strcmp(handler_name, "on_mouse_up") == 0)
             handler_ptr = (P_OUT(P_INSTANCE(void)) )&callbacks->on_mouse_up;
+        else if (strcmp(handler_name, "on_mouse_enter") == 0)
+            handler_ptr = (P_OUT(P_INSTANCE(void)) )&callbacks->on_mouse_enter;
+        else if (strcmp(handler_name, "on_mouse_leave") == 0)
+            handler_ptr = (P_OUT(P_INSTANCE(void)) )&callbacks->on_mouse_leave;
         else if (strcmp(handler_name, "on_resize") == 0)
             handler_ptr = (P_OUT(P_INSTANCE(void)) )&callbacks->on_resize;
         else if (strcmp(handler_name, "on_close") == 0)

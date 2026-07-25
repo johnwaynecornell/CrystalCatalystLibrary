@@ -680,10 +680,28 @@ namespace NewAge
             }
             break;
         case WM_MOUSEMOVE:
+            if (!wnd->mouse_tracked) {
+                TRACKMOUSEEVENT tme;
+                tme.cbSize = sizeof(TRACKMOUSEEVENT);
+                tme.dwFlags = TME_LEAVE;
+                tme.hwndTrack = hwnd;
+                if (TrackMouseEvent(&tme)) {
+                    wnd->mouse_tracked = true;
+                    if (wnd->callbacks.on_mouse_enter) {
+                        wnd->callbacks.on_mouse_enter(handle);
+                    }
+                }
+            }
             if (wnd->callbacks.on_mouse_move) {
                 wnd->callbacks.
                         on_mouse_move(handle, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)
                 );
+            }
+            break;
+        case WM_MOUSELEAVE:
+            wnd->mouse_tracked = false;
+            if (wnd->callbacks.on_mouse_leave) {
+                wnd->callbacks.on_mouse_leave(handle);
             }
             break;
         case WM_LBUTTONDOWN:

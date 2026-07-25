@@ -72,6 +72,9 @@ namespace NewAge {
         void (*on_mouse_down)(P_INSTANCE(WindowHandle) window_handle, int32_t button, int32_t x, int32_t y);
         void (*on_mouse_up)(P_INSTANCE(WindowHandle) window_handle, int32_t button, int32_t x, int32_t y);
 
+        void (*on_mouse_enter)(P_INSTANCE(WindowHandle) window_handle);
+        void (*on_mouse_leave)(P_INSTANCE(WindowHandle) window_handle);
+
         void (*on_resize)(P_INSTANCE(WindowHandle) window_handle, int32_t width, int32_t height);
 
         void (*on_close)(P_INSTANCE(WindowHandle) window_handle);
