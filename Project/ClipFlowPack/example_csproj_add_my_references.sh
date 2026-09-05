@@ -1,0 +1,2 @@
+csproj_add_my_references ClipFlow/ClipFlow.csproj CrystalCatalystLibrary.net CrystalSkia.net FluentCommandLine
+csproj_add_my_references ClipFlow.Format/ClipFlow.Format.csproj CrystalCatalystLibrary.net CrystalSkia.net FluentCommandLine

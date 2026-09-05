@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <PropertyGroup>
+    <MyReferencePath>$(NewAge)\DotNet\Libs\lib\$(Configuration)\$(TargetFramework)</MyReferencePath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="$(MyReferencePath)\JWCEssentials.net.dll" />
+    <Reference Include="$(MyReferencePath)\CrystalCatalystLibrary.net.dll" />
+    <Reference Include="$(MyReferencePath)\CrystalSkia.net.dll" />
+    <Reference Include="$(MyReferencePath)\FluentCommandLine.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" Version="[3.119.2,4.0.0)" />
+    <PackageReference Include="SkiaSharp.Svg" Version="1.60.0" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="[3.119.2,4.0.0)" />
+    <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="[3.119.2,4.0.0)" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="[3.119.2,4.0.0)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ClipFlow.Format\ClipFlow.Format.csproj" />
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="bash NewAge_forward.sh '$(MSBuildProjectName)' '$(NewAge)/bin/' '$(OutputPath)/'" />
+  </Target>
+
+</Project>

@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClipFlow.Format", "ClipFlow.Format\ClipFlow.Format.csproj", "{1778CE83-78D8-41D5-AFC7-10DA0EA0E094}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClipFlow", "ClipFlow\ClipFlow.csproj", "{477A112B-DC6E-491E-AC7A-CAC4E5503C5D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1778CE83-78D8-41D5-AFC7-10DA0EA0E094}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1778CE83-78D8-41D5-AFC7-10DA0EA0E094}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1778CE83-78D8-41D5-AFC7-10DA0EA0E094}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1778CE83-78D8-41D5-AFC7-10DA0EA0E094}.Release|Any CPU.Build.0 = Release|Any CPU
+		{477A112B-DC6E-491E-AC7A-CAC4E5503C5D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{477A112B-DC6E-491E-AC7A-CAC4E5503C5D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{477A112B-DC6E-491E-AC7A-CAC4E5503C5D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{477A112B-DC6E-491E-AC7A-CAC4E5503C5D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
