@@ -114,6 +114,8 @@ namespace NewAge {
         XContext windowContext = XUniqueContext();
         P_INSTANCE(Display)  globalDisplay = nullptr;  // Global display connection
 
+        ~CrystalApplication_X11() override;
+
         virtual void Init();
 
         virtual P_INSTANCE(WindowHandle) WindowCreate(int32_t width, int32_t height, utf8_string_struct title);
@@ -125,6 +127,6 @@ namespace NewAge {
         virtual bool HasMessage();
     };
 
-    extern CrystalApplication_X11 *AppX11;
+    extern thread_local CrystalApplication_X11 *AppX11;
 }
 #endif //CRYSTALAPPLICATION_X11_H

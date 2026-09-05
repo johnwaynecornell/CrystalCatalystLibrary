@@ -22,6 +22,8 @@ public:
     HINSTANCE hInstance;
     WNDCLASS wc;
 
+    ~CrystalApplication_Windows() override;
+
     virtual void Init();
 
     virtual P_INSTANCE(WindowHandle) WindowCreate(int32_t width, int32_t height, utf8_string_struct title);

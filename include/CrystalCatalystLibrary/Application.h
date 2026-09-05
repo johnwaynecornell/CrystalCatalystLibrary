@@ -14,7 +14,7 @@ using namespace JWCEssentials;
 namespace NewAge {
     class CrystalApplication {
     public:
-        virtual ~CrystalApplication() = default;
+        virtual ~CrystalApplication();
 
         HandleNode window_head = {nullptr, nullptr};
 
@@ -47,7 +47,7 @@ namespace NewAge {
         virtual void RetainerDecrement();
     };
 
-    extern P_INSTANCE(CrystalApplication)TheApplication;
+    extern thread_local P_INSTANCE(CrystalApplication) TheApplication;
 
     _EXPORT_ void Application_Init(struct_array_struct<utf8_string_struct> args);
     _EXPORT_ int32_t Application_Run(void);

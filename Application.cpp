@@ -5,16 +5,32 @@
 #include <iostream>
 
 namespace NewAge {
-    P_INSTANCE(CrystalApplication)TheApplication = nullptr;
+    thread_local P_INSTANCE(CrystalApplication) TheApplication = nullptr;
 
 
     P_INSTANCE(CrystalApplication) platform_initialize();
     void platform_uninitialize();
 
+    CrystalApplication::~CrystalApplication() {
+        P_INSTANCE(HandleNode) cur = window_head.next;
+        while (cur != nullptr) {
+            P_INSTANCE(HandleNode) next = cur->next;
+            if (cur->handle) {
+                if (cur->handle->crystal_window) {
+                    delete cur->handle->crystal_window;
+                }
+                free(cur->handle);
+            }
+            free(cur);
+            cur = next;
+        }
+        window_head.next = nullptr;
+    }
+
     void Application_Init(struct_array_struct<utf8_string_struct> args)
     {
         if (TheApplication != nullptr) {
-            std::cerr << "Application already initialized. The app model means only one application can exist at a time." << std::endl;
+            std::cerr << "Application already initialized on this thread." << std::endl;
             exit(1);
         }
         TheApplication = platform_initialize();
@@ -126,7 +142,12 @@ namespace NewAge {
     }
 
     int32_t Application_Run() {
-        return TheApplication->Run();
+        if (TheApplication == nullptr) return -1;
+        int32_t result = TheApplication->Run();
+        platform_uninitialize();
+        delete TheApplication;
+        TheApplication = nullptr;
+        return result;
     }
 
     int32_t CrystalApplication::Run() {

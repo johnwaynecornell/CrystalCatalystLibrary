@@ -22,6 +22,11 @@ namespace NewAge
 
     LRESULT CALLBACK CrystalWindow_Windows_WindowProc(HWND hwnd, uint32_t  uMsg, WPARAM wParam, LPARAM lParam);
 
+    CrystalApplication_Windows::~CrystalApplication_Windows() {
+        OleUninitialize();
+        CoUninitialize();
+    }
+
     void CrystalApplication_Windows::Init() {
         CrystalApplication::Init();
 

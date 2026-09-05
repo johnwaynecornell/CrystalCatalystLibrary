@@ -28,7 +28,17 @@ namespace NewAge {
         return 1; // You may want to exit the program here as the connection to the X server is lost
     }
 
-    CrystalApplication_X11 *AppX11 = nullptr;
+    thread_local CrystalApplication_X11 *AppX11 = nullptr;
+
+    CrystalApplication_X11::~CrystalApplication_X11() {
+        if (AppX11 == this) {
+            AppX11 = nullptr;
+        }
+        if (globalDisplay) {
+            XCloseDisplay(globalDisplay);
+            globalDisplay = nullptr;
+        }
+    }
 
     void CrystalApplication_X11::Init()
     {

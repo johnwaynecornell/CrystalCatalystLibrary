@@ -8,6 +8,11 @@
          test_client.cpp
  )
 
+ add_executable(test_multi_thread
+         test_multi_thread.cpp
+ )
+
  find_library(LIBJWCEssentials JWCEssentials)
 
  target_link_libraries(test_client PUBLIC CrystalCatalystLibrary ${LIBJWCEssentials})
+ target_link_libraries(test_multi_thread PUBLIC CrystalCatalystLibrary ${LIBJWCEssentials} pthread)
