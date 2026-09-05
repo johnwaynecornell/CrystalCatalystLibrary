@@ -49,6 +49,8 @@ namespace NewAge {
 
     extern thread_local P_INSTANCE(CrystalApplication) TheApplication;
 
+    _EXPORT_ P_INSTANCE(CrystalApplication) Application_Peek();
+
     _EXPORT_ void Application_Init(struct_array_struct<utf8_string_struct> args);
     _EXPORT_ int32_t Application_Run(void);
     _EXPORT_ void Application_SignalClose(void);

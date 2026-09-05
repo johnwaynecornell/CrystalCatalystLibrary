@@ -13,6 +13,7 @@ namespace TestWindow
         [STAThread]
         static void Main(string[] args)
         {
+            Console.WriteLine("Pre init Application.Peek() = " + Application.Peek());
             Console.WriteLine(JWCEssentials.net.Essentials.feffect("fg_red(\"Hello\")"));
 
             /*
@@ -21,6 +22,7 @@ namespace TestWindow
             struct_array_struct<utf8_string_struct> _args =
                 (struct_array_struct<utf8_string_struct>)tmp; */
             Application.Init(args);
+            Console.WriteLine("Post init Application.Peek() = " + Application.Peek());
             Window wnd = new Window();
             wnd.Run();
         }

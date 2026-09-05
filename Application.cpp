@@ -54,6 +54,11 @@ namespace NewAge {
         CloseSignalled = true;
     }
 
+    P_INSTANCE(CrystalApplication) Application_Peek()
+    {
+        return TheApplication;
+    }
+
     int32_t Application_ArgumentCount()
     {
         return TheApplication->ArgumentCount();

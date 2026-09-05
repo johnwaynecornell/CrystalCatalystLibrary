@@ -4,6 +4,11 @@ using JWCEssentials.net;
 namespace CrystalCatalystLibrary.net;
 public partial class Application
 {
+    public static IntPtr Peek()
+    {
+        return Imports.Application_Peek();
+    }
+
     public static void Init(string[] args)
     {
         var tmp = (from s in args select (utf8_string_struct)s).ToArray();
@@ -46,6 +51,10 @@ public partial class Application
 
     public class Imports
     {
+        //P_INSTANCE(CrystalApplication) Application_Peek()
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern IntPtr Application_Peek();
+
         // void Application_Init(struct_array_struct<utf8_string_struct> args)
         [DllImport("CrystalCatalystLibrary")]
         public static extern void Application_Init(ref struct_array_struct<utf8_string_struct> args);
