@@ -13,6 +13,7 @@
  )
 
  find_library(LIBJWCEssentials JWCEssentials)
+ find_package(Threads)
 
  target_link_libraries(test_client PUBLIC CrystalCatalystLibrary ${LIBJWCEssentials})
- target_link_libraries(test_multi_thread PUBLIC CrystalCatalystLibrary ${LIBJWCEssentials} pthread)
+ target_link_libraries(test_multi_thread PUBLIC CrystalCatalystLibrary ${LIBJWCEssentials} ${CMAKE_THREAD_LIBS_INIT})

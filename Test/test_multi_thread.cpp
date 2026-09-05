@@ -7,8 +7,11 @@
 #include <atomic>
 #include <cassert>
 #include <vector>
+
+#if !defined(_WIN32)
 #include <sys/wait.h>
 #include <unistd.h>
+#endif
 
 #include "CrystalCatalystLibrary/CrystalCatalystLibrary.h"
 #if defined(__linux__)
@@ -134,6 +137,7 @@ void test_reinitialization_after_teardown() {
 void test_double_init_rejected_on_same_thread() {
     std::cout << "[TEST] Running test_double_init_rejected_on_same_thread..." << std::endl;
 
+#if !defined(_WIN32)
     pid_t pid = fork();
     if (pid == 0) {
         // Child process
@@ -149,6 +153,9 @@ void test_double_init_rejected_on_same_thread() {
         assert(WIFEXITED(status));
         assert(WEXITSTATUS(status) == 1);
     }
+#else
+    std::cout << "  (Skipping fork-based exit test on Windows)" << std::endl;
+#endif
 
     std::cout << "[TEST] test_double_init_rejected_on_same_thread PASSED." << std::endl;
 }
