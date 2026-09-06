@@ -851,14 +851,9 @@ namespace NewAge {
        in->buffer.insert(in->buffer.end(), data, data + bytes);
        if (data) XFree(data);
 
-       if (INCR_STYLE_A) {
-           if (XDeleteProperty(dpy, in->requestor, in->property) != Success) {
-               handleDataInterchangeError(myHandle, di, ((std::string) mod_header() + "XDeleteProperty failed.").c_str());
-               if (in->is_clipboard) this->current_clipboard_receive_data = nullptr;
-               else this->current_drag_receive_data = nullptr;
-               return true;
-                                  }
-           usleep(5000);
+       if (INCR_STYLE_A)
+       {
+           XDeleteProperty(dpy, in->requestor, in->property);
            XFlush(dpy);
        }
 

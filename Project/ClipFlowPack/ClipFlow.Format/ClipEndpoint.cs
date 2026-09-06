@@ -103,7 +103,9 @@ public abstract class ClipEndpoint
             }
         }
         
-        private static void WriteImage(ClipContext context, ClipType.Image image)
+        private static void WriteImage(
+            ClipContext context,
+            ClipType.Image image)
         {
             if (image.Identity == null)
             {
@@ -123,27 +125,12 @@ public abstract class ClipEndpoint
                 data.SaveTo(stream);
             }
 
-            ProcessStartInfo psi;
-
-            if (OperatingSystem.IsWindows())
+            using Process ? process = Process.Start(new ProcessStartInfo
             {
-                psi = new ProcessStartInfo
-                {
-                    FileName = path,
-                    UseShellExecute = true
-                };
-            }
-            else
-            {
-                psi = new ProcessStartInfo
-                {
-                    FileName = "xdg-open",
-                    ArgumentList = { path },
-                    UseShellExecute = false
-                };
-            }
-
-            Process.Start(psi);
+                FileName = path,
+                UseShellExecute = true
+            });
+            Thread.Sleep(1000);
         }
     }
     
