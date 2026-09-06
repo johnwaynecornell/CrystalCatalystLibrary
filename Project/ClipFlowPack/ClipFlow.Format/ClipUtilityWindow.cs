@@ -109,8 +109,12 @@ public class ClipUtilityWindow
             
             Application.Run();
         });
-        runner.SetApartmentState(ApartmentState.STA);
 
+        if (OperatingSystem.IsWindows())
+        {
+            runner.SetApartmentState(ApartmentState.STA);
+        }
+        
         runner.Start();
         runner.Join();
     }
@@ -168,7 +172,12 @@ public class ClipUtilityWindow
             
             Application.Run();
         });
-        runner.SetApartmentState(ApartmentState.STA);
+        
+        if (OperatingSystem.IsWindows())
+        {
+            runner.SetApartmentState(ApartmentState.STA);
+        }
+        
         runner.Start();
         runner.Join();
     }
