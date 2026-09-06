@@ -223,6 +223,13 @@ namespace NewAge {
                         DataInterchange_FormatAdd(current_drag_receive_data, "text/html");
                     } else if (strcmp(type_name, "text/uri-list") == 0) {
                         DataInterchange_FormatAdd(current_drag_receive_data, "text/file-uri");
+                    } else if (strcmp(type_name, "image/png") == 0) {
+                        DataInterchange_FormatAdd(current_drag_receive_data, "image/png");
+                    } else if (strcmp(type_name, "image/bmp") == 0 || strcmp(type_name, "image/x-bmp") == 0 || strcmp(type_name, "image/x-MS-bmp") == 0) {
+                        if (!DataInterchange_FormatExists(current_drag_receive_data, "image/bmp"))
+                            DataInterchange_FormatAdd(current_drag_receive_data, "image/bmp");
+                    } else {
+                        DataInterchange_FormatAdd(current_drag_receive_data, type_name);
                     }
                 }
             }
@@ -343,6 +350,8 @@ namespace NewAge {
             } else if (strcmp(format, "text/file-uri") == 0) {
                 // Store type as text/uri-list
                 xformat = "text/uri-list";
+            } else {
+                xformat = format;
             }
 
             std::cerr << mod_header() << "Selected format: " << xformat << std::endl;
@@ -641,6 +650,14 @@ namespace NewAge {
                     std::cerr << mod_header() << "Setting selection for text/uri-list: " << cleaned_uri_list << std::endl;
                     DataInterchange_SelectionSet(current_data, "text/file-uri", cleaned_uri_list.data(), cleaned_uri_list.size());
                     XFree(prop);
+                } else if (strcmp("image/png", format) == 0) {
+                    std::cerr << mod_header() << "Setting selection for image/png" << std::endl;
+                    DataInterchange_SelectionSet(current_data, "image/png", prop, nitems);
+                    XFree(prop);
+                } else if (strcmp("image/bmp", format) == 0 || strcmp("image/x-bmp", format) == 0 || strcmp("image/x-MS-bmp", format) == 0) {
+                    std::cerr << mod_header() << "Setting selection for image/bmp" << std::endl;
+                    DataInterchange_SelectionSet(current_data, "image/bmp", prop, nitems);
+                    XFree(prop);
                 } else {
                     // Unknown but successfully requested X11 target.
                     // Preserve its actual format and raw payload.
@@ -808,6 +825,9 @@ namespace NewAge {
 
            if (in->first_chunk_type != None) {
                utf8_string_struct final_fmt = XGetAtomName_struct(dpy, in->first_chunk_type);
+               if (strcmp(final_fmt, "image/x-bmp") == 0 || strcmp(final_fmt, "image/x-MS-bmp") == 0) {
+                   final_fmt = "image/bmp";
+               }
                di->selected_format = final_fmt;
                DataInterchange_SelectionSet(di, final_fmt, in->buffer.data(), in->buffer.size());
            }
@@ -891,6 +911,10 @@ namespace NewAge {
             if (req->target == XInternAtom(req->display, "text/plain", False)) format = "text/plain";
             else if (req->target == XInternAtom(req->display, "text/html", False)) format = "text/html";
             else if (req->target == XInternAtom(req->display, "text/uri-list", False)) format = "text/file-uri";
+            else if (req->target == XInternAtom(req->display, "image/png", False)) format = "image/png";
+            else if (req->target == XInternAtom(req->display, "image/bmp", False)) format = "image/bmp";
+            else if (req->target == XInternAtom(req->display, "image/x-bmp", False)) format = "image/bmp";
+            else if (req->target == XInternAtom(req->display, "image/x-MS-bmp", False)) format = "image/bmp";
             else
             {
                 format = XGetAtomName(req->display, req->target);

@@ -5,6 +5,7 @@
 #define CRYSTALCATALYST_LINUX_CRYSTALWINDOW_H
 
 #include <GL/glx.h>
+#include <vector>
 
 #include "CrystalCatalystLibrary/CrystalCatalystLibrary.h"
 
@@ -27,6 +28,7 @@ namespace NewAge {
         Atom target_atom = None;     // the requested "format" (e.g., UTF8_STRING/text/html)
         Atom property_atom = None;   // the property we expect data on (e.g., CRYSTAL_SELECTION)
         Atom expected_selection = None;
+        std::vector<Atom> advertised_atoms;
         bool clipboard_pending = false;
         bool retry_with_property = false;   // add this bool in your window state
         bool tried_primary = false;         // add this too

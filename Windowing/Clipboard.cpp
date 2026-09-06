@@ -10,8 +10,9 @@ namespace NewAge {
     void DataInterchange::provide_for_clipboard(P_INSTANCE(DataInterchange) data, utf8_string_struct format)
     {
         DragDropData *dta = (DragDropData*)data;
-        dta->m_handle->crystal_window->callbacks.on_clipboard_provide_chosen(dta->m_handle, dta, format);
-
+        if (dta && dta->m_handle && dta->m_handle->crystal_window && dta->m_handle->crystal_window->callbacks.on_clipboard_provide_chosen) {
+            dta->m_handle->crystal_window->callbacks.on_clipboard_provide_chosen(dta->m_handle, dta, format);
+        }
     }
 
     void handleDataInterchangeError(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) di, std::string message)

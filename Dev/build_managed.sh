@@ -70,3 +70,4 @@ NEWAGE_BUILD_FRESH="$FRESH"
 NEWAGE_BUILD_CLEAN="$CLEAN"
 newage_managed_build_directory Project/CrystalCatalystLibrary.net
 newage_managed_build_directory CrystalOptics/Project/CrystalOptics.net
+newage_managed_build_directory Project/ClipFlowPack

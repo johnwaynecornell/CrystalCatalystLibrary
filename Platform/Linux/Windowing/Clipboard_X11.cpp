@@ -30,14 +30,26 @@ namespace NewAge {
     };
 
     void DataImterchange_FormatsFromAtomArray(P_INSTANCE(DataInterchange) dataInterchange, P_ELEMENTS(Atom) types, int num_types) {
-        Display *display = ((CrystalWindow_X11 *) dataInterchange->m_handle->crystal_window)->display;
+        auto* xwin = static_cast<CrystalWindow_X11*>(dataInterchange->m_handle->crystal_window);
+        Display *display = xwin->display;
+        xwin->advertised_atoms.clear();
 
         for (int32_t i = 0; i < num_types; ++i) {
             if (types[i] != None) {
+                xwin->advertised_atoms.push_back(types[i]);
                 utf8_string_struct type_name = XGetAtomName_struct(display, types[i]);
                 std::cerr << mod_header() << "Format: " << type_name << std::endl;
 
-                DataInterchange_FormatAdd(dataInterchange, type_name);
+                if (strcmp(type_name, "text/uri-list") == 0) {
+                    if (!DataInterchange_FormatExists(dataInterchange, "text/file-uri"))
+                        DataInterchange_FormatAdd(dataInterchange, "text/file-uri");
+                } else if (strcmp(type_name, "image/x-bmp") == 0 || strcmp(type_name, "image/x-MS-bmp") == 0) {
+                    if (!DataInterchange_FormatExists(dataInterchange, "image/bmp"))
+                        DataInterchange_FormatAdd(dataInterchange, "image/bmp");
+                } else {
+                    if (!DataInterchange_FormatExists(dataInterchange, type_name))
+                        DataInterchange_FormatAdd(dataInterchange, type_name);
+                }
             }
         }
     }
@@ -124,7 +136,7 @@ namespace NewAge {
         Atom selection = AppX11->atoms.clipboard;
         Atom target    = AppX11->atoms.targets;
 
-        XConvertSelection(xwin->display, selection, target, AppX11->atoms.selection_data, xwin->window, xwin->last_user_time);
+        XConvertSelection(xwin->display, selection, target, AppX11->atoms.selection_data, xwin->window, CurrentTime);
         XFlush(xwin->display);
 
         // Pump until handlers mark done (or timeout)
@@ -153,7 +165,7 @@ namespace NewAge {
 
         xwin->current_clipboard_provide_data = data;
 
-        XSetSelectionOwner(xwin->display, AppX11->atoms.clipboard, xwin->window, xwin->last_user_time);
+        XSetSelectionOwner(xwin->display, AppX11->atoms.clipboard, xwin->window, CurrentTime);
         if (XGetSelectionOwner(xwin->display, AppX11->atoms.clipboard) != xwin->window) {
             std::cerr << "Failed to set clipboard owner." << std::endl;
         }
@@ -294,11 +306,28 @@ namespace NewAge {
 
     void DataInterchange_Select(DataInterchange* data, utf8_string_struct format) {
         auto* xwin = static_cast<CrystalWindow_X11*>(data->m_handle->crystal_window);
+        xwin->current_clipboard_receive_data = data;
 
         Atom selection = AppX11->atoms.clipboard;
 
-        Atom target;
-        FormatToAtom(xwin->display, format, &target);
+        Atom target = None;
+        if (strcmp(format, "image/bmp") == 0) {
+            for (Atom a : xwin->advertised_atoms) {
+                utf8_string_struct aname = XGetAtomName_struct(xwin->display, a);
+                if (strcmp(aname, "image/bmp") == 0) { target = a; break; }
+            }
+            if (target == None) {
+                for (Atom a : xwin->advertised_atoms) {
+                    utf8_string_struct aname = XGetAtomName_struct(xwin->display, a);
+                    if (strcmp(aname, "image/x-bmp") == 0 || strcmp(aname, "image/x-MS-bmp") == 0) { target = a; break; }
+                }
+            }
+            if (target == None) {
+                FormatToAtom(xwin->display, format, &target);
+            }
+        } else {
+            FormatToAtom(xwin->display, format, &target);
+        }
 
         Atom property = AppX11->atoms.selection_data; // XInternAtom(..., "CRYSTAL_SELECTION", False) at init
 

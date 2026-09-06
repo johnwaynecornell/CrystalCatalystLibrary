@@ -2,6 +2,7 @@
 #include <ShlObj_core.h>
 #include <iostream>
 #include <sstream>
+#include <wingdi.h>
 #include "CrystalWindow_Windows.h"
 #include "Clipboard_Windows.h"
 #include "SimpleDataObject.h"
@@ -9,6 +10,86 @@
 using namespace JWCEssentials;
 
 namespace NewAge {
+
+static bool DibToBmpStream(const void* dibData, size_t dibSize, std::vector<uint8_t>& bmpOut) {
+    if (!dibData || dibSize < sizeof(DWORD)) return false;
+
+    const uint8_t* pDib = static_cast<const uint8_t*>(dibData);
+
+    // If it already has a BITMAPFILEHEADER (starts with 'BM' and size > 14)
+    if (dibSize >= sizeof(BITMAPFILEHEADER) && pDib[0] == 'B' && pDib[1] == 'M') {
+        bmpOut.assign(pDib, pDib + dibSize);
+        return true;
+    }
+
+    DWORD headerSize = *reinterpret_cast<const DWORD*>(pDib);
+    if (headerSize > dibSize) return false;
+
+    DWORD offsetInDib = headerSize;
+
+    if (headerSize == sizeof(BITMAPINFOHEADER)) { // 40 bytes
+        const BITMAPINFOHEADER* bih = reinterpret_cast<const BITMAPINFOHEADER*>(pDib);
+        DWORD clrUsed = bih->biClrUsed;
+        if (clrUsed == 0 && bih->biBitCount <= 8 && bih->biBitCount > 0) {
+            clrUsed = (1U << bih->biBitCount);
+        }
+        DWORD clrSize = clrUsed * sizeof(RGBQUAD);
+        if (bih->biCompression == BI_BITFIELDS && bih->biClrUsed == 0) {
+            clrSize = 3 * sizeof(DWORD);
+        }
+        offsetInDib = sizeof(BITMAPINFOHEADER) + clrSize;
+    } else if (headerSize == sizeof(BITMAPV5HEADER)) { // 124 bytes
+        const BITMAPV5HEADER* bV5 = reinterpret_cast<const BITMAPV5HEADER*>(pDib);
+        DWORD clrUsed = bV5->bV5ClrUsed;
+        if (clrUsed == 0 && bV5->bV5BitCount <= 8 && bV5->bV5BitCount > 0) {
+            clrUsed = (1U << bV5->bV5BitCount);
+        }
+        offsetInDib = sizeof(BITMAPV5HEADER) + clrUsed * sizeof(RGBQUAD);
+    } else if (headerSize == sizeof(BITMAPV4HEADER)) { // 108 bytes
+        const BITMAPV4HEADER* bV4 = reinterpret_cast<const BITMAPV4HEADER*>(pDib);
+        DWORD clrUsed = bV4->bV4ClrUsed;
+        if (clrUsed == 0 && bV4->bV4BitCount <= 8 && bV4->bV4BitCount > 0) {
+            clrUsed = (1U << bV4->bV4BitCount);
+        }
+        offsetInDib = sizeof(BITMAPV4HEADER) + clrUsed * sizeof(RGBQUAD);
+    } else if (headerSize == sizeof(BITMAPCOREHEADER)) { // 12 bytes
+        const BITMAPCOREHEADER* bch = reinterpret_cast<const BITMAPCOREHEADER*>(pDib);
+        DWORD clrUsed = (bch->bcBitCount <= 8 && bch->bcBitCount > 0) ? (1U << bch->bcBitCount) : 0;
+        offsetInDib = sizeof(BITMAPCOREHEADER) + clrUsed * sizeof(RGBTRIPLE);
+    }
+
+    if (offsetInDib > dibSize) {
+        offsetInDib = headerSize;
+    }
+
+    BITMAPFILEHEADER bfh = {};
+    bfh.bfType = 0x4D42; // "BM"
+    bfh.bfSize = static_cast<DWORD>(sizeof(BITMAPFILEHEADER) + dibSize);
+    bfh.bfReserved1 = 0;
+    bfh.bfReserved2 = 0;
+    bfh.bfOffBits = static_cast<DWORD>(sizeof(BITMAPFILEHEADER) + offsetInDib);
+
+    bmpOut.resize(sizeof(BITMAPFILEHEADER) + dibSize);
+    memcpy(bmpOut.data(), &bfh, sizeof(BITMAPFILEHEADER));
+    memcpy(bmpOut.data() + sizeof(BITMAPFILEHEADER), pDib, dibSize);
+    return true;
+}
+
+static void BmpStreamToDib(const void* bmpData, size_t bmpSize, const void*& dibOut, size_t& dibSizeOut) {
+    if (!bmpData || bmpSize == 0) {
+        dibOut = nullptr;
+        dibSizeOut = 0;
+        return;
+    }
+    const uint8_t* p = static_cast<const uint8_t*>(bmpData);
+    if (bmpSize >= sizeof(BITMAPFILEHEADER) && p[0] == 'B' && p[1] == 'M') {
+        dibOut = p + sizeof(BITMAPFILEHEADER);
+        dibSizeOut = bmpSize - sizeof(BITMAPFILEHEADER);
+    } else {
+        dibOut = bmpData;
+        dibSizeOut = bmpSize;
+    }
+}
 
 FormatEtcEnumerator::FormatEtcEnumerator(FORMATETC *fmt, int32_t count)
         : m_refs(1), m_count(count), m_index(0) {
@@ -122,11 +203,14 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
 
         if (f == "text/plain") {
             *cfFormat = CF_UNICODETEXT;
-
         } else if (f == "text/html") {
             *cfFormat = RegisterClipboardFormat(CFSTR_HTML);
         } else if (f == "text/file-uri") {
             *cfFormat = CF_HDROP;
+        } else if (f == "image/png") {
+            *cfFormat = RegisterClipboardFormatA("PNG");
+        } else if (f == "image/bmp") {
+            *cfFormat = CF_DIB;
         } else {
             // Unsupported format, return DV_E_FORMATETC
             return nullptr;
@@ -159,6 +243,29 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
                 memcpy(lpszText, data_ptr, size);
                 lpszText[size] = 0;
                 GlobalUnlock(hGlobal);
+            }
+        }
+    } else if (strcmp(format, "image/png") == 0) {
+        hGlobal = GlobalAlloc(GMEM_MOVEABLE, size);
+        if (hGlobal) {
+            void* lpszData = GlobalLock(hGlobal);
+            if (lpszData) {
+                memcpy(lpszData, data_ptr, size);
+                GlobalUnlock(hGlobal);
+            }
+        }
+    } else if (strcmp(format, "image/bmp") == 0) {
+        const void* dibSrc = nullptr;
+        size_t dibSize = 0;
+        BmpStreamToDib(data_ptr, size, dibSrc, dibSize);
+        if (dibSrc && dibSize > 0) {
+            hGlobal = GlobalAlloc(GMEM_MOVEABLE, dibSize);
+            if (hGlobal) {
+                void* lpszData = GlobalLock(hGlobal);
+                if (lpszData) {
+                    memcpy(lpszData, dibSrc, dibSize);
+                    GlobalUnlock(hGlobal);
+                }
             }
         }
     } else if (strcmp(format, "text/file-uri") == 0) {
@@ -238,6 +345,10 @@ HRESULT SimpleDataObject::GetData(FORMATETC *pFormatEtc, STGMEDIUM *pMedium) {
         format = "text/html";
     } else if (pFormatEtc->cfFormat == CF_HDROP) {
         format = "text/file-uri";
+    } else if (pFormatEtc->cfFormat == RegisterClipboardFormatA("PNG")) {
+        format = "image/png";
+    } else if (pFormatEtc->cfFormat == CF_DIB || pFormatEtc->cfFormat == CF_DIBV5) {
+        format = "image/bmp";
     } else {
         // Unsupported format, return DV_E_FORMATETC
         return DV_E_FORMATETC;
@@ -344,6 +455,28 @@ void DataInterchange_CreateContext(P_INSTANCE(DataInterchange) data)
             current->value.tymed = TYMED_HGLOBAL;
 
             n_Format++;
+        } else if (strcmp(n->type, "image/png") == 0) {
+            current = current->next = new SingleLink_Node<FORMATETC>();
+            memset(&current->value, 0, sizeof(current->value));
+
+            current->value.cfFormat = RegisterClipboardFormatA("PNG");
+            current->value.ptd = nullptr;
+            current->value.dwAspect = DVASPECT_CONTENT;
+            current->value.lindex = -1;
+            current->value.tymed = TYMED_HGLOBAL;
+
+            n_Format++;
+        } else if (strcmp(n->type, "image/bmp") == 0) {
+            current = current->next = new SingleLink_Node<FORMATETC>();
+            memset(&current->value, 0, sizeof(current->value));
+
+            current->value.cfFormat = CF_DIB;
+            current->value.ptd = nullptr;
+            current->value.dwAspect = DVASPECT_CONTENT;
+            current->value.lindex = -1;
+            current->value.tymed = TYMED_HGLOBAL;
+
+            n_Format++;
         }
     }
 
@@ -385,6 +518,7 @@ HRESULT DataInterchange_ReadFormats(P_INSTANCE(DataInterchange) data, IDataObjec
 
     FORMATETC fmt;
     char name[1024];
+    UINT cf_png = RegisterClipboardFormatA("PNG");
 
     do {
         E->Next(1, &fmt, &fetched);
@@ -394,6 +528,8 @@ HRESULT DataInterchange_ReadFormats(P_INSTANCE(DataInterchange) data, IDataObjec
             if (fmt.cfFormat == CF_UNICODETEXT) my_type = "text/plain";
             else if (fmt.cfFormat == RegisterClipboardFormat(CFSTR_HTML)) my_type = "text/html";
             else if (fmt.cfFormat == CF_HDROP) my_type = "text/file-uri";
+            else if (fmt.cfFormat == cf_png) my_type = "image/png";
+            else if (fmt.cfFormat == CF_DIB || fmt.cfFormat == CF_DIBV5) my_type = "image/bmp";
 
             name[GetClipboardFormatNameA(fmt.cfFormat, name, 1023)] = 0;
 
@@ -403,7 +539,11 @@ HRESULT DataInterchange_ReadFormats(P_INSTANCE(DataInterchange) data, IDataObjec
 
             std::cerr << mod_header() << "\ttype:" << my_t << "\tformat:" << fmt.cfFormat << "\tName:\"" << name << "\"" << std::endl;
 
-            if (my_type != nullptr) DataInterchange_FormatAdd(data, my_type);
+            if (my_type != nullptr) {
+                if (!DataInterchange_FormatExists(data, my_type)) {
+                    DataInterchange_FormatAdd(data, my_type);
+                }
+            }
         }
 
     } while (fetched);
@@ -421,6 +561,13 @@ void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_struct
     if (f == "text/plain") fmt.cfFormat = CF_UNICODETEXT;
     else if (f == "text/html") fmt.cfFormat = RegisterClipboardFormat(CFSTR_HTML);
     else if (f == "text/file-uri") fmt.cfFormat = CF_HDROP;
+    else if (f == "image/png") fmt.cfFormat = RegisterClipboardFormatA("PNG");
+    else if (f == "image/bmp") {
+        fmt.cfFormat = CF_DIB;
+        if (data && data->context && ((IDataObject *)data->context)->QueryGetData(&fmt) != S_OK) {
+            fmt.cfFormat = CF_DIBV5;
+        }
+    }
 
     if (!data || !data->context) {
         handleDataInterchangeError(data ? data->m_handle : nullptr, data, ((std::string) mod_header() + " DataInterchange context is null.").c_str());
@@ -448,6 +595,25 @@ void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_struct
                 size_t data_size = GlobalSize(stg.hGlobal);
                 // HTML Format is usually UTF-8.
                 DataInterchange_SelectionSet(data, format, (P_INSTANCE(void))lpszText, data_size);
+                GlobalUnlock(stg.hGlobal);
+            }
+        } else if (f == "image/png") {
+            void* pBytes = GlobalLock(stg.hGlobal);
+            if (pBytes != nullptr) {
+                size_t data_size = GlobalSize(stg.hGlobal);
+                DataInterchange_SelectionSet(data, format, pBytes, data_size);
+                GlobalUnlock(stg.hGlobal);
+            }
+        } else if (f == "image/bmp") {
+            void* pBytes = GlobalLock(stg.hGlobal);
+            if (pBytes != nullptr) {
+                size_t dib_size = GlobalSize(stg.hGlobal);
+                std::vector<uint8_t> bmpData;
+                if (DibToBmpStream(pBytes, dib_size, bmpData)) {
+                    DataInterchange_SelectionSet(data, format, bmpData.data(), bmpData.size());
+                } else {
+                    DataInterchange_SelectionSet(data, format, pBytes, dib_size);
+                }
                 GlobalUnlock(stg.hGlobal);
             }
         } else if (f == "text/file-uri") {
