@@ -31,6 +31,30 @@ public class ClipFlow_Fluent
         });
     }
     
+    public class ShowTopic : ClipDelegateCommand
+    {
+        public ShowTopic(Action<ClipContext> action) : base(action)
+        {
+        }
+    }
+
+    [FluentMethod]
+    [KV_FA(FluentAttribute.Help, "show topic information")]
+    public static ClipCommand show(ShowTopic topic)
+    {
+        return topic;
+    }
+    
+    [FluentMethod]
+    [KV_FA(FluentAttribute.Help, "show topic information")]
+    public static ShowTopic avail()
+    {
+        return new ShowTopic((ctx) =>
+        {
+            ClipUtilityWindow.ShowAvail(ctx);
+        });
+    }
+    
     
     [FluentMethod]
     [KV_FA(FluentAttribute.Help, "apply clipboard content to an endpoint")]

@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Runtime.InteropServices;
 using CrystalCatalystLibrary.net;
 
@@ -24,6 +25,91 @@ public class ClipUtilityWindow
        format selection by ClipType
        real copy/paste payloads
     */
+    
+    public static void ShowAvail(ClipContext context)
+    {
+        Thread runner = new Thread(() =>
+        {
+            Application.Init(new string[0]);
+            CrystalWindow wnd = CrystalWindow.CreateSimple(1, 1, "Clip Utility");
+            wnd.ApplicationRetain();
+
+            Queue<Action<CrystalWindow>> work_queue = new Queue<Action<CrystalWindow>>();
+            
+            wnd.OnClose = (wnd) =>
+            {
+                wnd.ApplicationRelease();
+            };
+            
+            wnd.OnDataInterchangeError = (wnd, di, message) =>
+            {
+                context.ErrorOutput.WriteLine($"Clipboard data interchange error: {message}");
+                context.Status = 1;
+                wnd.PostClose();
+            };
+            
+            List<ClipTypeHeader> providers = new List<ClipTypeHeader>();
+
+            foreach (Type t in typeof(ClipType).GetNestedTypes().Where(t => t.IsSubclassOf(typeof(ClipType))))
+            {
+                providers.Add((ClipTypeHeader)t.GetField("ClipTypeHeader", BindingFlags.Public | BindingFlags.Static).GetValue(null));
+            }
+
+            List<string> seen = new List<string>();
+            
+            work_queue.Enqueue((wnd) =>
+            {
+                DataInterchange di = wnd.ClipboardPaste();
+
+                bool found = false;
+                for (var node = di.FormatEnum(); node != IntPtr.Zero; node = DataInterchange.FormatEnumNext(node)) {
+                    
+                    DataInterchange.FormatEnumText(node, out var drop_format);
+
+                    foreach (var provider in providers)
+                    {
+                        if (seen.Contains(provider.CommandName)) continue;
+
+                        if (provider.Formats.Contains(drop_format))
+                        {
+                            context.Output.WriteLine(provider.CommandName);
+                            seen.Add(provider.CommandName);
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+
+                
+                if (!found)
+                {
+                    context.ErrorOutput.WriteLine("Clipboard contains no known format");
+                }
+                
+                wnd.PostClose();
+            });
+
+            wnd.OnIdle = (wnd) =>
+            {
+                if (work_queue.Count > 0)
+                {
+                    Action<CrystalWindow> action = work_queue.Dequeue();
+                    action(wnd);
+                }
+            };
+            
+            
+            Application.Run();
+        });
+
+        if (OperatingSystem.IsWindows())
+        {
+            runner.SetApartmentState(ApartmentState.STA);
+        }
+        
+        runner.Start();
+        runner.Join();
+    }
     
     public static void Paste(ClipContext context, ClipType type, ClipEndpoint endpoint)
     {
