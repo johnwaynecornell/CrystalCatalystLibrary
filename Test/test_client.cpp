@@ -117,7 +117,11 @@ void on_key_down(P_INSTANCE(WindowHandle) window_handle, int32_t keycode) {
             }
         }
 
-        DataInterchange_Select(data, format);
+        if (format == nullptr)
+        {
+            std::cerr << mod_header() << "Clipboard paste error no known format found" << std::endl;
+
+        } else DataInterchange_Select(data, format);
     }
 }
 

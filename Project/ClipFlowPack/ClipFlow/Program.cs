@@ -16,7 +16,8 @@ For this build, the generated help is the authoritative reference.
 
 List<String> cl = new List<String>(args);
 
-cl = new List<string>("-help".Split(' '));
+cl = new List<string> { "copy","text", "string", "Hello World" };
+cl = new List<string> { "paste","text", "console" };
 
 env.ServeTypes = new Type[] { typeof(ClipCommand) };
 

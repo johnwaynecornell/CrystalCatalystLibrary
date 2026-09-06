@@ -41,6 +41,7 @@ public class ClipFlow_Fluent
         
         return new ClipDelegateCommand((ctx) =>
         {
+            ClipUtilityWindow.Paste(ctx, type, endpoint);
         });
     }
     
@@ -53,6 +54,7 @@ public class ClipFlow_Fluent
         
         return new ClipDelegateCommand((ctx) =>
         {
+            ClipUtilityWindow.Copy(ctx, type, endpoint);
         });
     }
         
