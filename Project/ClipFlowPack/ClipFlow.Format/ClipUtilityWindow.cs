@@ -5,6 +5,26 @@ namespace ClipFlow.Format;
 
 public class ClipUtilityWindow
 {
+    /*
+        DONE / substantially proven
+       ---------------------------
+       thread-affine CrystalApplication
+       multiple UI threads
+       Windows + X11 clipboard plumbing
+       raw X11 format preservation
+       DataInterchange error callback
+       ClipFlow fluent grammar
+       utility-window execution isolation
+       
+       NOW
+       ---
+       ClipType specialization
+       ClipEndpoint read/write behavior
+       context-owned input/output
+       format selection by ClipType
+       real copy/paste payloads
+    */
+    
     public static void Paste(ClipContext context, ClipType type, ClipEndpoint endpoint)
     {
         Thread runner = new Thread(() =>
