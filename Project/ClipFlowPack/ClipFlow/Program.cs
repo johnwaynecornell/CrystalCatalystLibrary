@@ -18,7 +18,8 @@ List<String> cl = new List<String>(args);
 
 cl = new List<string> { "copy","text", "string", "Hello World" };
 cl = new List<string> { "paste","text", "console" };
-cl = new List<string> { "show","avail" };
+cl = new List<string> { "paste","image", "console" };
+//cl = new List<string> { "show","avail" };
 
 env.ServeTypes = new Type[] { typeof(ClipCommand) };
 
@@ -60,7 +61,9 @@ if (cl_index < cl.Count && !env.WantExit)
 
 if (env.WantExit || env.Status != 0)return env.Status == 0 ? 0 : 1;
 
-if (commandResult.Result is ClipCommand cmd) cmd.Execute(new());
+ClipContext ctx = new ();
+
+if (commandResult.Result is ClipCommand cmd) cmd.Execute(ctx);
 
 return 0;
 

@@ -143,64 +143,20 @@ public class ClipUtilityWindow
                     wnd.PostClose();
                     return;
                 }
+            
+                type.Receive(context, di, format, data, size);
+                if (context.Status == 0) endpoint.Write(context, type);
                 
-                Console.WriteLine(Marshal.PtrToStringUTF8(data));
                 wnd.PostClose();
               
             };
             
-            string[] format_prec = new string[] { "text/plain", "TEXT", "STRING", "UTF8_STRING" };
-            
             work_queue.Enqueue((wnd) =>
             {
                 DataInterchange di = wnd.ClipboardPaste();
+                type.Select(context, di);
                 
-                string? format = null;
-
-                bool hasNode = false;
-                for (var node = di.FormatEnum(); node != IntPtr.Zero; node = DataInterchange.FormatEnumNext(node)) {
-                    if (!hasNode)
-                    {
-                        Console.WriteLine("Advertised formats:");
-                    }
-                    
-                    DataInterchange.FormatEnumText(node, out var drop_format);
-                    Console.WriteLine(drop_format);
-                    
-                    hasNode = true;
-                }
-
-                if (!hasNode)
-                {
-                    Console.WriteLine("No advertised formats");
-                }
-                
-                for (var node = di.FormatEnum(); node != IntPtr.Zero; node = DataInterchange.FormatEnumNext(node)) {
-                    
-                    DataInterchange.FormatEnumText(node, out var drop_format);
-                    
-                    foreach (string known in format_prec)
-                    {
-                        if (known == drop_format) {
-                            format = known;
-                            break;
-                        }
-                    }
-                    if (format != null)
-                        break;
-                }
-
-                if (format == null)
-                {
-                    context.ErrorOutput.WriteLine("Clipboard paste error no known format found");
-                    context.Status = 1;
-                    wnd.PostClose();
-                }
-                else
-                {
-                    context.ErrorOutput.WriteLine($"Clipboard paste format {format}");
-                    di.Select(format);
-                }
+                if (context.Status != 0) wnd.PostClose();
             });
 
             wnd.OnIdle = (wnd) =>
