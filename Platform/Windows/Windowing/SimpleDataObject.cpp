@@ -1,7 +1,9 @@
 #include <vector>
 #include <ShlObj_core.h>
 #include <iostream>
+#include <sstream>
 #include "CrystalWindow_Windows.h"
+#include "Clipboard_Windows.h"
 #include "SimpleDataObject.h"
 
 using namespace JWCEssentials;
@@ -357,7 +359,12 @@ void DataInterchange_CreateContext(P_INSTANCE(DataInterchange) data)
             delete i;
         }
 
-        HRESULT_IsError(CreateDataObject(data, fmt, n_Format, data->m_handle, &pDataObject), "CreateDataObject");
+        HRESULT hr = CreateDataObject(data, fmt, n_Format, data->m_handle, &pDataObject);
+        if (FAILED(hr)) {
+            std::stringstream ss;
+            ss << mod_header() << " CreateDataObject failed. HRESULT: " << std::hex << hr;
+            handleDataInterchangeError(data ? data->m_handle : nullptr, data, ss.str());
+        }
         data->context = pDataObject;
     }
 }
@@ -366,7 +373,13 @@ HRESULT DataInterchange_ReadFormats(P_INSTANCE(DataInterchange) data, IDataObjec
 {
     IEnumFORMATETC *E;
 
-    HRESULT_IsError(pDataObject->EnumFormatEtc(DATADIR_GET, &E), "pDataObject->EnumFormatEtc");
+    HRESULT hr = pDataObject->EnumFormatEtc(DATADIR_GET, &E);
+    if (FAILED(hr)) {
+        std::stringstream ss;
+        ss << mod_header() << " EnumFormatEtc failed. HRESULT: " << std::hex << hr;
+        handleDataInterchangeError(data ? data->m_handle : nullptr, data, ss.str());
+        return hr;
+    }
 
     ULONG fetched = 0;
 
@@ -408,6 +421,11 @@ void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_struct
     if (f == "text/plain") fmt.cfFormat = CF_UNICODETEXT;
     else if (f == "text/html") fmt.cfFormat = RegisterClipboardFormat(CFSTR_HTML);
     else if (f == "text/file-uri") fmt.cfFormat = CF_HDROP;
+
+    if (!data || !data->context) {
+        handleDataInterchangeError(data ? data->m_handle : nullptr, data, ((std::string) mod_header() + " DataInterchange context is null.").c_str());
+        return;
+    }
 
     STGMEDIUM stg;
     HRESULT hr = ((IDataObject *)data->context)->GetData(&fmt, &stg);
@@ -462,6 +480,10 @@ void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_struct
     	} else if (data->selection_type == DataInterchange::E_CLIPBOARD)
         	data->m_handle->crystal_window->callbacks.on_clipboard_receive_data(data->m_handle, data);
 
+    } else {
+        std::stringstream ss;
+        ss << mod_header() << " GetData failed for format " << f << ". HRESULT: " << std::hex << hr;
+        handleDataInterchangeError(data ? data->m_handle : nullptr, data, ss.str());
     }
 }
 }

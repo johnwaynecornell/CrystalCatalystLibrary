@@ -92,5 +92,7 @@ namespace NewAge {
     // Issue XConvertSelection with either property=None (first try) or property=target (retry).
     void request_selection(Display* dpy, P_INSTANCE(CrystalWindow_X11) win, Atom selection, Atom target);
 
+    void handleDataInterchangeError(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) di, std::string message);
+
 }
 #endif //CRYSTALCATALYST_CRYSTALWINDOW_H

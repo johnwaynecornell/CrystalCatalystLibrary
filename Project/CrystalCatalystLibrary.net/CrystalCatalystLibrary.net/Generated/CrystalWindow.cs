@@ -1099,6 +1099,38 @@ public partial class CrystalWindow : IDisposable
         get => delegate_on_clipboard_receive_data;
     }
 
+    public delegate void Delegate_on_data_interchange_error(CrystalWindow window_handle, DataInterchange data, string error);
+
+    protected static Imports.Delegate_on_data_interchange_error TranslateDelegate_on_data_interchange_error(
+        Delegate_on_data_interchange_error callback)
+    {
+        return (IntPtr window_handle, IntPtr data, ref utf8_string_struct error) => { callback((CrystalWindow)window_handle, (DataInterchange)data, (string) error); };
+    }
+
+    private Imports.Delegate_on_data_interchange_error? native_on_data_interchange_error;
+    private Delegate_on_data_interchange_error? delegate_on_data_interchange_error;
+
+    public Delegate_on_data_interchange_error? OnDataInterchangeError
+    {
+        set
+        {
+            if (value == null)
+            {
+                native_on_data_interchange_error = null;
+                delegate_on_data_interchange_error = null;
+                SetMessageHandler("on_data_interchange_error", IntPtr.Zero);
+                return;
+            }
+
+            native_on_data_interchange_error = TranslateDelegate_on_data_interchange_error(value);
+            delegate_on_data_interchange_error = value;
+            IntPtr pointerToNative = Marshal.GetFunctionPointerForDelegate(native_on_data_interchange_error);
+            SetMessageHandler("on_data_interchange_error", pointerToNative);
+        }
+
+        get => delegate_on_data_interchange_error;
+    }
+
     public delegate void Delegate_on_idle(CrystalWindow window_handle);
 
     protected static Imports.Delegate_on_idle TranslateDelegate_on_idle(Delegate_on_idle callback)
@@ -1385,6 +1417,9 @@ public partial class CrystalWindow : IDisposable
 
         // void (*on_clipboard_receive_data)(P_INSTANCE WindowHandle window_handle, P_INSTANCE DataInterchange data)
         public delegate void Delegate_on_clipboard_receive_data(IntPtr window_handle, IntPtr data);
+
+        // void (*on_data_interchange_error)(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DataInterchange)  data, utf8_string_struct error);
+        public delegate void Delegate_on_data_interchange_error(IntPtr window_handle, IntPtr  data, ref utf8_string_struct error);
 
         // void (*on_idle)(P_INSTANCE WindowHandle window_handle)
         public delegate void Delegate_on_idle(IntPtr window_handle);

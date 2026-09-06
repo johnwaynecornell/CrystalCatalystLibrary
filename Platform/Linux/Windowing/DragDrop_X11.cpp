@@ -402,14 +402,14 @@ namespace NewAge {
 
         if (!have_selection || !current_data) {
             // Unknown selection: don’t run DnD tail; just stop here.
-            callbacks.on_data_interchange_error(myHandle, current_data, ((std::string) mod_header() + "Unknown selection").c_str());
+            handleDataInterchangeError(myHandle, current_data, ((std::string) mod_header() + "Unknown selection").c_str());
 
             return true;
         }
 
         if (event->xselection.property == None) {
 
-            callbacks.on_data_interchange_error(myHandle, current_data, ((std::string) mod_header() + "Selection conversion failed (property=None)").c_str());
+            handleDataInterchangeError(myHandle, current_data, ((std::string) mod_header() + "Selection conversion failed (property=None)").c_str());
 
             // Null out pending receive pointers on error
             if (is_clipboard) this->current_clipboard_receive_data = nullptr;
@@ -564,7 +564,7 @@ namespace NewAge {
                             XFlush(event->xselection.display);
                             return true;
                                                } else {
-                                                   callbacks.on_data_interchange_error(myHandle, current_data, ((std::string) mod_header() + "Property read error").c_str());
+                                                   handleDataInterchangeError(myHandle, current_data, ((std::string) mod_header() + "Property read error").c_str());
                                                }
                     }
                 }
@@ -573,7 +573,7 @@ namespace NewAge {
 
                 if (XGetWindowProperty(event->xselection.display, event->xselection.requestor, event->xselection.property, 0, (~0L) , False, AnyPropertyType,
                                 &actual_type, &actual_format, &nitems, &bytes_after, &prop) != Success) {
-                    callbacks.on_data_interchange_error(myHandle, current_data, ((std::string) mod_header() + "Property data read error").c_str());
+                    handleDataInterchangeError(myHandle, current_data, ((std::string) mod_header() + "Property data read error").c_str());
                     //std::cerr << mod_header() << "Property data read error"  << std::endl;
                     return true;
                 }
@@ -587,9 +587,8 @@ namespace NewAge {
                 utf8_string_struct format = XGetAtomName_struct(event->xselection.display, actual_type);
                 std::cerr << mod_header() << "SelectionNotify format: " << format << std::endl;
 
-                current_data->selected_format = format;
-
                 if (strcmp("ATOM", format) == 0) {
+                    current_data->selected_format = format;
                     Atom* atoms = reinterpret_cast<Atom*>(prop);
                     DataImterchange_FormatsFromAtomArray(current_data, atoms, nitems);
                     XFree(prop);
@@ -642,11 +641,53 @@ namespace NewAge {
                     std::cerr << mod_header() << "Setting selection for text/uri-list: " << cleaned_uri_list << std::endl;
                     DataInterchange_SelectionSet(current_data, "text/file-uri", cleaned_uri_list.data(), cleaned_uri_list.size());
                     XFree(prop);
+                } else {
+                    // Unknown but successfully requested X11 target.
+                    // Preserve its actual format and raw payload.
+                    std::cerr << mod_header()
+                              << "Setting raw selection for "
+                              << format << std::endl;
+
+                    if (actual_format == 8) {
+
+                        DataInterchange_SelectionSet(
+                            current_data,
+                            format,
+                            prop,
+                            nitems);
+
+                    } else if (actual_format == 16) {
+
+                        DataInterchange_SelectionSet(
+                            current_data,
+                            format,
+                            prop,
+                            nitems * sizeof(uint16_t));
+
+                    } else if (actual_format == 32) {
+
+                        auto* source = reinterpret_cast<unsigned long*>(prop);
+
+                        std::vector<uint32_t> packed;
+                        packed.reserve(nitems);
+
+                        for (unsigned long i = 0; i < nitems; ++i) {
+                            packed.push_back(static_cast<uint32_t>(source[i]));
+                        }
+
+                        DataInterchange_SelectionSet(
+                            current_data,
+                            format,
+                            packed.data(),
+                            packed.size() * sizeof(uint32_t));
+                    }
+
+                    XFree(prop);
                 }
 
                 //XDeleteProperty(event->xselection.display, event->xselection.requestor, event->xselection.property);
             } else {
-                callbacks.on_data_interchange_error(myHandle, current_data, ((std::string) mod_header() + "Selection conversion failed.").c_str());
+                handleDataInterchangeError(myHandle, current_data, ((std::string) mod_header() + "Selection conversion failed.").c_str());
                 if (is_clipboard) this->current_clipboard_receive_data = nullptr;
                 if (is_dnd) this->current_drag_receive_data = nullptr;
 
@@ -677,7 +718,7 @@ namespace NewAge {
 
         } else {
 
-            callbacks.on_data_interchange_error(myHandle, current_data, ((std::string) mod_header() + "Selection conversion failed.").c_str());
+            handleDataInterchangeError(myHandle, current_data, ((std::string) mod_header() + "Selection conversion failed.").c_str());
             if (is_clipboard) this->current_clipboard_receive_data = nullptr;
             if (is_dnd) this->current_drag_receive_data = nullptr;
 
@@ -741,7 +782,7 @@ namespace NewAge {
            if (XGetWindowProperty(dpy, in->requestor, in->property,
                                   0, (~0L), False, AnyPropertyType,
                                   &type, &format, &nitems, &bytes_after, &data) != Success) {
-               callbacks.on_data_interchange_error(myHandle, di, ((std::string) mod_header() + "Property read failed.").c_str());
+               handleDataInterchangeError(myHandle, di, ((std::string) mod_header() + "Property read failed.").c_str());
                if (in->is_clipboard) this->current_clipboard_receive_data = nullptr;
                else this->current_drag_receive_data = nullptr;
 
@@ -751,7 +792,7 @@ namespace NewAge {
            if (XGetWindowProperty(dpy, in->requestor, in->property,
                                   0, (~0L), True, AnyPropertyType,
                                   &type, &format, &nitems, &bytes_after, &data) != Success) {
-               callbacks.on_data_interchange_error(myHandle, di, ((std::string) mod_header() + "Property read failed.").c_str());
+               handleDataInterchangeError(myHandle, di, ((std::string) mod_header() + "Property read failed.").c_str());
                if (in->is_clipboard) this->current_clipboard_receive_data = nullptr;
                else this->current_drag_receive_data = nullptr;
                return true;
@@ -792,7 +833,7 @@ namespace NewAge {
 
        if (INCR_STYLE_A) {
            if (XDeleteProperty(dpy, in->requestor, in->property) != Success) {
-               callbacks.on_data_interchange_error(myHandle, di, ((std::string) mod_header() + "XDeleteProperty failed.").c_str());
+               handleDataInterchangeError(myHandle, di, ((std::string) mod_header() + "XDeleteProperty failed.").c_str());
                if (in->is_clipboard) this->current_clipboard_receive_data = nullptr;
                else this->current_drag_receive_data = nullptr;
                return true;

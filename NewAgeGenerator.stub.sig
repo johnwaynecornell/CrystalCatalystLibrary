@@ -79,6 +79,8 @@
             void (*on_clipboard_provide_chosen)(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DataInterchange)  data, utf8_string_struct format);
             void (*on_clipboard_receive_data)(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DataInterchange)  data);
 
+            void (*on_data_interchange_error)(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(DataInterchange)  data, utf8_string_struct error);
+
             void (*on_idle)(P_INSTANCE(WindowHandle) window_handle);
         ");
     }

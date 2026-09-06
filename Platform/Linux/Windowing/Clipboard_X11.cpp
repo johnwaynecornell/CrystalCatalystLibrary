@@ -37,32 +37,23 @@ namespace NewAge {
                 utf8_string_struct type_name = XGetAtomName_struct(display, types[i]);
                 std::cerr << mod_header() << "Format: " << type_name << std::endl;
 
-                if (strcmp(type_name, "text/plain") == 0) {
-                    DataInterchange_FormatAdd(dataInterchange, "text/plain");
-                } else if (strcmp(type_name, "text/html") == 0) {
-                    DataInterchange_FormatAdd(dataInterchange, "text/html");
-                } else if (strcmp(type_name, "text/uri-list") == 0) {
-                    DataInterchange_FormatAdd(dataInterchange, "text/file-uri");
-                }
+                DataInterchange_FormatAdd(dataInterchange, type_name);
             }
         }
     }
 
-    bool FormatToAtom(Display * display, utf8_string_struct format, P_OUT(Atom) atom) {
-        *atom = 0;
-
-        if (strcmp(format, "text/plain") == 0) {
-            *atom= XInternAtom(display, "text/plain", False);
-            return true;
-        } else if (strcmp(format, "text/html") == 0) {
-            *atom = XInternAtom(display, "text/html", False);
-            return true;
-        } else if (strcmp(format, "text/file-uri") == 0) {
+    bool FormatToAtom(
+    Display* display,
+    utf8_string_struct format,
+    P_OUT(Atom) atom)
+    {
+        if (strcmp(format, "text/file-uri") == 0) {
             *atom = XInternAtom(display, "text/uri-list", False);
             return true;
         }
 
-        return false;
+        *atom = XInternAtom(display, format, False);
+        return *atom != None;
     }
 
     void DataImterchange_AtomArrayFromFormats(P_INSTANCE(DataInterchange) dataInterchange, P_INSTANCE(P_ELEMENTS(Atom)) types, P_INSTANCE(int) num_types) {

@@ -20,9 +20,23 @@ public class ClipUtilityWindow
                 wnd.ApplicationRelease();
             };
             
+            wnd.OnDataInterchangeError = (wnd, di, message) =>
+            {
+                context.ErrorOutput.WriteLine($"Clipboard data interchange error: {message}");
+                context.Status = 1;
+                wnd.PostClose();
+            };
+            
             wnd.OnClipboardReceiveData = (wnd, di) =>
             {
                 di.SelectionReveal(out string format, out IntPtr data, out IntPtr size);
+                if (data == IntPtr.Zero)
+                {
+                    context.ErrorOutput.WriteLine($"Clipboard paste data is null");
+                    context.Status = 1;
+                    wnd.PostClose();
+                    return;
+                }
                 
                 Console.WriteLine(Marshal.PtrToStringUTF8(data));
                 wnd.PostClose();
@@ -66,6 +80,8 @@ public class ClipUtilityWindow
                             break;
                         }
                     }
+                    if (format != null)
+                        break;
                 }
 
                 if (format == null)
@@ -76,6 +92,7 @@ public class ClipUtilityWindow
                 }
                 else
                 {
+                    context.ErrorOutput.WriteLine($"Clipboard paste format {format}");
                     di.Select(format);
                 }
             });
@@ -92,6 +109,8 @@ public class ClipUtilityWindow
             
             Application.Run();
         });
+        runner.SetApartmentState(ApartmentState.STA);
+
         runner.Start();
         runner.Join();
     }
@@ -149,6 +168,7 @@ public class ClipUtilityWindow
             
             Application.Run();
         });
+        runner.SetApartmentState(ApartmentState.STA);
         runner.Start();
         runner.Join();
     }

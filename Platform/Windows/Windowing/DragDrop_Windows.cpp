@@ -3,11 +3,13 @@
 // See LICENSE file in the project root for full license information.
 #include "DragDrop_Windows.h"
 #include "CrystalWindow_Windows.h"
+#include "Clipboard_Windows.h"
 #include "SimpleDataObject.h"
 #include <shlobj.h>
 #include <ole2.h>
 #include <strsafe.h>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -127,6 +129,8 @@ HRESULT __stdcall CrystalWindow_Windows::Drop(IDataObject* pDataObject, DWORD gr
             *pdwEffect = drag_actions_to_dropeffect(current_drag_data->status.action);
             return drag_status_to_hresult(current_drag_data->status);
         //}
+    } else {
+        handleDataInterchangeError(myHandle, current_drag_data, ((std::string) mod_header() + " Drag receive select returned no format.").c_str());
     }
 
     return S_OK;
@@ -151,7 +155,12 @@ void CrystalWindow_Windows::DragStart(P_INSTANCE(DragDropData)  data, int32_t x,
     DWORD dwEffect = drag_actions_to_dropeffect(data->action_selections);
 
     DWORD _dwEffect;
-    HRESULT_IsError(DoDragDrop(pDataObject, static_cast<IDropSource *>(this), dwEffect, &_dwEffect), "DoDragDrop");
+    HRESULT hr = DoDragDrop(pDataObject, static_cast<IDropSource *>(this), dwEffect, &_dwEffect);
+    if (FAILED(hr)) {
+        std::stringstream ss;
+        ss << mod_header() << " DoDragDrop failed. HRESULT: " << std::hex << hr;
+        handleDataInterchangeError(myHandle, data, ss.str());
+    }
     pDataObject->Release();
 }
 

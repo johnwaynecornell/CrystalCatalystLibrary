@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sstream>
 #include "Clipboard_Windows.h"
 #include "SimpleDataObject.h"
 
@@ -15,7 +16,9 @@ P_INSTANCE(DataInterchange)  CrystalWindow_ClipboardPaste(P_INSTANCE(WindowHandl
     IDataObject* pDataObject = nullptr;
     HRESULT hr = OleGetClipboard(&pDataObject);
     if (FAILED(hr)) {
-        std::cerr << "Failed to get clipboard data. HRESULT: " << std::hex << hr << std::endl;
+        std::stringstream ss;
+        ss << "Failed to get clipboard data. HRESULT: " << std::hex << hr;
+        handleDataInterchangeError(handle, data, ss.str());
         return data;
     }
 
@@ -23,7 +26,9 @@ P_INSTANCE(DataInterchange)  CrystalWindow_ClipboardPaste(P_INSTANCE(WindowHandl
     hr = DataInterchange_ReadFormats(data, pDataObject);
 
     if (FAILED(hr)) {
-        std::cerr << "Failed to get clipboard formats. HRESULT: " << std::hex << hr << std::endl;
+        std::stringstream ss;
+        ss << "Failed to get clipboard formats. HRESULT: " << std::hex << hr;
+        handleDataInterchangeError(handle, data, ss.str());
     }
 
     return data;
@@ -40,10 +45,12 @@ void CrystalWindow_ClipboardCopy(P_INSTANCE(WindowHandle) handle, P_INSTANCE(Dat
     HRESULT hr = OleSetClipboard(pDataObject);
     if (FAILED(hr)) {
         if (hr == CO_E_NOTINITIALIZED) {
-            std::cerr << "Failed to set clipboard data. COM/OLE not initialized on this thread. "
-                         "Ensure Application_Init was called and the thread is STA." << std::endl;
+            handleDataInterchangeError(handle, data, "Failed to set clipboard data. COM/OLE not initialized on this thread. "
+                         "Ensure Application_Init was called and the thread is STA.");
         } else {
-            std::cerr << "Failed to set clipboard data. HRESULT: " << std::hex << hr << std::endl;
+            std::stringstream ss;
+            ss << "Failed to set clipboard data. HRESULT: " << std::hex << hr;
+            handleDataInterchangeError(handle, data, ss.str());
         }
     }
 
@@ -62,10 +69,12 @@ void CrystalWindow_ClipboardCopyWithCallback(void (*provide)(P_INSTANCE(DataInte
     HRESULT hr = OleSetClipboard(pDataObject);
     if (FAILED(hr)) {
         if (hr == CO_E_NOTINITIALIZED) {
-            std::cerr << "Failed to set clipboard data. COM/OLE not initialized on this thread. "
-                         "Ensure Application_Init was called and the thread is STA." << std::endl;
+            handleDataInterchangeError(data ? data->m_handle : nullptr, data, "Failed to set clipboard data. COM/OLE not initialized on this thread. "
+                         "Ensure Application_Init was called and the thread is STA.");
         } else {
-            std::cerr << "Failed to set clipboard data. HRESULT: " << std::hex << hr << std::endl;
+            std::stringstream ss;
+            ss << "Failed to set clipboard data. HRESULT: " << std::hex << hr;
+            handleDataInterchangeError(data ? data->m_handle : nullptr, data, ss.str());
         }
     }
 
@@ -76,7 +85,7 @@ void CrystalWindow_ClipboardCopyWithCallback(void (*provide)(P_INSTANCE(DataInte
 
 void CrystalWindow_ClipboardCopyPersist(P_INSTANCE(DataInterchange) dataInterchange) {
     if (!OpenClipboard(nullptr)) {
-        std::cerr << "Failed to open clipboard." << std::endl;
+        handleDataInterchangeError(dataInterchange ? dataInterchange->m_handle : nullptr, dataInterchange, "Failed to open clipboard.");
         return;
     }
 
@@ -93,7 +102,7 @@ void CrystalWindow_ClipboardCopyPersist(P_INSTANCE(DataInterchange) dataIntercha
         if (hGlobal) {
             SetClipboardData(cfFormat, hGlobal);
         } else {
-            std::cerr << "Failed to allocate global memory." << std::endl;
+            handleDataInterchangeError(dataInterchange ? dataInterchange->m_handle : nullptr, dataInterchange, "Failed to allocate global memory.");
         }
     }
 
@@ -103,7 +112,7 @@ void CrystalWindow_ClipboardCopyPersist(P_INSTANCE(DataInterchange) dataIntercha
 void CrystalWindow_ClipboardClear()
 {
     if (!OpenClipboard(nullptr)) {
-        std::cerr << "Failed to open clipboard." << std::endl;
+        handleDataInterchangeError(nullptr, nullptr, "Failed to open clipboard.");
         return;
     }
     EmptyClipboard();
