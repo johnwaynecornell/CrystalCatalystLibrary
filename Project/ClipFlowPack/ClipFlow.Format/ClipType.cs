@@ -142,7 +142,66 @@ public abstract class ClipType
 
         public override void Receive(ClipContext context, DataInterchange di, string format, IntPtr data, IntPtr size)
         {
-            Identity = Marshal.PtrToStringUTF8(data, checked((int)size));
+            string raw = Marshal.PtrToStringUTF8(data, checked((int)size)) ?? string.Empty;
+            Identity = UnwrapCfHtml(raw);
+        }
+
+        public static string UnwrapCfHtml(string html)
+        {
+            if (string.IsNullOrEmpty(html)) return string.Empty;
+            if (!html.StartsWith("Version:", StringComparison.OrdinalIgnoreCase))
+            {
+                return html;
+            }
+
+            int startFrag = FindOffset(html, "StartFragment:");
+            int endFrag = FindOffset(html, "EndFragment:");
+
+            if (startFrag >= 0 && endFrag > startFrag)
+            {
+                byte[] utf8Bytes = Encoding.UTF8.GetBytes(html);
+                if (startFrag < utf8Bytes.Length && endFrag <= utf8Bytes.Length && endFrag > startFrag)
+                {
+                    return Encoding.UTF8.GetString(utf8Bytes, startFrag, endFrag - startFrag);
+                }
+            }
+
+            int startHtml = FindOffset(html, "StartHTML:");
+            int endHtml = FindOffset(html, "EndHTML:");
+            if (startHtml >= 0 && endHtml > startHtml)
+            {
+                byte[] utf8Bytes = Encoding.UTF8.GetBytes(html);
+                if (startHtml < utf8Bytes.Length && endHtml <= utf8Bytes.Length && endHtml > startHtml)
+                {
+                    return Encoding.UTF8.GetString(utf8Bytes, startHtml, endHtml - startHtml);
+                }
+            }
+
+            const string startMarker = "<!--StartFragment-->";
+            const string endMarker = "<!--EndFragment-->";
+            int sPos = html.IndexOf(startMarker, StringComparison.OrdinalIgnoreCase);
+            int ePos = html.IndexOf(endMarker, StringComparison.OrdinalIgnoreCase);
+            if (sPos >= 0 && ePos > sPos)
+            {
+                return html.Substring(sPos + startMarker.Length, ePos - (sPos + startMarker.Length));
+            }
+
+            return html;
+        }
+
+        private static int FindOffset(string text, string field)
+        {
+            int idx = text.IndexOf(field, StringComparison.OrdinalIgnoreCase);
+            if (idx < 0) return -1;
+            idx += field.Length;
+            while (idx < text.Length && (text[idx] == ' ' || text[idx] == '\t')) idx++;
+            int end = idx;
+            while (end < text.Length && char.IsDigit(text[end])) end++;
+            if (end > idx && int.TryParse(text.Substring(idx, end - idx), out int val))
+            {
+                return val;
+            }
+            return -1;
         }
     }
 
@@ -170,14 +229,14 @@ public abstract class ClipType
 
             if (format == "image/bmp")
             {
-                using SKData? encodedData = Identity.Encode(SKEncodedImageFormat.Bmp, 100);
-                if (encodedData == null)
+                byte[]? bmpBytes = BmpEncoder.EncodeToBmp(Identity);
+                if (bmpBytes == null)
                 {
                     context.ErrorOutput.WriteLine("Failed to encode image as BMP");
                     context.Status = 1;
                     return null;
                 }
-                return encodedData.ToArray();
+                return bmpBytes;
             }
             
             if (format == "image/png")

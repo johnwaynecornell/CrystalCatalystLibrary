@@ -135,6 +135,31 @@ public class ClipTypeTests
         }
     }
 
+    [Fact]
+    public void Html_Receive_CfHtml_ExtractsFragmentCleanly()
+    {
+        const string cfHtmlPayload = "Version:0.9\r\nStartHTML:0000000105\r\nEndHTML:0000000197\r\nStartFragment:0000000141\r\nEndFragment:0000000161\r\n<html>\r\n<body>\r\n<!--StartFragment--><h1>HELLO WORLD</h1><!--EndFragment-->\r\n</body>\r\n</html>";
+        byte[] bytes = Encoding.UTF8.GetBytes(cfHtmlPayload);
+        IntPtr ptr = Marshal.AllocHGlobal(bytes.Length);
+
+        try
+        {
+            Marshal.Copy(bytes, 0, ptr, bytes.Length);
+
+            var htmlType = new ClipType.Html();
+            using var testCtx = new TestClipContext();
+
+            htmlType.Receive(testCtx.Context, null!, "text/html", ptr, (IntPtr)bytes.Length);
+
+            Assert.Equal("<h1>HELLO WORLD</h1>", htmlType.Identity);
+            Assert.Equal(0, testCtx.Status);
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(ptr);
+        }
+    }
+
     #endregion
 
     #region Image Tests
@@ -159,7 +184,7 @@ public class ClipTypeTests
     }
 
     [Fact]
-    public void Image_Provide_Bmp_HandlesRuntimeSupportGracefully()
+    public void Image_Provide_Bmp_EncodesValidBmp()
     {
         using var originalImage = CreateTestImage(4, 4);
         var imageType = new ClipType.Image { Identity = originalImage };
@@ -167,21 +192,14 @@ public class ClipTypeTests
         using var testCtx = new TestClipContext();
         byte[]? bmpBytes = imageType.Provide(testCtx.Context, null!, "image/bmp");
 
-        if (bmpBytes != null)
-        {
-            // If runtime supports BMP encoding
-            Assert.Equal(0, testCtx.Status);
-            using var decoded = SKImage.FromEncodedData(bmpBytes);
-            Assert.NotNull(decoded);
-            Assert.Equal(4, decoded.Width);
-            Assert.Equal(4, decoded.Height);
-        }
-        else
-        {
-            // If runtime (e.g. Linux libSkiaSharp) does not support BMP encoding
-            Assert.NotEqual(0, testCtx.Status);
-            Assert.Contains("Failed to encode image as BMP", testCtx.ErrorText);
-        }
+        Assert.NotNull(bmpBytes);
+        Assert.NotEmpty(bmpBytes);
+        Assert.Equal(0, testCtx.Status);
+
+        using var decoded = SKImage.FromEncodedData(bmpBytes);
+        Assert.NotNull(decoded);
+        Assert.Equal(4, decoded.Width);
+        Assert.Equal(4, decoded.Height);
     }
 
     [Fact]

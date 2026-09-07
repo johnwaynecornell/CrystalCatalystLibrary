@@ -91,6 +91,105 @@ static void BmpStreamToDib(const void* bmpData, size_t bmpSize, const void*& dib
     }
 }
 
+static bool IsCfHtml(const char* data, size_t size) {
+    if (!data || size < 8) return false;
+    return (_strnicmp(data, "Version:", 8) == 0);
+}
+
+static std::string WrapInCfHtml(const char* htmlFragment, size_t fragmentSize) {
+    if (!htmlFragment || fragmentSize == 0) return "";
+    if (IsCfHtml(htmlFragment, fragmentSize)) {
+        return std::string(htmlFragment, fragmentSize);
+    }
+
+    const char* prefix = "<html>\r\n<body>\r\n<!--StartFragment-->";
+    const char* suffix = "<!--EndFragment-->\r\n</body>\r\n</html>";
+
+    size_t prefixLen = strlen(prefix);
+    size_t suffixLen = strlen(suffix);
+
+    char dummyHeader[128];
+    int headerLen = snprintf(dummyHeader, sizeof(dummyHeader),
+        "Version:0.9\r\nStartHTML:%010d\r\nEndHTML:%010d\r\nStartFragment:%010d\r\nEndFragment:%010d\r\n",
+        0, 0, 0, 0);
+
+    size_t startHtml = (size_t)headerLen;
+    size_t startFrag = (size_t)headerLen + prefixLen;
+    size_t endFrag = startFrag + fragmentSize;
+    size_t endHtml = endFrag + suffixLen;
+
+    char header[128];
+    snprintf(header, sizeof(header),
+        "Version:0.9\r\nStartHTML:%010zu\r\nEndHTML:%010zu\r\nStartFragment:%010zu\r\nEndFragment:%010zu\r\n",
+        startHtml, endHtml, startFrag, endFrag);
+
+    std::string result;
+    result.reserve(headerLen + prefixLen + fragmentSize + suffixLen);
+    result.append(header);
+    result.append(prefix);
+    result.append(htmlFragment, fragmentSize);
+    result.append(suffix);
+    return result;
+}
+
+static bool UnwrapCfHtml(const char* data, size_t size, const char*& outFragment, size_t& outSize) {
+    if (!data || size == 0) {
+        outFragment = nullptr;
+        outSize = 0;
+        return false;
+    }
+    if (!IsCfHtml(data, size)) {
+        outFragment = data;
+        outSize = size;
+        return true;
+    }
+
+    std::string text(data, size);
+
+    auto findOffset = [&](const char* field) -> long long {
+        size_t pos = text.find(field);
+        if (pos == std::string::npos) return -1;
+        pos += strlen(field);
+        while (pos < text.size() && (text[pos] == ' ' || text[pos] == '\t')) pos++;
+        char* endPtr = nullptr;
+        long long val = strtoll(text.c_str() + pos, &endPtr, 10);
+        return val;
+    };
+
+    long long startFrag = findOffset("StartFragment:");
+    long long endFrag = findOffset("EndFragment:");
+
+    if (startFrag >= 0 && endFrag > startFrag && (size_t)endFrag <= size) {
+        outFragment = data + startFrag;
+        outSize = (size_t)(endFrag - startFrag);
+        return true;
+    }
+
+    long long startHtml = findOffset("StartHTML:");
+    long long endHtml = findOffset("EndHTML:");
+
+    if (startHtml >= 0 && endHtml > startHtml && (size_t)endHtml <= size) {
+        outFragment = data + startHtml;
+        outSize = (size_t)(endHtml - startHtml);
+        return true;
+    }
+
+    const char* startMarker = "<!--StartFragment-->";
+    const char* endMarker = "<!--EndFragment-->";
+    size_t startPos = text.find(startMarker);
+    size_t endPos = text.find(endMarker);
+    if (startPos != std::string::npos && endPos != std::string::npos && endPos > startPos) {
+        startPos += strlen(startMarker);
+        outFragment = data + startPos;
+        outSize = endPos - startPos;
+        return true;
+    }
+
+    outFragment = data;
+    outSize = size;
+    return true;
+}
+
 FormatEtcEnumerator::FormatEtcEnumerator(FORMATETC *fmt, int32_t count)
         : m_refs(1), m_count(count), m_index(0) {
     m_fmt = new FORMATETC[count];
@@ -250,12 +349,13 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
         if (actual_size > 0 && pText[actual_size - 1] == '\0') {
             actual_size--;
         }
-        hGlobal = GlobalAlloc(GMEM_MOVEABLE, actual_size + 1);
+        std::string cfHtml = WrapInCfHtml(pText, actual_size);
+        hGlobal = GlobalAlloc(GMEM_MOVEABLE, cfHtml.length() + 1);
         if (hGlobal) {
             char* lpszText = (char*)GlobalLock(hGlobal);
             if (lpszText) {
-                memcpy(lpszText, data_ptr, actual_size);
-                lpszText[actual_size] = 0;
+                memcpy(lpszText, cfHtml.c_str(), cfHtml.length());
+                lpszText[cfHtml.length()] = 0;
                 GlobalUnlock(hGlobal);
             }
         }
@@ -614,7 +714,10 @@ void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_struct
             if (lpszText != nullptr) {
                 size_t max_size = GlobalSize(stg.hGlobal);
                 size_t data_size = strnlen(lpszText, max_size);
-                DataInterchange_SelectionSet(data, format, (P_INSTANCE(void))lpszText, data_size);
+                const char* fragment = nullptr;
+                size_t fragment_size = 0;
+                UnwrapCfHtml(lpszText, data_size, fragment, fragment_size);
+                DataInterchange_SelectionSet(data, format, (P_INSTANCE(void))fragment, fragment_size);
                 GlobalUnlock(stg.hGlobal);
             }
         } else if (f == "image/png") {

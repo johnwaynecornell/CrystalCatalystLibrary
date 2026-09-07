@@ -160,18 +160,28 @@ public abstract class ClipEndpoint
 
             SKEncodedImageFormat format = GetImageFormatFromPath(path);
 
-            using SKData? data = image.Identity.Encode(format, 100);
-            if (data == null)
+            byte[]? dataBytes = null;
+            if (format == SKEncodedImageFormat.Bmp)
+            {
+                dataBytes = BmpEncoder.EncodeToBmp(image.Identity);
+            }
+            else
+            {
+                using SKData? data = image.Identity.Encode(format, 100);
+                if (data != null)
+                {
+                    dataBytes = data.ToArray();
+                }
+            }
+
+            if (dataBytes == null)
             {
                 context.ErrorOutput.WriteLine($"Failed to encode image for: {path}");
                 context.Status = 1;
                 return;
             }
 
-            using (FileStream stream = System.IO.File.Create(path))
-            {
-                data.SaveTo(stream);
-            }
+            System.IO.File.WriteAllBytes(path, dataBytes);
         }
 
         private static void ReadImage(
