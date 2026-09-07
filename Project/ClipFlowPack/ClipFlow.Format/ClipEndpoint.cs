@@ -139,8 +139,14 @@ public abstract class ClipEndpoint
 
             SKEncodedImageFormat format = GetImageFormatFromPath(path);
 
-            using (SKData data =
-                   image.Identity.Encode(format, 100))
+            using SKData? data = image.Identity.Encode(format, 100);
+            if (data == null)
+            {
+                context.ErrorOutput.WriteLine($"Failed to encode image for: {path}");
+                context.Status = 1;
+                return;
+            }
+
             using (FileStream stream = System.IO.File.Create(path))
             {
                 data.SaveTo(stream);
@@ -398,9 +404,11 @@ public abstract class ClipEndpoint
                     {
                         searchPattern = fileName;
                         directoryPath = Path.GetDirectoryName(path) ?? path;
+                        if (string.IsNullOrEmpty(directoryPath))
+                            directoryPath = ".";
                     }
 
-                    if (System.IO.Directory.Exists(path))
+                    if (System.IO.Directory.Exists(directoryPath))
                     {
                         
                         files.Identity = new List<string>(
@@ -408,7 +416,7 @@ public abstract class ClipEndpoint
                     }
                     else
                     {
-                        context.ErrorOutput.WriteLine($"Directory not found: {path}");
+                        context.ErrorOutput.WriteLine($"Directory not found: {directoryPath}");
                         context.Status = 1;
                     }
 

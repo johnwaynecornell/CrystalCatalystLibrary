@@ -170,13 +170,25 @@ public abstract class ClipType
 
             if (format == "image/bmp")
             {
-                using SKData encodedData = Identity.Encode(SKEncodedImageFormat.Bmp, 100);
+                using SKData? encodedData = Identity.Encode(SKEncodedImageFormat.Bmp, 100);
+                if (encodedData == null)
+                {
+                    context.ErrorOutput.WriteLine("Failed to encode image as BMP");
+                    context.Status = 1;
+                    return null;
+                }
                 return encodedData.ToArray();
             }
             
             if (format == "image/png")
             {
-                using SKData encodedData = Identity.Encode(SKEncodedImageFormat.Png, 100);
+                using SKData? encodedData = Identity.Encode(SKEncodedImageFormat.Png, 100);
+                if (encodedData == null)
+                {
+                    context.ErrorOutput.WriteLine("Failed to encode image as PNG");
+                    context.Status = 1;
+                    return null;
+                }
                 return encodedData.ToArray();
             }
             

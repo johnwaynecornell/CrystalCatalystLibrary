@@ -14,13 +14,16 @@ The command language and available commands may grow between releases.
 For this build, the generated help is the authoritative reference.
 "));
 
-List<String> cl = new List<String>(args);
+List<String> cl;
 
-cl = new List<string> { "copy","text", "string", "Hello World" };
+
 cl = new List<string> { "paste","text", "console" };
 cl = new List<string> { "paste","image", "console" };
 cl = new List<string> { "paste","text", "console" };
-//cl = new List<string> { "show","avail" };
+cl = new List<string> { "show","avail" };
+cl = new List<string> { "copy","text", "string", "Hello World" };
+
+cl = new List<String>(args);
 
 env.ServeTypes = new Type[] { typeof(ClipCommand) };
 
@@ -64,8 +67,18 @@ if (env.WantExit || env.Status != 0)return env.Status == 0 ? 0 : 1;
 
 ClipContext ctx = new ();
 
-if (commandResult.Result is ClipCommand cmd) cmd.Execute(ctx);
+ClipCommand cmd;
+
+if (commandResult == null)
+{
+    using (FluentEnvironmentScope.Enter(env))
+    {
+        cmd = ClipFlow_Fluent.help();
+    }
+}
+else cmd = (ClipCommand)commandResult.Result;
+
+cmd.Execute(ctx);
 
 return 0;
-
 
