@@ -90,7 +90,28 @@ public abstract class ClipEndpoint
                     break;
 
                 case ClipType.Files files:
-                    files.Identity = new List<string>(System.IO.File.ReadAllLines(path));
+                    if (!System.IO.File.Exists(path))
+                    {
+                        context.ErrorOutput.WriteLine($"File not found: {path}");
+                        context.Status = 1;
+                        return;
+                    }
+
+                    string[] rawLines = System.IO.File.ReadAllLines(path);
+                    List<string> normalizedPaths = new();
+                    foreach (string line in rawLines)
+                    {
+                        if (string.IsNullOrWhiteSpace(line)) continue;
+                        string fullPath = Path.GetFullPath(line);
+                        if (!System.IO.File.Exists(fullPath) && !System.IO.Directory.Exists(fullPath))
+                        {
+                            context.ErrorOutput.WriteLine($"Path not found: {line}");
+                            context.Status = 1;
+                            return;
+                        }
+                        normalizedPaths.Add(fullPath);
+                    }
+                    files.Identity = normalizedPaths;
                     break;
 
                 case ClipType.Image image:
@@ -276,14 +297,27 @@ public abstract class ClipEndpoint
                     break;
 
                 case ClipType.Files files:
-                    files.Identity = new List<string>();
+                    List<string> lines = new();
                     string? line;
-                    do
+                    while ((line = context.Input.ReadLine()) != null)
                     {
-                        line = context.Input.ReadLine();
-                        if (line != null) files.Identity.Add(line);
-                    } while (line != null);
-                    
+                        if (string.IsNullOrWhiteSpace(line)) continue;
+                        lines.Add(line);
+                    }
+
+                    List<string> normalizedPaths = new();
+                    foreach (string raw in lines)
+                    {
+                        string fullPath = Path.GetFullPath(raw);
+                        if (!System.IO.File.Exists(fullPath) && !System.IO.Directory.Exists(fullPath))
+                        {
+                            context.ErrorOutput.WriteLine($"Path not found: {raw}");
+                            context.Status = 1;
+                            return;
+                        }
+                        normalizedPaths.Add(fullPath);
+                    }
+                    files.Identity = normalizedPaths;
                     break;
 
                 case ClipType.Image image:
@@ -339,6 +373,30 @@ public abstract class ClipEndpoint
 
         public string path;
 
+        public void CopyHelper(string src, string dst)
+        {
+            if (System.IO.Directory.Exists(src))
+            {
+                if (!System.IO.Directory.Exists(dst))
+                {
+                    System.IO.Directory.CreateDirectory(dst);
+                }
+                
+                foreach (string directory in System.IO.Directory.GetDirectories(src))
+                {
+                    string newDst = System.IO.Path.Combine(dst, System.IO.Path.GetFileName(directory));
+                    CopyHelper(directory, newDst);
+                }
+                
+                foreach (string file in System.IO.Directory.GetFiles(src))
+                {
+                    string newDst = System.IO.Path.Combine(dst, System.IO.Path.GetFileName(file));
+                    System.IO.File.Copy(file, newDst, overwrite: true);
+                }
+            } else System.IO.File.Copy(src, dst, overwrite: true);
+        }
+        
+        
         public override void Write(ClipContext context, ClipType type)
         {
             switch (type)
@@ -361,7 +419,17 @@ public abstract class ClipEndpoint
                         {
                             string fileName = Path.GetFileName(file);
                             string destPath = Path.Combine(path, fileName);
-                            System.IO.File.Copy(file, destPath, overwrite: true);
+
+                            try
+                            {
+                                CopyHelper(file, destPath);
+                            }
+                            catch (Exception ex)
+                            {
+                                context.ErrorOutput.WriteLine($"Error copying {file}: {ex.Message}");
+                                context.Status = 1;
+                                return;
+                            }
                         }
                     }
 
@@ -410,9 +478,13 @@ public abstract class ClipEndpoint
 
                     if (System.IO.Directory.Exists(directoryPath))
                     {
-                        
-                        files.Identity = new List<string>(
-                            System.IO.Directory.GetFiles(directoryPath, searchPattern));
+                        string[] rawFiles = System.IO.Directory.GetFiles(directoryPath, searchPattern);
+                        List<string> normalized = new(rawFiles.Length);
+                        foreach (string f in rawFiles)
+                        {
+                            normalized.Add(Path.GetFullPath(f));
+                        }
+                        files.Identity = normalized;
                     }
                     else
                     {

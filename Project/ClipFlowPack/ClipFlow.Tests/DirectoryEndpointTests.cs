@@ -59,6 +59,41 @@ public class DirectoryEndpointTests : IDisposable
     }
 
     [Fact]
+    public void Read_Files_RelativeDirectoryPath_ReturnsNormalizedFullPaths()
+    {
+        string originalCwd = Environment.CurrentDirectory;
+        try
+        {
+            Environment.CurrentDirectory = _tempDirectory;
+            string subDir = Path.Combine(_tempDirectory, "mysub");
+            Directory.CreateDirectory(subDir);
+            string file1 = Path.Combine(subDir, "one.txt");
+            string file2 = Path.Combine(subDir, "two.txt");
+            File.WriteAllText(file1, "1");
+            File.WriteAllText(file2, "2");
+
+            var endpoint = new ClipEndpoint.Directory("./mysub");
+            var files = new ClipType.Files();
+            using var testCtx = new TestClipContext();
+
+            endpoint.Read(testCtx.Context, files);
+
+            Assert.Equal(0, testCtx.Status);
+            Assert.NotNull(files.Identity);
+            Assert.Equal(2, files.Identity.Count);
+            foreach (var path in files.Identity)
+            {
+                Assert.True(Path.IsPathRooted(path));
+                Assert.True(File.Exists(path));
+            }
+        }
+        finally
+        {
+            Environment.CurrentDirectory = originalCwd;
+        }
+    }
+
+    [Fact]
     public void Read_Files_WildcardAsterisk_MatchesFilteredFilesAndUsesResolvedDirectoryPath()
     {
         // Regression test: Ensures Directory.Read checks existence of resolved directoryPath,
@@ -164,6 +199,40 @@ public class DirectoryEndpointTests : IDisposable
         Assert.True(File.Exists(destFile2));
         Assert.Equal(content1, File.ReadAllText(destFile1));
         Assert.Equal(content2, File.ReadAllText(destFile2));
+    }
+
+    [Fact]
+    public void Write_Files_ExpandsDirectoriesRecursively()
+    {
+        string sourceDir = Path.Combine(_tempDirectory, "source_tree");
+        string subDir = Path.Combine(sourceDir, "subdir");
+        Directory.CreateDirectory(subDir);
+
+        string rootFile = Path.Combine(sourceDir, "root.txt");
+        string subFile = Path.Combine(subDir, "nested.txt");
+        File.WriteAllText(rootFile, "root content");
+        File.WriteAllText(subFile, "nested content");
+
+        string destDir = Path.Combine(_tempDirectory, "destination_tree");
+        var endpoint = new ClipEndpoint.Directory(destDir);
+        var files = new ClipType.Files
+        {
+            Identity = new List<string> { sourceDir }
+        };
+        using var testCtx = new TestClipContext();
+
+        endpoint.Write(testCtx.Context, files);
+
+        Assert.Equal(0, testCtx.Status);
+        Assert.True(Directory.Exists(destDir));
+
+        string destRoot = Path.Combine(destDir, "source_tree", "root.txt");
+        string destNested = Path.Combine(destDir, "source_tree", "subdir", "nested.txt");
+
+        Assert.True(File.Exists(destRoot));
+        Assert.True(File.Exists(destNested));
+        Assert.Equal("root content", File.ReadAllText(destRoot));
+        Assert.Equal("nested content", File.ReadAllText(destNested));
     }
 
     [Fact]

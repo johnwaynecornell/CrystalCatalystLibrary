@@ -38,16 +38,148 @@ public class ConsoleEndpointTests
     [Fact]
     public void Read_Files_ReadsLinesToListIdentity()
     {
-        string inputData = $"alpha.txt{Environment.NewLine}beta.txt{Environment.NewLine}gamma.txt{Environment.NewLine}";
-        using var testCtx = new TestClipContext(inputData);
-        var endpoint = new ClipEndpoint.Console();
-        var files = new ClipType.Files();
+        string tempDir = Path.Combine(Path.GetTempPath(), "clipflow-console-test-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        string originalCwd = Environment.CurrentDirectory;
 
-        endpoint.Read(testCtx.Context, files);
+        try
+        {
+            Environment.CurrentDirectory = tempDir;
+            string subDir = Path.Combine(tempDir, "sub");
+            Directory.CreateDirectory(subDir);
 
-        Assert.NotNull(files.Identity);
-        Assert.Equal(new List<string> { "alpha.txt", "beta.txt", "gamma.txt" }, files.Identity);
-        Assert.Equal(0, testCtx.Status);
+            File.WriteAllText(Path.Combine(tempDir, "a.txt"), "a");
+            File.WriteAllText(Path.Combine(subDir, "b.txt"), "b");
+
+            string inputData = $"a.txt{Environment.NewLine}sub/b.txt{Environment.NewLine}";
+            using var testCtx = new TestClipContext(inputData);
+            var endpoint = new ClipEndpoint.Console();
+            var files = new ClipType.Files();
+
+            endpoint.Read(testCtx.Context, files);
+
+            Assert.NotNull(files.Identity);
+            Assert.Equal(2, files.Identity.Count);
+            Assert.Equal(Path.GetFullPath("a.txt"), files.Identity[0]);
+            Assert.Equal(Path.GetFullPath("sub/b.txt"), files.Identity[1]);
+            Assert.True(File.Exists(files.Identity[0]));
+            Assert.True(File.Exists(files.Identity[1]));
+            Assert.Equal(0, testCtx.Status);
+        }
+        finally
+        {
+            Environment.CurrentDirectory = originalCwd;
+            if (Directory.Exists(tempDir))
+            {
+                try { Directory.Delete(tempDir, true); } catch { }
+            }
+        }
+    }
+
+    [Fact]
+    public void Read_Files_InvalidPath_SetsStatusAndDiagnostic()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), "clipflow-console-inv-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        string originalCwd = Environment.CurrentDirectory;
+
+        try
+        {
+            Environment.CurrentDirectory = tempDir;
+            File.WriteAllText(Path.Combine(tempDir, "a.txt"), "a");
+
+            string inputData = $"a.txt{Environment.NewLine}does-not-exist.txt{Environment.NewLine}";
+            using var testCtx = new TestClipContext(inputData);
+            var endpoint = new ClipEndpoint.Console();
+            var files = new ClipType.Files();
+
+            endpoint.Read(testCtx.Context, files);
+
+            Assert.NotEqual(0, testCtx.Status);
+            Assert.Contains("Path not found", testCtx.ErrorText, StringComparison.OrdinalIgnoreCase);
+            Assert.Null(files.Identity);
+        }
+        finally
+        {
+            Environment.CurrentDirectory = originalCwd;
+            if (Directory.Exists(tempDir))
+            {
+                try { Directory.Delete(tempDir, true); } catch { }
+            }
+        }
+    }
+
+    [Fact]
+    public void Read_Files_BlankAndWhitespaceLines_AreIgnored()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), "clipflow-console-blank-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        string originalCwd = Environment.CurrentDirectory;
+
+        try
+        {
+            Environment.CurrentDirectory = tempDir;
+            File.WriteAllText(Path.Combine(tempDir, "a.txt"), "a");
+            File.WriteAllText(Path.Combine(tempDir, "b.txt"), "b");
+
+            string inputData = $"{Environment.NewLine}   {Environment.NewLine}a.txt{Environment.NewLine}\t{Environment.NewLine}b.txt{Environment.NewLine}  {Environment.NewLine}";
+            using var testCtx = new TestClipContext(inputData);
+            var endpoint = new ClipEndpoint.Console();
+            var files = new ClipType.Files();
+
+            endpoint.Read(testCtx.Context, files);
+
+            Assert.Equal(0, testCtx.Status);
+            Assert.NotNull(files.Identity);
+            Assert.Equal(2, files.Identity.Count);
+            Assert.Equal(Path.GetFullPath("a.txt"), files.Identity[0]);
+            Assert.Equal(Path.GetFullPath("b.txt"), files.Identity[1]);
+        }
+        finally
+        {
+            Environment.CurrentDirectory = originalCwd;
+            if (Directory.Exists(tempDir))
+            {
+                try { Directory.Delete(tempDir, true); } catch { }
+            }
+        }
+    }
+
+    [Fact]
+    public void Read_Files_AcceptsBothFilesAndDirectories()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), "clipflow-console-mixed-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+        string originalCwd = Environment.CurrentDirectory;
+
+        try
+        {
+            Environment.CurrentDirectory = tempDir;
+            string subDir = Path.Combine(tempDir, "subfolder");
+            Directory.CreateDirectory(subDir);
+            File.WriteAllText(Path.Combine(tempDir, "a.txt"), "a");
+
+            string inputData = $"a.txt{Environment.NewLine}subfolder{Environment.NewLine}";
+            using var testCtx = new TestClipContext(inputData);
+            var endpoint = new ClipEndpoint.Console();
+            var files = new ClipType.Files();
+
+            endpoint.Read(testCtx.Context, files);
+
+            Assert.Equal(0, testCtx.Status);
+            Assert.NotNull(files.Identity);
+            Assert.Equal(2, files.Identity.Count);
+            Assert.True(File.Exists(files.Identity[0]));
+            Assert.True(Directory.Exists(files.Identity[1]));
+        }
+        finally
+        {
+            Environment.CurrentDirectory = originalCwd;
+            if (Directory.Exists(tempDir))
+            {
+                try { Directory.Delete(tempDir, true); } catch { }
+            }
+        }
     }
 
     [Fact]

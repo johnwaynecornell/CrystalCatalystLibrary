@@ -343,12 +343,116 @@ public class ClipTypeTests
 
             Assert.Equal(0, testCtx.Status);
             Assert.NotNull(filesType.Identity);
-            Assert.Equal(new List<string> { "a.txt", "b.txt" }, filesType.Identity);
+            Assert.Equal(new List<string> { Path.GetFullPath("a.txt"), Path.GetFullPath("b.txt") }, filesType.Identity);
         }
         finally
         {
             Marshal.FreeHGlobal(ptr);
         }
+    }
+
+    [Fact]
+    public void Files_Receive_NormalizesUris_Spaces_Unicode_MultipleEntries()
+    {
+        string payload = string.Join("\r\n", new[]
+        {
+            "# Comment line in uri-list",
+            "file:///tmp/my%20test%20file.txt",
+            "   ",
+            "file://localhost/tmp/unicode_%C3%A9cole.txt",
+            "/tmp/plain_path.txt"
+        });
+
+        byte[] payloadBytes = Encoding.UTF8.GetBytes(payload);
+        IntPtr ptr = Marshal.AllocHGlobal(payloadBytes.Length);
+
+        try
+        {
+            Marshal.Copy(payloadBytes, 0, ptr, payloadBytes.Length);
+
+            var filesType = new ClipType.Files();
+            using var testCtx = new TestClipContext();
+
+            filesType.Receive(testCtx.Context, null!, "text/file-uri", ptr, (IntPtr)payloadBytes.Length);
+
+            Assert.Equal(0, testCtx.Status);
+            Assert.NotNull(filesType.Identity);
+            Assert.Equal(3, filesType.Identity.Count);
+
+            string expected1 = Path.GetFullPath("/tmp/my test file.txt");
+            string expected2 = Path.GetFullPath("/tmp/unicode_école.txt");
+            string expected3 = Path.GetFullPath("/tmp/plain_path.txt");
+
+            Assert.Equal(expected1, filesType.Identity[0]);
+            Assert.Equal(expected2, filesType.Identity[1]);
+            Assert.Equal(expected3, filesType.Identity[2]);
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(ptr);
+        }
+    }
+
+    [Fact]
+    public void Files_RoundTrip_ProvideAndReceive_PreservesNormalizedLocalPaths()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), "clipflow-roundtrip-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            string file1 = Path.Combine(tempDir, "first file with spaces.txt");
+            string file2 = Path.Combine(tempDir, "second_é_file.txt");
+            File.WriteAllText(file1, "1");
+            File.WriteAllText(file2, "2");
+
+            var originalPaths = new List<string> { Path.GetFullPath(file1), Path.GetFullPath(file2) };
+            var provideFiles = new ClipType.Files { Identity = originalPaths };
+
+            using var provideCtx = new TestClipContext();
+            byte[]? providedBytes = provideFiles.Provide(provideCtx.Context, null!, "text/file-uri");
+
+            Assert.NotNull(providedBytes);
+            Assert.Equal(0, provideCtx.Status);
+
+            IntPtr ptr = Marshal.AllocHGlobal(providedBytes.Length);
+            try
+            {
+                Marshal.Copy(providedBytes, 0, ptr, providedBytes.Length);
+
+                var receiveFiles = new ClipType.Files();
+                using var receiveCtx = new TestClipContext();
+                receiveFiles.Receive(receiveCtx.Context, null!, "text/file-uri", ptr, (IntPtr)providedBytes.Length);
+
+                Assert.Equal(0, receiveCtx.Status);
+                Assert.NotNull(receiveFiles.Identity);
+                Assert.Equal(originalPaths, receiveFiles.Identity);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(ptr);
+            }
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                try { Directory.Delete(tempDir, true); } catch { }
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData("file:///home/user/document.txt", "/home/user/document.txt")]
+    [InlineData("file://localhost/home/user/document.txt", "/home/user/document.txt")]
+    [InlineData("file:///home/user/my%20file.txt", "/home/user/my file.txt")]
+    [InlineData("file:///home/user/caf%C3%A9.txt", "/home/user/café.txt")]
+    [InlineData("/home/user/already_local.txt", "/home/user/already_local.txt")]
+    public void Files_NormalizePathOrUri_HandlesVariousSchemes(string input, string expectedLocalPath)
+    {
+        string result = ClipType.Files.NormalizePathOrUri(input);
+        string expected = Path.GetFullPath(expectedLocalPath);
+        Assert.Equal(expected, result);
     }
 
     #endregion

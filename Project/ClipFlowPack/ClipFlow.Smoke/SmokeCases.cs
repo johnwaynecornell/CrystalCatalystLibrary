@@ -26,7 +26,11 @@ public static class SmokeCases
         new("files/file-list -> console", Case6_FilesFileListToConsole),
         new("directory wildcard", Case7_DirectoryWildcard),
         new("image advertisement", Case8_ImageAdvertisement),
-        new("image full persistence round trip", Case9_ImageFullPersistenceRoundTrip)
+        new("image full persistence round trip", Case9_ImageFullPersistenceRoundTrip),
+        new("files/console relative stdin -> file", Case10_FilesConsoleRelativeStdinToFile),
+        new("files/file-list relative entries -> file", Case11_FilesFileListRelativeEntriesToFile),
+        new("files/console invalid path error", Case12_FilesConsoleInvalidPathError),
+        new("files/directory expansion -> directory", Case13_FilesDirectoryExpansionToDirectory)
     };
 
     public static CaseResult Case1_TextStringToFile(string exe, SmokeFixture fixture, TimeSpan timeout)
@@ -448,5 +452,265 @@ public static class SmokeCases
             }
         }
         return bmp;
+    }
+
+    public static CaseResult Case10_FilesConsoleRelativeStdinToFile(string exe, SmokeFixture fixture, TimeSpan timeout)
+    {
+        var sw = Stopwatch.StartNew();
+        var runs = new List<RunResult>();
+        string workDir = fixture.GetPath("case10_workdir");
+        Directory.CreateDirectory(workDir);
+
+        string subDir = Path.Combine(workDir, "sub");
+        Directory.CreateDirectory(subDir);
+
+        string fileA = Path.Combine(workDir, "file_a.txt");
+        string fileB = Path.Combine(subDir, "file_b.txt");
+        File.WriteAllText(fileA, "content A");
+        File.WriteAllText(fileB, "content B");
+
+        string stdinInput = $"file_a.txt\nsub/file_b.txt\n";
+        string resultFile = fixture.GetPath("case10_result.txt");
+
+        var copyRun = ProcessRunner.Run(
+            exe,
+            new[] { "copy", "files", "console" },
+            stdin: stdinInput,
+            timeout: timeout,
+            workingDir: workDir);
+        runs.Add(copyRun);
+
+        if (copyRun.ExitCode != 0 || copyRun.TimedOut)
+        {
+            sw.Stop();
+            return new CaseResult("files/console relative stdin -> file", false, $"Copy from relative stdin failed (exit {copyRun.ExitCode}, timedOut={copyRun.TimedOut}, stderr={copyRun.StdErr})", runs, sw.Elapsed);
+        }
+
+        var pasteRun = ProcessRunner.Run(
+            exe,
+            new[] { "paste", "files", "file", resultFile },
+            timeout: timeout);
+        runs.Add(pasteRun);
+
+        sw.Stop();
+        if (pasteRun.ExitCode != 0 || pasteRun.TimedOut)
+        {
+            return new CaseResult("files/console relative stdin -> file", false, $"Paste files to file failed (exit {pasteRun.ExitCode}, timedOut={pasteRun.TimedOut}, stderr={pasteRun.StdErr})", runs, sw.Elapsed);
+        }
+
+        if (!File.Exists(resultFile))
+        {
+            return new CaseResult("files/console relative stdin -> file", false, "Result file was not created", runs, sw.Elapsed);
+        }
+
+        var lines = File.ReadAllLines(resultFile)
+            .Select(l => l.Trim())
+            .Where(l => !string.IsNullOrEmpty(l))
+            .ToList();
+
+        if (lines.Count != 2)
+        {
+            return new CaseResult("files/console relative stdin -> file", false, $"Expected 2 lines, got {lines.Count}", runs, sw.Elapsed);
+        }
+
+        string expectedA = Path.GetFullPath(fileA);
+        string expectedB = Path.GetFullPath(fileB);
+
+        if (lines[0] != expectedA || lines[1] != expectedB)
+        {
+            return new CaseResult("files/console relative stdin -> file", false, $"Path mismatch. Expected [{expectedA}, {expectedB}], got [{lines[0]}, {lines[1]}]", runs, sw.Elapsed);
+        }
+
+        if (!File.Exists(lines[0]) || !File.Exists(lines[1]))
+        {
+            return new CaseResult("files/console relative stdin -> file", false, "Result file paths do not exist on disk", runs, sw.Elapsed);
+        }
+
+        return new CaseResult("files/console relative stdin -> file", true, "Relative stdin paths resolved to full existing paths against CWD", runs, sw.Elapsed);
+    }
+
+    public static CaseResult Case11_FilesFileListRelativeEntriesToFile(string exe, SmokeFixture fixture, TimeSpan timeout)
+    {
+        var sw = Stopwatch.StartNew();
+        var runs = new List<RunResult>();
+        string workDir = fixture.GetPath("case11_workdir");
+        Directory.CreateDirectory(workDir);
+
+        string nestedDir = Path.Combine(workDir, "nested");
+        Directory.CreateDirectory(nestedDir);
+
+        string file1 = Path.Combine(workDir, "doc1.txt");
+        string file2 = Path.Combine(nestedDir, "doc2.txt");
+        File.WriteAllText(file1, "doc 1");
+        File.WriteAllText(file2, "doc 2");
+
+        string listFile = Path.Combine(workDir, "list.txt");
+        File.WriteAllText(listFile, $"doc1.txt\n\nnested/doc2.txt\n   \n");
+
+        string resultFile = fixture.GetPath("case11_result.txt");
+
+        var copyRun = ProcessRunner.Run(
+            exe,
+            new[] { "copy", "files", "file", listFile },
+            timeout: timeout,
+            workingDir: workDir);
+        runs.Add(copyRun);
+
+        if (copyRun.ExitCode != 0 || copyRun.TimedOut)
+        {
+            sw.Stop();
+            return new CaseResult("files/file-list relative entries -> file", false, $"Copy from list file failed (exit {copyRun.ExitCode}, timedOut={copyRun.TimedOut}, stderr={copyRun.StdErr})", runs, sw.Elapsed);
+        }
+
+        var pasteRun = ProcessRunner.Run(
+            exe,
+            new[] { "paste", "files", "file", resultFile },
+            timeout: timeout);
+        runs.Add(pasteRun);
+
+        sw.Stop();
+        if (pasteRun.ExitCode != 0 || pasteRun.TimedOut)
+        {
+            return new CaseResult("files/file-list relative entries -> file", false, $"Paste to file failed (exit {pasteRun.ExitCode}, timedOut={pasteRun.TimedOut}, stderr={pasteRun.StdErr})", runs, sw.Elapsed);
+        }
+
+        if (!File.Exists(resultFile))
+        {
+            return new CaseResult("files/file-list relative entries -> file", false, "Result file was not created", runs, sw.Elapsed);
+        }
+
+        var lines = File.ReadAllLines(resultFile)
+            .Select(l => l.Trim())
+            .Where(l => !string.IsNullOrEmpty(l))
+            .ToList();
+
+        string expected1 = Path.GetFullPath(file1);
+        string expected2 = Path.GetFullPath(file2);
+
+        if (lines.Count != 2 || lines[0] != expected1 || lines[1] != expected2)
+        {
+            return new CaseResult("files/file-list relative entries -> file", false, $"Pasted paths mismatch. Got: {string.Join(", ", lines)}", runs, sw.Elapsed);
+        }
+
+        return new CaseResult("files/file-list relative entries -> file", true, "Relative list-file entries resolved against CWD and pasted cleanly", runs, sw.Elapsed);
+    }
+
+    public static CaseResult Case12_FilesConsoleInvalidPathError(string exe, SmokeFixture fixture, TimeSpan timeout)
+    {
+        var sw = Stopwatch.StartNew();
+        var runs = new List<RunResult>();
+        string workDir = fixture.GetPath("case12_workdir");
+        Directory.CreateDirectory(workDir);
+
+        string validFile = Path.Combine(workDir, "real.txt");
+        File.WriteAllText(validFile, "real");
+
+        string stdinInput = $"real.txt\nmissing_file_xyz.txt\n";
+
+        var copyRun = ProcessRunner.Run(
+            exe,
+            new[] { "copy", "files", "console" },
+            stdin: stdinInput,
+            timeout: timeout,
+            workingDir: workDir);
+        runs.Add(copyRun);
+        sw.Stop();
+
+        if (copyRun.ExitCode == 0)
+        {
+            return new CaseResult("files/console invalid path error", false, $"Expected non-zero exit code for invalid path, got exit 0. StdOut: {copyRun.StdOut}, StdErr: {copyRun.StdErr}", runs, sw.Elapsed);
+        }
+
+        if (!copyRun.StdErr.Contains("Path not found", StringComparison.OrdinalIgnoreCase))
+        {
+            return new CaseResult("files/console invalid path error", false, $"Expected 'Path not found' diagnostic in stderr, got: {copyRun.StdErr}", runs, sw.Elapsed);
+        }
+
+        return new CaseResult("files/console invalid path error", true, "Non-existent path produced non-zero exit code and diagnostic in stderr", runs, sw.Elapsed);
+    }
+
+    public static CaseResult Case13_FilesDirectoryExpansionToDirectory(string exe, SmokeFixture fixture, TimeSpan timeout)
+    {
+        var sw = Stopwatch.StartNew();
+        var runs = new List<RunResult>();
+        string workDir = fixture.GetPath("case13_workdir");
+        Directory.CreateDirectory(workDir);
+
+        string srcTree = Path.Combine(workDir, "source_tree");
+        string srcSub = Path.Combine(srcTree, "nested_sub");
+        Directory.CreateDirectory(srcSub);
+
+        string rootFile = Path.Combine(srcTree, "root.txt");
+        string nestedFile = Path.Combine(srcSub, "nested.txt");
+        string standaloneFile = Path.Combine(workDir, "standalone.txt");
+
+        const string rootContent = "Root file content in source tree";
+        const string nestedContent = "Nested file content in deep subfolder";
+        const string standaloneContent = "Standalone extra file content";
+
+        File.WriteAllText(rootFile, rootContent);
+        File.WriteAllText(nestedFile, nestedContent);
+        File.WriteAllText(standaloneFile, standaloneContent);
+
+        string targetDir = fixture.GetPath("case13_target");
+
+        string stdinInput = $"source_tree\nstandalone.txt\n";
+
+        var copyRun = ProcessRunner.Run(
+            exe,
+            new[] { "copy", "files", "console" },
+            stdin: stdinInput,
+            timeout: timeout,
+            workingDir: workDir);
+        runs.Add(copyRun);
+
+        if (copyRun.ExitCode != 0 || copyRun.TimedOut)
+        {
+            sw.Stop();
+            return new CaseResult("files/directory expansion -> directory", false, $"Copy failed (exit {copyRun.ExitCode}, timedOut={copyRun.TimedOut}, stderr={copyRun.StdErr})", runs, sw.Elapsed);
+        }
+
+        var pasteRun = ProcessRunner.Run(
+            exe,
+            new[] { "paste", "files", "directory", targetDir },
+            timeout: timeout);
+        runs.Add(pasteRun);
+
+        sw.Stop();
+        if (pasteRun.ExitCode != 0 || pasteRun.TimedOut)
+        {
+            return new CaseResult("files/directory expansion -> directory", false, $"Paste to directory failed (exit {pasteRun.ExitCode}, timedOut={pasteRun.TimedOut}, stderr={pasteRun.StdErr})", runs, sw.Elapsed);
+        }
+
+        if (!Directory.Exists(targetDir))
+        {
+            return new CaseResult("files/directory expansion -> directory", false, "Target directory was not created", runs, sw.Elapsed);
+        }
+
+        string destRootFile = Path.Combine(targetDir, "source_tree", "root.txt");
+        string destNestedFile = Path.Combine(targetDir, "source_tree", "nested_sub", "nested.txt");
+        string destStandaloneFile = Path.Combine(targetDir, "standalone.txt");
+
+        if (!File.Exists(destRootFile))
+        {
+            return new CaseResult("files/directory expansion -> directory", false, $"Expected expanded file at {destRootFile}", runs, sw.Elapsed);
+        }
+        if (!File.Exists(destNestedFile))
+        {
+            return new CaseResult("files/directory expansion -> directory", false, $"Expected expanded nested file at {destNestedFile}", runs, sw.Elapsed);
+        }
+        if (!File.Exists(destStandaloneFile))
+        {
+            return new CaseResult("files/directory expansion -> directory", false, $"Expected standalone file at {destStandaloneFile}", runs, sw.Elapsed);
+        }
+
+        if (File.ReadAllText(destRootFile) != rootContent ||
+            File.ReadAllText(destNestedFile) != nestedContent ||
+            File.ReadAllText(destStandaloneFile) != standaloneContent)
+        {
+            return new CaseResult("files/directory expansion -> directory", false, "Content mismatch in expanded files", runs, sw.Elapsed);
+        }
+
+        return new CaseResult("files/directory expansion -> directory", true, "Directory tree and standalone files expanded and copied recursively with contents preserved", runs, sw.Elapsed);
     }
 }

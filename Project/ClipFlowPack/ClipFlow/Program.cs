@@ -84,5 +84,5 @@ else cmd = (ClipCommand)commandResult.Result;
 
 cmd.Execute(ctx);
 
-return 0;
+return ctx.Status == 0 ? 0 : 1;
 

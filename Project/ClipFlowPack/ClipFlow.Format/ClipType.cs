@@ -51,7 +51,7 @@ public abstract class ClipType
         var fi = GetType().GetField("ClipTypeHeader", BindingFlags.Public | BindingFlags.Static);
         if (fi == null) throw new Exception("Programmer error: ClipTypeHeader field not found");
         
-        ClipTypeHeader header = (ClipTypeHeader)fi.GetValue(null);
+        ClipTypeHeader header = (ClipTypeHeader)fi.GetValue(null)!;
         
         foreach (string known in header.Formats)
         {
@@ -259,12 +259,62 @@ public abstract class ClipType
             Identity = new List<string>();
 
             string? line;
-            do
+            while ((line = reader.ReadLine()) != null)
             {
-                line = reader.ReadLine();
-                if (line != null) Identity.Add(line);
-                
-            } while (line != null);
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+
+                if (line.TrimStart().StartsWith("#"))
+                    continue;
+
+                string normalized = NormalizePathOrUri(line);
+                Identity.Add(normalized);
+            }
+        }
+
+        public static string NormalizePathOrUri(string line)
+        {
+            string trimmed = line.Trim();
+
+            if (trimmed.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
+            {
+                if (trimmed.StartsWith("file://localhost/", StringComparison.OrdinalIgnoreCase))
+                {
+                    trimmed = "file:///" + trimmed.Substring("file://localhost/".Length);
+                }
+                else if (trimmed.StartsWith("file://localhost", StringComparison.OrdinalIgnoreCase))
+                {
+                    trimmed = "file:///" + trimmed.Substring("file://localhost".Length).TrimStart('/');
+                }
+                else if (trimmed.StartsWith("file://", StringComparison.OrdinalIgnoreCase) &&
+                         !trimmed.StartsWith("file:///", StringComparison.OrdinalIgnoreCase))
+                {
+                    string afterScheme = trimmed.Substring("file://".Length);
+                    if (afterScheme.Length >= 2 && char.IsLetter(afterScheme[0]) && (afterScheme[1] == ':' || afterScheme[1] == '|'))
+                    {
+                        trimmed = "file:///" + afterScheme;
+                    }
+                }
+
+                if (Uri.TryCreate(trimmed, UriKind.Absolute, out Uri? uri) && uri.IsFile)
+                {
+                    return Path.GetFullPath(uri.LocalPath);
+                }
+
+                string raw = trimmed.Substring(5);
+                while (raw.StartsWith("//")) raw = raw.Substring(2);
+                if (raw.StartsWith("localhost/", StringComparison.OrdinalIgnoreCase))
+                    raw = raw.Substring("localhost/".Length);
+                if (raw.StartsWith("/")) raw = raw.Substring(1);
+                raw = Uri.UnescapeDataString(raw);
+                if (!raw.StartsWith("/") && !raw.Contains(":") && Environment.OSVersion.Platform != PlatformID.Win32NT)
+                {
+                    raw = "/" + raw;
+                }
+                return Path.GetFullPath(raw);
+            }
+
+            return Path.GetFullPath(line);
         }
     }
     
