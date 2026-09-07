@@ -1,7 +1,11 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
+using System.Text;
 using FluentCommandLine;
 using ClipFlow.Format;
+
+Console.OutputEncoding = Encoding.UTF8;
+Console.InputEncoding = Encoding.UTF8;
 
 FluentEnvironment env = new FluentEnvironment();
 env.AddModule<ClipFlow_Fluent>();

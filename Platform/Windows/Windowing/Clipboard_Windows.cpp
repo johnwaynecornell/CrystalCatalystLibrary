@@ -2,6 +2,7 @@
 #include <sstream>
 #include "Clipboard_Windows.h"
 #include "SimpleDataObject.h"
+#include "CrystalWindow_Windows.h"
 
 using namespace JWCEssentials;
 
@@ -84,26 +85,33 @@ void CrystalWindow_ClipboardCopyWithCallback(void (*provide)(P_INSTANCE(DataInte
 }
 
 void CrystalWindow_ClipboardCopyPersist(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) dataInterchange) {
-    if (handle && dataInterchange) dataInterchange->m_handle = handle;
-    if (!OpenClipboard(nullptr)) {
-        handleDataInterchangeError(dataInterchange ? dataInterchange->m_handle : nullptr, dataInterchange, "Failed to open clipboard.");
-        return;
+    if (!dataInterchange) return;
+    if (handle) dataInterchange->m_handle = handle;
+    dataInterchange->selection_type = DataInterchange::E_CLIPBOARD;
+    dataInterchange->provide_chosen = DataInterchange::provide_for_clipboard;
+
+    HWND hwnd = nullptr;
+    if (handle && handle->crystal_window) {
+        hwnd = ((CrystalWindow_Windows*)handle->crystal_window)->hwnd;
     }
 
-	dataInterchange->selection_type = DataInterchange::E_CLIPBOARD;
+    if (!OpenClipboard(hwnd)) {
+        handleDataInterchangeError(dataInterchange->m_handle, dataInterchange, "Failed to open clipboard.");
+        return;
+    }
 
     EmptyClipboard();
 
     for (DataInterchange::Node *node = dataInterchange->data_head.next; node != nullptr; node = node->next) {
 
-        UINT cfFormat;
+        UINT cfFormat = 0;
         HGLOBAL hGlobal;
 
         hGlobal = DataInterchange_MakeHGLOBAl(dataInterchange, node->type, &cfFormat);
         if (hGlobal) {
             SetClipboardData(cfFormat, hGlobal);
         } else {
-            handleDataInterchangeError(dataInterchange ? dataInterchange->m_handle : nullptr, dataInterchange, "Failed to allocate global memory.");
+            handleDataInterchangeError(dataInterchange->m_handle, dataInterchange, "Failed to allocate global memory for format: " + std::string(node->type.c_str ? node->type.c_str : ""));
         }
     }
 

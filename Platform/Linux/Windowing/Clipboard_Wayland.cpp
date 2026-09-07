@@ -141,53 +141,83 @@ namespace NewAge {
         } else {
             fwrite(d, 1, sz, pipe);
         }
-        pclose(pipe);
+        int status = pclose(pipe);
 
-        return true;
+        return (status == 0);
     }
 
     bool Clipboard_Wayland::Paste(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) data) {
         if (!IsAvailable() || !data) return false;
-        FILE* pipe = popen("wl-paste --list-types", "r");
+        FILE* pipe = popen("wl-paste --list-types 2>/dev/null", "r");
         if (!pipe) return false;
         char buf[256];
+        bool anyAdded = false;
         while (fgets(buf, sizeof(buf), pipe) != nullptr) {
             std::string line(buf);
             while (!line.empty() && (line.back() == '\n' || line.back() == '\r')) line.pop_back();
             if (line.empty()) continue;
             if (line == "text/uri-list") {
-                if (!DataInterchange_FormatExists(data, "text/file-uri"))
+                if (!DataInterchange_FormatExists(data, "text/file-uri")) {
                     DataInterchange_FormatAdd(data, "text/file-uri");
+                    anyAdded = true;
+                }
             } else if (line == "image/x-bmp" || line == "image/x-MS-bmp") {
-                if (!DataInterchange_FormatExists(data, "image/bmp"))
+                if (!DataInterchange_FormatExists(data, "image/bmp")) {
                     DataInterchange_FormatAdd(data, "image/bmp");
+                    anyAdded = true;
+                }
             } else {
-                if (!DataInterchange_FormatExists(data, (utf8_string_struct)line.c_str()))
+                if (!DataInterchange_FormatExists(data, (utf8_string_struct)line.c_str())) {
                     DataInterchange_FormatAdd(data, (utf8_string_struct)line.c_str());
+                    anyAdded = true;
+                }
             }
         }
-        pclose(pipe);
-        return true;
+        int status = pclose(pipe);
+        return (status == 0 && anyAdded);
     }
 
     bool Clipboard_Wayland::Select(P_INSTANCE(DataInterchange) data, utf8_string_struct format) {
         const char* fmt_str = (const char*)format;
         if (!IsAvailable() || !data || !fmt_str || fmt_str[0] == '\0') return false;
-        std::string mime_type = fmt_str;
-        if (mime_type == "text/file-uri") {
-            mime_type = "text/uri-list";
+
+        std::vector<std::string> candidates;
+        std::string req(fmt_str);
+        if (req == "text/file-uri") {
+            candidates.push_back("text/uri-list");
+        } else if (req == "image/bmp") {
+            candidates.push_back("image/bmp");
+            candidates.push_back("image/x-bmp");
+            candidates.push_back("image/x-MS-bmp");
+        } else if (req == "text/plain") {
+            candidates.push_back("text/plain");
+            candidates.push_back("text/plain;charset=utf-8");
+            candidates.push_back("UTF8_STRING");
+            candidates.push_back("STRING");
+            candidates.push_back("TEXT");
+        } else if (req == "text/html") {
+            candidates.push_back("text/html");
+        } else {
+            candidates.push_back(req);
         }
-        std::string cmd = "wl-paste --no-newline --type " + mime_type;
-        FILE* pipe = popen(cmd.c_str(), "r");
-        if (!pipe) return false;
 
         std::vector<uint8_t> buffer;
-        char chunk[512];
-        size_t n;
-        while ((n = fread(chunk, 1, sizeof(chunk), pipe)) > 0) {
-            buffer.insert(buffer.end(), chunk, chunk + n);
+        for (const auto& mime : candidates) {
+            std::string cmd = "wl-paste --no-newline --type " + mime + " 2>/dev/null";
+            FILE* pipe = popen(cmd.c_str(), "r");
+            if (!pipe) continue;
+
+            buffer.clear();
+            char chunk[512];
+            size_t n;
+            while ((n = fread(chunk, 1, sizeof(chunk), pipe)) > 0) {
+                buffer.insert(buffer.end(), chunk, chunk + n);
+            }
+            int status = pclose(pipe);
+            if (status == 0 && !buffer.empty()) {
+                break;
+            }
         }
-        pclose(pipe);
 
         if (!buffer.empty()) {
             DataInterchange_SelectionSet(data, format, buffer.data(), buffer.size());

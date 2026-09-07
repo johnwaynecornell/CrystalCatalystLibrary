@@ -223,33 +223,32 @@ namespace NewAge {
 
         std::cerr << mod_header() << "CrystalWindow_ClipboardCopyPersist()"  << std::endl;
 
-        // 1. Acquire CLIPBOARD selection ownership
+        // 1. Check for CLIPBOARD_MANAGER first
+        Window manager = XGetSelectionOwner(xwin->display, AppX11->atoms.clipboard_manager);
+        if (manager == None) {
+            if (Clipboard_Wayland::IsAvailable()) {
+                if (Clipboard_Wayland::CopyPersist(handle, data)) {
+                    return;
+                }
+            }
+            handleDataInterchangeError(handle, data, "Clipboard persistence failed: no clipboard manager running (CLIPBOARD_MANAGER owner is None).");
+            return;
+        }
+
+        // 2. Acquire CLIPBOARD selection ownership
         XSetSelectionOwner(xwin->display, AppX11->atoms.clipboard, xwin->window, CurrentTime);
         if (XGetSelectionOwner(xwin->display, AppX11->atoms.clipboard) != xwin->window) {
             handleDataInterchangeError(handle, data, "Failed to acquire CLIPBOARD selection ownership.");
             return;
         }
 
-        // 2. Set TARGETS property on window
+        // 3. Set TARGETS property on window
         Atom *types = nullptr;
         int num_types = 0;
         DataImterchange_AtomArrayFromFormats(data, &types, &num_types);
-
-        XChangeProperty(xwin->display, xwin->window, AppX11->atoms.targets, XA_ATOM, 32, PropModeReplace,
-                        reinterpret_cast<const unsigned char*>(types), num_types);
-
-        // 3. Check for CLIPBOARD_MANAGER
-        Window manager = XGetSelectionOwner(xwin->display, AppX11->atoms.clipboard_manager);
-        if (manager == None) {
-            if (Clipboard_Wayland::IsAvailable()) {
-                if (Clipboard_Wayland::CopyPersist(handle, data)) {
-                    if (types) delete[] types;
-                    return;
-                }
-            }
-            if (types) delete[] types;
-            handleDataInterchangeError(handle, data, "Clipboard persistence failed: no clipboard manager running (CLIPBOARD_MANAGER owner is None).");
-            return;
+        if (types && num_types > 0) {
+            XChangeProperty(xwin->display, xwin->window, AppX11->atoms.targets, XA_ATOM, 32, PropModeReplace,
+                            reinterpret_cast<const unsigned char*>(types), num_types);
         }
 
         // 4. Set SAVE_TARGETS property on window with targets to be saved

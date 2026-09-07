@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClipFlow", "ClipFlow\ClipFl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClipFlow.Tests", "ClipFlow.Tests\ClipFlow.Tests.csproj", "{08364A1F-9B4B-4E9C-85CD-D148EB9716A3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClipFlow.Smoke", "ClipFlow.Smoke\ClipFlow.Smoke.csproj", "{6E9D5E7B-0A97-4A2D-A0DF-B3C57B4B1C64}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -52,6 +54,18 @@ Global
 		{08364A1F-9B4B-4E9C-85CD-D148EB9716A3}.Release|x64.Build.0 = Release|Any CPU
 		{08364A1F-9B4B-4E9C-85CD-D148EB9716A3}.Release|x86.ActiveCfg = Release|Any CPU
 		{08364A1F-9B4B-4E9C-85CD-D148EB9716A3}.Release|x86.Build.0 = Release|Any CPU
+		{6E9D5E7B-0A97-4A2D-A0DF-B3C57B4B1C64}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6E9D5E7B-0A97-4A2D-A0DF-B3C57B4B1C64}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6E9D5E7B-0A97-4A2D-A0DF-B3C57B4B1C64}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6E9D5E7B-0A97-4A2D-A0DF-B3C57B4B1C64}.Debug|x64.Build.0 = Debug|Any CPU
+		{6E9D5E7B-0A97-4A2D-A0DF-B3C57B4B1C64}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6E9D5E7B-0A97-4A2D-A0DF-B3C57B4B1C64}.Debug|x86.Build.0 = Debug|Any CPU
+		{6E9D5E7B-0A97-4A2D-A0DF-B3C57B4B1C64}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6E9D5E7B-0A97-4A2D-A0DF-B3C57B4B1C64}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6E9D5E7B-0A97-4A2D-A0DF-B3C57B4B1C64}.Release|x64.ActiveCfg = Release|Any CPU
+		{6E9D5E7B-0A97-4A2D-A0DF-B3C57B4B1C64}.Release|x64.Build.0 = Release|Any CPU
+		{6E9D5E7B-0A97-4A2D-A0DF-B3C57B4B1C64}.Release|x86.ActiveCfg = Release|Any CPU
+		{6E9D5E7B-0A97-4A2D-A0DF-B3C57B4B1C64}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

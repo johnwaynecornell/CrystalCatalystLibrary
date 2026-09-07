@@ -194,10 +194,11 @@ ULONG SimpleDataObject::Release() {
 
 HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange, utf8_string_struct format, UINT *cfFormat)
 {
+    if (!dataInterchange) return nullptr;
     P_INSTANCE(void)data_ptr = nullptr;
     size_t size = 0;
 
-    std::string  f = format.c_str;
+    std::string f = format.c_str ? format.c_str : "";
 
     if (cfFormat != nullptr) {
 
@@ -217,31 +218,44 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
         }
     }
 
-    dataInterchange->provide_chosen(dataInterchange, format);
+    if (dataInterchange->provide_chosen) {
+        dataInterchange->provide_chosen(dataInterchange, format);
+    }
     DataInterchange_SelectionReveal(dataInterchange, &format, &data_ptr, &size);
 
+    if (!data_ptr || size == 0) {
+        return nullptr;
+    }
 
     HGLOBAL hGlobal = nullptr;
 
     if (strcmp(format, "text/plain") == 0) {
-        std::string utf8_text = std::string((char *) data_ptr, size);
-        int32_t len = MultiByteToWideChar(CP_UTF8, 0, utf8_text.c_str(), -1, nullptr, 0);
+        std::string utf8_text((char *) data_ptr, size);
+        if (!utf8_text.empty() && utf8_text.back() == '\0') {
+            utf8_text.pop_back();
+        }
+        int32_t len = MultiByteToWideChar(CP_UTF8, 0, utf8_text.c_str(), (int)utf8_text.length(), nullptr, 0);
         hGlobal = GlobalAlloc(GMEM_MOVEABLE, (len + 1) * sizeof(WCHAR));
         if (hGlobal) {
             LPWSTR lpszText = (LPWSTR) GlobalLock(hGlobal);
             if (lpszText) {
-                MultiByteToWideChar(CP_UTF8, 0, utf8_text.c_str(), -1, lpszText, len);
+                MultiByteToWideChar(CP_UTF8, 0, utf8_text.c_str(), (int)utf8_text.length(), lpszText, len);
                 lpszText[len] = 0; // Ensure null terminator
                 GlobalUnlock(hGlobal);
             }
         }
     } else if (strcmp(format, "text/html") == 0) {
-        hGlobal = GlobalAlloc(GMEM_MOVEABLE, size + 1);
+        size_t actual_size = size;
+        const char* pText = (const char*)data_ptr;
+        if (actual_size > 0 && pText[actual_size - 1] == '\0') {
+            actual_size--;
+        }
+        hGlobal = GlobalAlloc(GMEM_MOVEABLE, actual_size + 1);
         if (hGlobal) {
             char* lpszText = (char*)GlobalLock(hGlobal);
             if (lpszText) {
-                memcpy(lpszText, data_ptr, size);
-                lpszText[size] = 0;
+                memcpy(lpszText, data_ptr, actual_size);
+                lpszText[actual_size] = 0;
                 GlobalUnlock(hGlobal);
             }
         }
@@ -270,7 +284,7 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
         }
     } else if (strcmp(format, "text/file-uri") == 0) {
         // Parse URIs
-        std::string uri_list = std::string((char *) data_ptr, size);
+        std::string uri_list((char *) data_ptr, size);
         std::vector<std::wstring> files;
         size_t pos = 0;
         size_t new_pos;
@@ -278,13 +292,28 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
         while ((new_pos = uri_list.find('\n', pos)) != std::string::npos) {
             std::string uri = uri_list.substr(pos, new_pos - pos);
             pos = new_pos + 1;
+            if (!uri.empty() && uri.back() == '\r') uri.pop_back();
             if (uri.empty()) continue;
 
             // Convert URI to wide string
-            int32_t len = MultiByteToWideChar(CP_UTF8, 0, uri.c_str(), -1, nullptr, 0);
-            std::wstring ws(len, L'\0');
-            MultiByteToWideChar(CP_UTF8, 0, uri.c_str(), -1, &ws[0], len);
-            files.push_back(ws);
+            int32_t len = MultiByteToWideChar(CP_UTF8, 0, uri.c_str(), (int)uri.length(), nullptr, 0);
+            if (len > 0) {
+                std::wstring ws(len, L'\0');
+                MultiByteToWideChar(CP_UTF8, 0, uri.c_str(), (int)uri.length(), &ws[0], len);
+                files.push_back(ws);
+            }
+        }
+        if (pos < uri_list.length()) {
+            std::string uri = uri_list.substr(pos);
+            if (!uri.empty() && uri.back() == '\r') uri.pop_back();
+            if (!uri.empty()) {
+                int32_t len = MultiByteToWideChar(CP_UTF8, 0, uri.c_str(), (int)uri.length(), nullptr, 0);
+                if (len > 0) {
+                    std::wstring ws(len, L'\0');
+                    MultiByteToWideChar(CP_UTF8, 0, uri.c_str(), (int)uri.length(), &ws[0], len);
+                    files.push_back(ws);
+                }
+            }
         }
 
         // Calculate size of the global memory block
@@ -292,7 +321,7 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
         for (const auto &file: files) {
             total_size += (file.length() + 1) * sizeof(WCHAR);
         }
-        total_size += sizeof(WCHAR); // Extra null terminator
+        total_size += sizeof(WCHAR); // Extra double null terminator
 
         // Allocate global memory block
         hGlobal = GlobalAlloc(GMEM_MOVEABLE, total_size);
@@ -308,23 +337,12 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
                 // Copy file paths to the global memory block
                 LPWSTR pwsz = (LPWSTR) ((LPBYTE) pDropFiles + sizeof(DROPFILES));
                 LPWSTR cur = pwsz;
-                size_t max = (total_size - sizeof(WCHAR) - sizeof(DROPFILES)) / sizeof(WCHAR);
 
-                for (std::wstring &file: files) {
-                    int i;
-                    for (i=0; i<max+1 && i < file.length(); i++)
-                    {
-                        cur[i] = file[i];
-                    }
-                    if (i == max+1)
-                        throw std::runtime_error("corruption");
-
-                    cur[i] = 0;
-
-                    cur += i; // Move the pointer to the next location
-                    max -= i;// on after the null terminator
+                for (const auto &file: files) {
+                    memcpy(cur, file.c_str(), (file.length() + 1) * sizeof(WCHAR));
+                    cur += file.length() + 1;
                 }
-                *cur = L'\0'; // Extra null terminator
+                *cur = L'\0'; // Extra double null terminator
 
                 GlobalUnlock(hGlobal);
             }
@@ -584,16 +602,18 @@ void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_struct
                 std::wstring ws(lpszText);
                 int size_needed = WideCharToMultiByte(CP_UTF8, 0, ws.c_str(), (int)ws.length(), NULL, 0, NULL, NULL);
                 std::string text_data(size_needed, 0);
-                WideCharToMultiByte(CP_UTF8, 0, ws.c_str(), (int)ws.length(), &text_data[0], size_needed, NULL, NULL);
+                if (size_needed > 0) {
+                    WideCharToMultiByte(CP_UTF8, 0, ws.c_str(), (int)ws.length(), &text_data[0], size_needed, NULL, NULL);
+                }
                 GlobalUnlock(stg.hGlobal);
 
-                DataInterchange_SelectionSet(data, format, (P_INSTANCE(void))text_data.c_str(), text_data.length() + 1);
+                DataInterchange_SelectionSet(data, format, (P_INSTANCE(void))text_data.c_str(), text_data.length());
             }
         } else if (f == "text/html") {
             char* lpszText = static_cast<char*>(GlobalLock(stg.hGlobal));
             if (lpszText != nullptr) {
-                size_t data_size = GlobalSize(stg.hGlobal);
-                // HTML Format is usually UTF-8.
+                size_t max_size = GlobalSize(stg.hGlobal);
+                size_t data_size = strnlen(lpszText, max_size);
                 DataInterchange_SelectionSet(data, format, (P_INSTANCE(void))lpszText, data_size);
                 GlobalUnlock(stg.hGlobal);
             }
@@ -619,24 +639,24 @@ void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_struct
         } else if (f == "text/file-uri") {
             HDROP hDrop = static_cast<HDROP>(GlobalLock(stg.hGlobal));
             if (hDrop != nullptr) {
-                uint32_t  fileCount = DragQueryFile(hDrop, 0xFFFFFFFF, nullptr, 0);
-
-                std::cout << "drag of " << fileCount << " files" << std::endl;
+                uint32_t fileCount = DragQueryFileW(hDrop, 0xFFFFFFFF, nullptr, 0);
 
                 std::string uri = "";
-                for (uint32_t  i = 0; i < fileCount; i++) {
+                for (uint32_t i = 0; i < fileCount; i++) {
                     WCHAR filePath[MAX_PATH];
                     if (DragQueryFileW(hDrop, i, filePath, MAX_PATH)) {
-                        std::wstring ws(filePath);
-                        std::string filePathStr(ws.begin(), ws.end());
-                        std::cout << "File Path: " << filePathStr << std::endl; // Debug log
-                        uri += filePathStr + "\n";
+                        int size_needed = WideCharToMultiByte(CP_UTF8, 0, filePath, -1, NULL, 0, NULL, NULL);
+                        if (size_needed > 1) {
+                            std::string filePathStr(size_needed - 1, 0);
+                            WideCharToMultiByte(CP_UTF8, 0, filePath, -1, &filePathStr[0], size_needed, NULL, NULL);
+                            uri += filePathStr + "\n";
+                        }
                     }
                 }
                 GlobalUnlock(stg.hGlobal);
 
                 DataInterchange_SelectionSet(data, "text/file-uri", (P_INSTANCE(void) ) uri.c_str(),
-                                              uri.length() + 1);
+                                              uri.length());
             }
         }
         ReleaseStgMedium(&stg);
