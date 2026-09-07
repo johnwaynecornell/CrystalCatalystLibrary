@@ -389,19 +389,20 @@ public abstract class ClipEndpoint
                     break;
 
                 case ClipType.Files files:
+                    string searchPattern = "*";
+                    string directoryPath = path;
+
+                    // Check if path contains wildcard pattern
+                    string fileName = Path.GetFileName(path);
+                    if (fileName.Contains('*') || fileName.Contains('?'))
+                    {
+                        searchPattern = fileName;
+                        directoryPath = Path.GetDirectoryName(path) ?? path;
+                    }
+
                     if (System.IO.Directory.Exists(path))
                     {
-                        string searchPattern = "*";
-                        string directoryPath = path;
-
-                        // Check if path contains wildcard pattern
-                        string fileName = Path.GetFileName(path);
-                        if (fileName.Contains('*') || fileName.Contains('?'))
-                        {
-                            searchPattern = fileName;
-                            directoryPath = Path.GetDirectoryName(path) ?? path;
-                        }
-
+                        
                         files.Identity = new List<string>(
                             System.IO.Directory.GetFiles(directoryPath, searchPattern));
                     }

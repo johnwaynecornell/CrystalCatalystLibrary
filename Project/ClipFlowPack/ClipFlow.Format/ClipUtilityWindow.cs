@@ -198,9 +198,38 @@ public class ClipUtilityWindow
             
             wnd.OnClipboardProvideChosen = (handle, data, format) =>
             {
-                endpoint.Read(context, type);
-                
                 byte[]? bytes = type.Provide(context, data, format);
+
+                if (context.Status != 0 || bytes == null)
+                {
+                    if (context.Status == 0)
+                    {
+                        context.ErrorOutput.WriteLine(
+                            $"Unable to provide clipboard format {format}");
+                        context.Status = 1;
+                    }
+
+                    wnd.PostClose();
+                    return;
+                }
+                IntPtr ptr = Marshal.AllocHGlobal(bytes.Length);
+
+                try
+                {
+                    Marshal.Copy(bytes, 0, ptr, bytes.Length);
+                    data.SelectionSet(format, ptr, (IntPtr)bytes.Length);
+                }
+                finally
+                {
+                    Marshal.FreeHGlobal(ptr);
+                }
+                
+                work_queue.Enqueue((wnd) => { wnd.PostClose(); });
+            };
+            
+            work_queue.Enqueue(wnd =>
+            {
+                endpoint.Read(context, type);
 
                 if (context.Status != 0)
                 {
@@ -208,23 +237,11 @@ public class ClipUtilityWindow
                     return;
                 }
 
-                IntPtr _data = Marshal.AllocHGlobal(bytes.Length);
-                Marshal.Copy(bytes, 0, _data, bytes.Length);
-                IntPtr _size = (IntPtr)bytes.Length;
-        
-                data.SelectionSet(format, _data, _size);
-
-                work_queue.Enqueue((wnd) => { wnd.PostClose(); });
-            };
-            
-            work_queue.Enqueue((wnd) =>
-            {
-                DataInterchange dataInterchange = DataInterchange.Create();
-                type.Advertise(context, dataInterchange);
-
-                wnd.ClipboardCopy(dataInterchange);
+                DataInterchange di = DataInterchange.Create();
+                type.Advertise(context, di);
+                wnd.ClipboardCopy(di);
             });
-
+            
             wnd.OnIdle = (wnd) =>
             {
                 if (work_queue.Count > 0)

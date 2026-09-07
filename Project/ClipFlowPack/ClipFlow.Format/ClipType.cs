@@ -238,7 +238,11 @@ public abstract class ClipType
 
         public override void Receive(ClipContext context, DataInterchange di, string format, IntPtr data, IntPtr size)
         {
-            StringReader reader = new StringReader(Marshal.PtrToStringUTF8(data));
+            string value =
+                Marshal.PtrToStringUTF8(data, checked((int)size))
+                ?? string.Empty;
+
+            using StringReader reader = new(value);
             
             Identity = new List<string>();
 
