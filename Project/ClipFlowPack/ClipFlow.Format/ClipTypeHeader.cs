@@ -4,6 +4,7 @@ public class ClipTypeHeader
 {
     public string CommandName { get; }
     public string[] Formats { get; }
+    
 
     public ClipTypeHeader(
         string commandName,

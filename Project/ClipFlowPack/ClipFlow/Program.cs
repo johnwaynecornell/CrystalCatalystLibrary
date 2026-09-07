@@ -19,6 +19,7 @@ List<String> cl = new List<String>(args);
 cl = new List<string> { "copy","text", "string", "Hello World" };
 cl = new List<string> { "paste","text", "console" };
 cl = new List<string> { "paste","image", "console" };
+cl = new List<string> { "paste","text", "console" };
 //cl = new List<string> { "show","avail" };
 
 env.ServeTypes = new Type[] { typeof(ClipCommand) };

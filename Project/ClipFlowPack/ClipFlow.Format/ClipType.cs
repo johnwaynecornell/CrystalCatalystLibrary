@@ -85,7 +85,7 @@ public abstract class ClipType
     public class Text : ClipType
     {
         public static ClipTypeHeader ClipTypeHeader =
-            new ClipTypeHeader("text", new[] { "text/plain", "TEXT", "STRING", "UTF8_STRING" });
+            new ClipTypeHeader("text", new[] { "text/plain", "UTF8_STRING", "STRING", "TEXT" });
         
         public string? Identity { get; set; }
         
