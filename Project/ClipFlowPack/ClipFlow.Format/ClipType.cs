@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 using CrystalCatalystLibrary.net;
 using FluentCommandLine;
 using SkiaSharp;
@@ -39,6 +40,9 @@ public abstract class ClipType
     {
         return new ClipType.Files();
     }
+    
+    public abstract void Advertise(ClipContext context, DataInterchange di);
+    public abstract byte[]? Provide(ClipContext context, DataInterchange di, string format);
     
     public virtual void Select(ClipContext context, DataInterchange di)
     {
@@ -89,6 +93,23 @@ public abstract class ClipType
         
         public string? Identity { get; set; }
         
+        public override void Advertise(ClipContext context, DataInterchange di)
+        {
+            di.FormatAdd("text/plain");
+        }
+        
+        public override byte[]? Provide(ClipContext context, DataInterchange di, string format)
+        {
+            if (Identity == null)
+            {
+                context.ErrorOutput.WriteLine("ClipType Identity is null");
+                context.Status = 1;
+                return null;
+            }
+            
+            return System.Text.Encoding.UTF8.GetBytes(Identity);
+        }
+        
         public override void Receive(ClipContext context, DataInterchange di, string format, IntPtr data, IntPtr size)
         {
             Identity = Marshal.PtrToStringUTF8(data, checked((int)size));
@@ -102,6 +123,23 @@ public abstract class ClipType
         
         public string? Identity { get; set; }
         
+        public override void Advertise(ClipContext context, DataInterchange di)
+        {
+            di.FormatAdd("text/html");
+        }
+
+        public override byte[]? Provide(ClipContext context, DataInterchange di, string format)
+        {
+            if (Identity == null)
+            {
+                context.ErrorOutput.WriteLine("ClipType Identity is null");
+                context.Status = 1;
+                return null;
+            }
+            
+            return System.Text.Encoding.UTF8.GetBytes(Identity);
+        }
+
         public override void Receive(ClipContext context, DataInterchange di, string format, IntPtr data, IntPtr size)
         {
             Identity = Marshal.PtrToStringUTF8(data, checked((int)size));
@@ -113,7 +151,37 @@ public abstract class ClipType
         public static ClipTypeHeader ClipTypeHeader =
             new ClipTypeHeader("image", new[] { "image/png", "image/bmp" });
 
-        public SKImage? Identity { get; private set; }
+        public SKImage? Identity { get; set; }
+
+        public override void Advertise(ClipContext context, DataInterchange di)
+        {
+            di.FormatAdd("image/png");
+            di.FormatAdd("image/bmp");
+        }
+
+        public override byte[]? Provide(ClipContext context, DataInterchange di, string format)
+        {
+            if (Identity == null)
+            {
+                context.ErrorOutput.WriteLine("ClipType Identity is null");
+                context.Status = 1;
+                return null;
+            }
+
+            if (format == "image/bmp")
+            {
+                using SKData encodedData = Identity.Encode(SKEncodedImageFormat.Bmp, 100);
+                return encodedData.ToArray();
+            }
+            
+            if (format == "image/png")
+            {
+                using SKData encodedData = Identity.Encode(SKEncodedImageFormat.Png, 100);
+                return encodedData.ToArray();
+            }
+            
+            return null;
+        }
 
         public override void Receive(
             ClipContext context,
@@ -145,6 +213,29 @@ public abstract class ClipType
         
         public List<string>? Identity { get; set; }
         
+        public override void Advertise(ClipContext context, DataInterchange di)
+        {
+            di.FormatAdd("text/file-uri");
+        }
+
+        public override byte[]? Provide(ClipContext context, DataInterchange di, string format)
+        {
+            if (Identity == null)
+            {
+                context.ErrorOutput.WriteLine("ClipType Identity is null");
+                context.Status = 1;
+                return null;
+            }
+
+            StringWriter writer = new StringWriter();
+            foreach (string s in Identity)
+            {
+                writer.WriteLine(s);
+            }
+
+            return Encoding.UTF8.GetBytes(writer.ToString());
+        }
+
         public override void Receive(ClipContext context, DataInterchange di, string format, IntPtr data, IntPtr size)
         {
             StringReader reader = new StringReader(Marshal.PtrToStringUTF8(data));

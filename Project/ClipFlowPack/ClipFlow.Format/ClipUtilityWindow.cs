@@ -198,26 +198,29 @@ public class ClipUtilityWindow
             
             wnd.OnClipboardProvideChosen = (handle, data, format) =>
             {
-                if (format == "text/plain" || format == "TEXT")
-                {
-                    string message = "Hello, World! From the clipboard";
-            
-                    byte[] utf8Bytes = System.Text.Encoding.UTF8.GetBytes(message);
-                    IntPtr _data = Marshal.AllocHGlobal(utf8Bytes.Length);
-                    Marshal.Copy(utf8Bytes, 0, _data, utf8Bytes.Length);
-                    IntPtr _size = (IntPtr)utf8Bytes.Length;
-            
-                    data.SelectionSet(format, _data, _size);
-
-                    work_queue.Enqueue((wnd) => { wnd.PostClose(); });
-                }
+                endpoint.Read(context, type);
                 
+                byte[]? bytes = type.Provide(context, data, format);
+
+                if (context.Status != 0)
+                {
+                    wnd.PostClose();
+                    return;
+                }
+
+                IntPtr _data = Marshal.AllocHGlobal(bytes.Length);
+                Marshal.Copy(bytes, 0, _data, bytes.Length);
+                IntPtr _size = (IntPtr)bytes.Length;
+        
+                data.SelectionSet(format, _data, _size);
+
+                work_queue.Enqueue((wnd) => { wnd.PostClose(); });
             };
             
             work_queue.Enqueue((wnd) =>
             {
                 DataInterchange dataInterchange = DataInterchange.Create();
-                dataInterchange.FormatAdd("text/plain");
+                type.Advertise(context, dataInterchange);
 
                 wnd.ClipboardCopy(dataInterchange);
             });
