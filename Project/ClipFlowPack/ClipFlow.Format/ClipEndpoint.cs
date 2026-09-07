@@ -71,7 +71,7 @@ public abstract class ClipEndpoint
 
                 default:
                     context.ErrorOutput.WriteLine(
-                        $"Console endpoint does not support {type.GetType().Name}");
+                        $"{GetType().Name} endpoint does not support {type.GetType().Name}");
                     context.Status = 1;
                     break;
             }
@@ -99,7 +99,7 @@ public abstract class ClipEndpoint
 
                 default:
                     context.ErrorOutput.WriteLine(
-                        $"Console endpoint does not support {type.GetType().Name}");
+                        $"{GetType().Name} endpoint does not support {type.GetType().Name}");
                     context.Status = 1;
                     break;
             }
@@ -208,7 +208,7 @@ public abstract class ClipEndpoint
 
                 default:
                     context.ErrorOutput.WriteLine(
-                        $"Console endpoint does not support {type.GetType().Name}");
+                        $"{GetType().Name} endpoint does not support {type.GetType().Name}");
                     context.Status = 1;
                     break;
             }
@@ -251,7 +251,7 @@ public abstract class ClipEndpoint
 
                 default:
                     context.ErrorOutput.WriteLine(
-                        $"Console endpoint does not support {type.GetType().Name}");
+                        $"{GetType().Name} endpoint does not support {type.GetType().Name}");
                     context.Status = 1;
                     break;
             }
@@ -287,7 +287,7 @@ public abstract class ClipEndpoint
 
                 default:
                     context.ErrorOutput.WriteLine(
-                        $"Console endpoint does not support {type.GetType().Name}");
+                        $"{GetType().Name} endpoint does not support {type.GetType().Name}");
                     context.Status = 1;
                     break;
             }
@@ -368,7 +368,7 @@ public abstract class ClipEndpoint
 
                 default:
                     context.ErrorOutput.WriteLine(
-                        $"Console endpoint does not support {type.GetType().Name}");
+                        $"{GetType().Name} endpoint does not support {type.GetType().Name}");
                     context.Status = 1;
                     break;
             }
@@ -420,7 +420,7 @@ public abstract class ClipEndpoint
 
                 default:
                     context.ErrorOutput.WriteLine(
-                        $"Console endpoint does not support {type.GetType().Name}");
+                        $"{GetType().Name} endpoint does not support {type.GetType().Name}");
                     context.Status = 1;
                     break;
             }
