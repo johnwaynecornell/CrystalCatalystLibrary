@@ -23,6 +23,9 @@ set(PLATFORM_SOURCES
         Platform/Linux/Windowing/Clipboard_X11.cpp
         Platform/Linux/Windowing/Clipboard_X11.h
 
+        Platform/Linux/Windowing/Clipboard_Wayland.cpp
+        Platform/Linux/Windowing/Clipboard_Wayland.h
+
         Platform/Linux/Windowing/DragDrop_X11.cpp
         Platform/Linux/Windowing/DragDrop_X11.h
 

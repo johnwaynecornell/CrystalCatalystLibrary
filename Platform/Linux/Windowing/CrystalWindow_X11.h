@@ -30,6 +30,8 @@ namespace NewAge {
         Atom expected_selection = None;
         std::vector<Atom> advertised_atoms;
         bool clipboard_pending = false;
+        bool clipboard_persist_pending = false;
+        bool clipboard_persist_success = false;
         bool retry_with_property = false;   // add this bool in your window state
         bool tried_primary = false;         // add this too
 

@@ -44,6 +44,10 @@ public class ClipUtilityWindow
             wnd.OnDataInterchangeError = (wnd, di, message) =>
             {
                 context.ErrorOutput.WriteLine($"Clipboard data interchange error: {message}");
+                if (message != null && message.Contains("no clipboard manager running"))
+                {
+                    context.ErrorOutput.WriteLine("Notice: No X11 clipboard manager is running. Start a clipboard daemon (e.g. xfce4-clipman, parcellite, clipman) to retain clipboard contents after ClipFlow exits.");
+                }
                 context.Status = 1;
                 wnd.PostClose();
             };
@@ -129,6 +133,10 @@ public class ClipUtilityWindow
             wnd.OnDataInterchangeError = (wnd, di, message) =>
             {
                 context.ErrorOutput.WriteLine($"Clipboard data interchange error: {message}");
+                if (message != null && message.Contains("no clipboard manager running"))
+                {
+                    context.ErrorOutput.WriteLine("Notice: No X11 clipboard manager is running. Start a clipboard daemon (e.g. xfce4-clipman, parcellite, clipman) to retain clipboard contents after ClipFlow exits.");
+                }
                 context.Status = 1;
                 wnd.PostClose();
             };
@@ -185,50 +193,69 @@ public class ClipUtilityWindow
     {
         Thread runner = new Thread(() =>
         {
-            Application.Init(new string[0]);
-            CrystalWindow wnd = CrystalWindow.CreateSimple(1, 1, "Clip Utility");
+            Application.Init([]);
+
+            CrystalWindow wnd =
+                CrystalWindow.CreateSimple(1, 1, "Clip Utility");
+
             wnd.ApplicationRetain();
 
-            Queue<Action<CrystalWindow>> work_queue = new Queue<Action<CrystalWindow>>();
-            
-            wnd.OnClose = (wnd) =>
+            wnd.OnClose = wnd =>
             {
                 wnd.ApplicationRelease();
             };
-            
+
+            wnd.OnDataInterchangeError = (wnd, di, message) =>
+            {
+                context.ErrorOutput.WriteLine(
+                    $"Clipboard data interchange error: {message}");
+                if (message != null && message.Contains("no clipboard manager running"))
+                {
+                    context.ErrorOutput.WriteLine(
+                        "Notice: No X11 clipboard manager is running. Start a clipboard daemon (e.g. xfce4-clipman, parcellite, clipman) to retain clipboard contents after ClipFlow exits.");
+                }
+
+                context.Status = 1;
+                wnd.PostClose();
+            };
+
             wnd.OnClipboardProvideChosen = (handle, data, format) =>
             {
-                byte[]? bytes = type.Provide(context, data, format);
+                byte[]? bytes =
+                    type.Provide(context, data, format);
 
                 if (context.Status != 0 || bytes == null)
-                {
-                    if (context.Status == 0)
-                    {
-                        context.ErrorOutput.WriteLine(
-                            $"Unable to provide clipboard format {format}");
-                        context.Status = 1;
-                    }
-
-                    wnd.PostClose();
                     return;
-                }
-                IntPtr ptr = Marshal.AllocHGlobal(bytes.Length);
+
+                IntPtr ptr =
+                    Marshal.AllocHGlobal(bytes.Length);
 
                 try
                 {
-                    Marshal.Copy(bytes, 0, ptr, bytes.Length);
-                    data.SelectionSet(format, ptr, (IntPtr)bytes.Length);
+                    Marshal.Copy(
+                        bytes,
+                        0,
+                        ptr,
+                        bytes.Length);
+
+                    data.SelectionSet(
+                        format,
+                        ptr,
+                        (IntPtr)bytes.Length);
                 }
                 finally
                 {
                     Marshal.FreeHGlobal(ptr);
                 }
-                
-                work_queue.Enqueue((wnd) => { wnd.PostClose(); });
             };
-            
-            work_queue.Enqueue(wnd =>
+
+            bool executed = false;
+            wnd.OnIdle = wnd =>
             {
+                if (executed) return;
+                executed = true;
+
+                // execute once somehow
                 endpoint.Read(context, type);
 
                 if (context.Status != 0)
@@ -237,21 +264,17 @@ public class ClipUtilityWindow
                     return;
                 }
 
-                DataInterchange di = DataInterchange.Create();
+                DataInterchange di =
+                    DataInterchange.Create();
+
                 type.Advertise(context, di);
-                wnd.ClipboardCopy(di);
-            });
-            
-            wnd.OnIdle = (wnd) =>
-            {
-                if (work_queue.Count > 0)
-                {
-                    Action<CrystalWindow> action = work_queue.Dequeue();
-                    action(wnd);
-                }
+
+                wnd.ClipboardCopyPersist(di);
+
+                // Persist owns completion semantics.
+                wnd.PostClose();
             };
-            
-            
+
             Application.Run();
         });
         

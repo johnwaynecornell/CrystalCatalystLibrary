@@ -22,6 +22,8 @@ namespace NewAge {
 #pragma pack(push, 1) // Save the current packing and set the new packing to 1 byte
         struct {
             Atom clipboard;
+            Atom clipboard_manager;
+            Atom save_targets;
             Atom primary;
             Atom xdnd_selection;
             Atom targets;
@@ -67,6 +69,8 @@ namespace NewAge {
     private:
         inline void InitAtoms() {
             atoms.clipboard = GetAtom("CLIPBOARD");
+            atoms.clipboard_manager = GetAtom("CLIPBOARD_MANAGER");
+            atoms.save_targets = GetAtom("SAVE_TARGETS");
             atoms.primary = GetAtom("PRIMARY");
             atoms.xdnd_selection = GetAtom("XdndSelection");
             atoms.targets = GetAtom("TARGETS");

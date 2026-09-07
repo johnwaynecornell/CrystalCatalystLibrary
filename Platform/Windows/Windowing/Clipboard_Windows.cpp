@@ -83,7 +83,8 @@ void CrystalWindow_ClipboardCopyWithCallback(void (*provide)(P_INSTANCE(DataInte
     data->provide_chosen = provide;
 }
 
-void CrystalWindow_ClipboardCopyPersist(P_INSTANCE(DataInterchange) dataInterchange) {
+void CrystalWindow_ClipboardCopyPersist(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) dataInterchange) {
+    if (handle && dataInterchange) dataInterchange->m_handle = handle;
     if (!OpenClipboard(nullptr)) {
         handleDataInterchangeError(dataInterchange ? dataInterchange->m_handle : nullptr, dataInterchange, "Failed to open clipboard.");
         return;

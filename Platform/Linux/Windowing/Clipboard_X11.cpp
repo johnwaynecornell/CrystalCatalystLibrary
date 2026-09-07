@@ -1,7 +1,9 @@
 #include "Clipboard_X11.h"
+#include "Clipboard_Wayland.h"
 
 #include <chrono>
 #include <iostream>
+#include <unistd.h>
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <string.h>
@@ -126,6 +128,12 @@ namespace NewAge {
         Window op = XGetSelectionOwner(xwin->display, AppX11->atoms.primary);
         std::cerr << "Owners: CLIPBOARD=" << std::hex << oc << " PRIMARY=" << op << std::dec << "\n";
 
+        if (oc == None && Clipboard_Wayland::IsAvailable()) {
+            if (Clipboard_Wayland::Paste(handle, data)) {
+                return data;
+            }
+        }
+
 
         Display* dpy = xwin->display;
         Window   win = xwin->window;
@@ -166,6 +174,7 @@ namespace NewAge {
         xwin->current_clipboard_provide_data = data;
 
         XSetSelectionOwner(xwin->display, AppX11->atoms.clipboard, xwin->window, CurrentTime);
+        XFlush(xwin->display);
         if (XGetSelectionOwner(xwin->display, AppX11->atoms.clipboard) != xwin->window) {
             std::cerr << "Failed to set clipboard owner." << std::endl;
         }
@@ -203,36 +212,85 @@ namespace NewAge {
 
     void CrystalWindow_ClipboardCopyPersist(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) data)
     {
+        if (!handle || !handle->crystal_window || !data) return;
+
+        data->m_handle = handle;
         CrystalWindow_X11 *xwin = ((CrystalWindow_X11 *)handle->crystal_window);
+        data->selection_type = DataInterchange::E_CLIPBOARD;
+        data->provide_chosen = DataInterchange::provide_for_clipboard;
+
+        xwin->current_clipboard_provide_data = data;
 
         std::cerr << mod_header() << "CrystalWindow_ClipboardCopyPersist()"  << std::endl;
 
-        for (P_INSTANCE(DragDropData::Node) node = DataInterchange_FormatEnum(data); node != nullptr; node = DataInterchange_FormatEnumNext(node)) {
-            utf8_string_struct ty;
-            DataInterchange_FormatEnumText(node, &ty);
+        // 1. Acquire CLIPBOARD selection ownership
+        XSetSelectionOwner(xwin->display, AppX11->atoms.clipboard, xwin->window, CurrentTime);
+        if (XGetSelectionOwner(xwin->display, AppX11->atoms.clipboard) != xwin->window) {
+            handleDataInterchangeError(handle, data, "Failed to acquire CLIPBOARD selection ownership.");
+            return;
+        }
 
-            Atom A;
+        // 2. Set TARGETS property on window
+        Atom *types = nullptr;
+        int num_types = 0;
+        DataImterchange_AtomArrayFromFormats(data, &types, &num_types);
 
-            if (!FormatToAtom(xwin->display, ty, &A)) {
-                std::cerr << mod_header() << "DragProvide_X11::send_xdnd_enter can't convert " << ty << " to an Atom" << std::endl;
+        XChangeProperty(xwin->display, xwin->window, AppX11->atoms.targets, XA_ATOM, 32, PropModeReplace,
+                        reinterpret_cast<const unsigned char*>(types), num_types);
 
-                throw std::runtime_error("Unsupported format type");
+        // 3. Check for CLIPBOARD_MANAGER
+        Window manager = XGetSelectionOwner(xwin->display, AppX11->atoms.clipboard_manager);
+        if (manager == None) {
+            if (Clipboard_Wayland::IsAvailable()) {
+                if (Clipboard_Wayland::CopyPersist(handle, data)) {
+                    if (types) delete[] types;
+                    return;
+                }
+            }
+            if (types) delete[] types;
+            handleDataInterchangeError(handle, data, "Clipboard persistence failed: no clipboard manager running (CLIPBOARD_MANAGER owner is None).");
+            return;
+        }
+
+        // 4. Set SAVE_TARGETS property on window with targets to be saved
+        XChangeProperty(xwin->display, xwin->window, AppX11->atoms.save_targets, XA_ATOM, 32, PropModeReplace,
+                        reinterpret_cast<const unsigned char*>(types), num_types);
+        if (types) delete[] types;
+
+        // 5. Request SAVE_TARGETS conversion from CLIPBOARD_MANAGER
+        xwin->clipboard_persist_pending = true;
+        xwin->clipboard_persist_success = false;
+
+        XConvertSelection(xwin->display, AppX11->atoms.clipboard_manager, AppX11->atoms.save_targets,
+                          AppX11->atoms.save_targets, xwin->window, CurrentTime);
+        XFlush(xwin->display);
+
+        // 6. Pump events until SAVE_TARGETS completes or times out
+        XEvent ev;
+        auto t0 = std::chrono::steady_clock::now();
+        while (xwin->clipboard_persist_pending) {
+            if (XPending(xwin->display)) {
+                XNextEvent(xwin->display, &ev);
+                static_cast<CrystalApplication_X11*>(TheApplication)->DispatchEvent(ev);
+            } else {
+                usleep(1000); // 1ms sleep when waiting for events
             }
 
-            data->provide_chosen(data, ty);
-
-            void *data_ptr;
-            size_t size;
-
-            DataInterchange_SelectionReveal(data, nullptr, &data_ptr, &size);
-
-            XChangeProperty(xwin->display, xwin->window, AppX11->atoms.clipboard, A, 8, PropModeReplace,
-                            reinterpret_cast<const unsigned char*>(data_ptr), size);
+            if (std::chrono::steady_clock::now() - t0 > std::chrono::seconds(5)) {
+                handleDataInterchangeError(handle, data, "Clipboard persistence timed out waiting for CLIPBOARD_MANAGER response.");
+                xwin->clipboard_persist_pending = false;
+                xwin->clipboard_persist_success = false;
+                break;
+            }
         }
     }
 
     void CrystalWindow_ClipboardClear()
     {
+        if (Clipboard_Wayland::IsAvailable()) {
+            Clipboard_Wayland::Clear();
+        }
+
         Display *display = ((CrystalApplication_X11 *)TheApplication)->globalDisplay;
 
         Atom clipboard = AppX11->atoms.clipboard;
@@ -336,9 +394,10 @@ namespace NewAge {
         xwin->property_atom = property;
         xwin->expected_selection = selection; // optional: track which selection we asked for
 
-        if (XGetSelectionOwner(xwin->display, selection) == None) {
-            //selection = AppX11->atoms.primary;           // if you want automatic fallback here
-            //xwin->expected_selection = selection;        // keep in sync
+        if (XGetSelectionOwner(xwin->display, selection) == None && Clipboard_Wayland::IsAvailable()) {
+            if (Clipboard_Wayland::Select(data, format)) {
+                return;
+            }
         }
         // Start by asking for TARGETS on CLIPBOARD with property=None
         xwin->clipboard_pending = true;

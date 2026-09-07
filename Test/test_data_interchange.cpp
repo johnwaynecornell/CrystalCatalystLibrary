@@ -336,6 +336,220 @@ void test_x11_bmp_alias_roundtrip() {
     std::cout << "[TEST] test_x11_bmp_alias_roundtrip PASSED." << std::endl;
 }
 
+void test_x11_clipboard_persistence_without_manager() {
+    std::cout << "[TEST] Running test_x11_clipboard_persistence_without_manager..." << std::endl;
+
+    struct_array_struct<utf8_string_struct> args;
+    args.Alloc(0);
+    Application_Init(args);
+
+    P_INSTANCE(WindowHandle) win = CrystalWindow_CreateSimple(100, 100, "Persistence No Manager Test Window");
+    assert(win != nullptr);
+
+    static std::string last_error_msg;
+    static bool error_called = false;
+    error_called = false;
+    last_error_msg.clear();
+
+    win->crystal_window->callbacks.on_data_interchange_error = [](P_INSTANCE(WindowHandle) h, P_INSTANCE(DataInterchange) di, utf8_string_struct msg) {
+        error_called = true;
+        if (msg) last_error_msg = msg;
+    };
+
+    P_INSTANCE(DataInterchange) copy_data = DataInterchange_Create();
+    DataInterchange_FormatAdd(copy_data, "text/plain");
+
+    // When no CLIPBOARD_MANAGER is running, CrystalWindow_ClipboardCopyPersist should report error and return cleanly
+    CrystalWindow_ClipboardCopyPersist(win, copy_data);
+
+    assert(error_called == true);
+    assert(last_error_msg.find("no clipboard manager running") != std::string::npos);
+
+    DataInterchange_Free(copy_data);
+
+    delete TheApplication;
+    TheApplication = nullptr;
+
+    std::cout << "[TEST] test_x11_clipboard_persistence_without_manager PASSED." << std::endl;
+}
+
+void test_x11_clipboard_persistence_with_manager() {
+    std::cout << "[TEST] Running test_x11_clipboard_persistence_with_manager..." << std::endl;
+
+    std::atomic<bool> manager_ready(false);
+    std::atomic<bool> manager_done(false);
+    std::atomic<bool> manager_success(false);
+    std::vector<uint8_t> mgr_saved_png;
+    std::vector<uint8_t> mgr_saved_bmp;
+
+    auto png_expected = create_binary_png_data();
+    auto bmp_expected = create_binary_bmp_data();
+
+    // Spawn Thread M: Simulated Clipboard Manager
+    std::thread manager_thread([&]() {
+        Display* dpy = XOpenDisplay(nullptr);
+        if (!dpy) return;
+
+        Atom cm_atom = XInternAtom(dpy, "CLIPBOARD_MANAGER", False);
+        Atom cb_atom = XInternAtom(dpy, "CLIPBOARD", False);
+        Atom st_atom = XInternAtom(dpy, "SAVE_TARGETS", False);
+        Atom targets_atom = XInternAtom(dpy, "TARGETS", False);
+        Atom sel_prop_atom = XInternAtom(dpy, "MGR_SAVED_DATA", False);
+        Atom png_atom = XInternAtom(dpy, "image/png", False);
+        Atom bmp_atom = XInternAtom(dpy, "image/bmp", False);
+
+        int screen = DefaultScreen(dpy);
+        Window root = RootWindow(dpy, screen);
+        Window mgr_win = XCreateSimpleWindow(dpy, root, -100, -100, 10, 10, 0, 0, 0);
+
+        XSelectInput(dpy, mgr_win, PropertyChangeMask);
+        XSetSelectionOwner(dpy, cm_atom, mgr_win, CurrentTime);
+        XFlush(dpy);
+
+        assert(XGetSelectionOwner(dpy, cm_atom) == mgr_win);
+        manager_ready = true;
+
+        // Process events for manager
+        XEvent ev;
+        bool save_targets_done = false;
+        while (!save_targets_done) {
+            XNextEvent(dpy, &ev);
+            if (ev.type == SelectionRequest && ev.xselectionrequest.selection == cm_atom) {
+                auto* req = &ev.xselectionrequest;
+                if (req->target == st_atom) {
+                    Window producer_win = XGetSelectionOwner(dpy, cb_atom);
+
+                    // Manager queries TARGETS from producer
+                    XConvertSelection(dpy, cb_atom, targets_atom, sel_prop_atom, mgr_win, CurrentTime);
+                    XFlush(dpy);
+
+                    XEvent notify_ev;
+                    bool got_targets = false;
+                    std::vector<Atom> targets_to_save;
+
+                    while (!got_targets) {
+                        XNextEvent(dpy, &notify_ev);
+                        if (notify_ev.type == SelectionNotify && notify_ev.xselection.target == targets_atom) {
+                            if (notify_ev.xselection.property != None) {
+                                Atom actual_type;
+                                int actual_format;
+                                unsigned long nitems, bytes_after;
+                                unsigned char* prop = nullptr;
+                                XGetWindowProperty(dpy, mgr_win, sel_prop_atom, 0, ~0, True, AnyPropertyType,
+                                                   &actual_type, &actual_format, &nitems, &bytes_after, &prop);
+                                if (prop) {
+                                    Atom* atms = (Atom*)prop;
+                                    for (unsigned long i = 0; i < nitems; ++i) {
+                                        targets_to_save.push_back(atms[i]);
+                                    }
+                                    XFree(prop);
+                                }
+                            }
+                            got_targets = true;
+                        }
+                    }
+
+                    // For each target (e.g. image/png and image/bmp), query format from producer
+                    for (Atom t : targets_to_save) {
+                        XConvertSelection(dpy, cb_atom, t, sel_prop_atom, mgr_win, CurrentTime);
+                        XFlush(dpy);
+
+                        bool got_data = false;
+                        while (!got_data) {
+                            XNextEvent(dpy, &notify_ev);
+                            if (notify_ev.type == SelectionNotify && notify_ev.xselection.target == t) {
+                                if (notify_ev.xselection.property != None) {
+                                    Atom actual_type;
+                                    int actual_format;
+                                    unsigned long nitems, bytes_after;
+                                    unsigned char* prop = nullptr;
+                                    XGetWindowProperty(dpy, mgr_win, sel_prop_atom, 0, ~0, True, AnyPropertyType,
+                                                       &actual_type, &actual_format, &nitems, &bytes_after, &prop);
+                                    if (prop) {
+                                        if (t == png_atom) {
+                                            mgr_saved_png.assign(prop, prop + nitems);
+                                        } else if (t == bmp_atom) {
+                                            mgr_saved_bmp.assign(prop, prop + nitems);
+                                        }
+                                        XFree(prop);
+                                    }
+                                }
+                                got_data = true;
+                            }
+                        }
+                    }
+
+                    // Respond to SAVE_TARGETS SelectionRequest with success
+                    XSelectionEvent resp = {0};
+                    resp.type = SelectionNotify;
+                    resp.display = req->display;
+                    resp.requestor = req->requestor;
+                    resp.selection = req->selection;
+                    resp.target = req->target;
+                    resp.property = req->property;
+                    resp.time = req->time;
+                    XSendEvent(dpy, req->requestor, False, 0, (XEvent*)&resp);
+                    XFlush(dpy);
+
+                    save_targets_done = true;
+                }
+            }
+        }
+
+        manager_success = true;
+        while (!manager_done) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+
+        XSetSelectionOwner(dpy, cm_atom, None, CurrentTime);
+        XDestroyWindow(dpy, mgr_win);
+        XCloseDisplay(dpy);
+    });
+
+    // Wait until manager thread is ready
+    while (!manager_ready) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+
+    // Thread P (Producer): initialize, persist, and teardown
+    {
+        struct_array_struct<utf8_string_struct> args;
+        args.Alloc(0);
+        Application_Init(args);
+
+        P_INSTANCE(WindowHandle) win = CrystalWindow_CreateSimple(100, 100, "Persistence Producer Window");
+        assert(win != nullptr);
+        s_png_payload = png_expected;
+        s_bmp_payload = bmp_expected;
+        win->crystal_window->callbacks.on_clipboard_provide_chosen = on_clipboard_provide_cb;
+
+        P_INSTANCE(DataInterchange) copy_data = DataInterchange_Create();
+        DataInterchange_FormatAdd(copy_data, "image/png");
+        DataInterchange_FormatAdd(copy_data, "image/bmp");
+
+        // Execute persistent copy
+        CrystalWindow_ClipboardCopyPersist(win, copy_data);
+
+        DataInterchange_Free(copy_data);
+
+        // Teardown application & window completely (simulating process exit)
+        delete TheApplication;
+        TheApplication = nullptr;
+    }
+
+    // Verify simulated manager received and saved both payloads
+    assert(manager_success == true);
+    assert(mgr_saved_png.size() == png_expected.size());
+    assert(memcmp(mgr_saved_png.data(), png_expected.data(), png_expected.size()) == 0);
+    assert(mgr_saved_bmp.size() == bmp_expected.size());
+    assert(memcmp(mgr_saved_bmp.data(), bmp_expected.data(), bmp_expected.size()) == 0);
+
+    manager_done = true;
+    manager_thread.join();
+
+    std::cout << "[TEST] test_x11_clipboard_persistence_with_manager PASSED." << std::endl;
+}
+
 #endif
 
 int main() {
@@ -346,6 +560,8 @@ int main() {
     test_x11_atom_format_mapping_and_aliases();
     test_x11_clipboard_image_roundtrip();
     test_x11_bmp_alias_roundtrip();
+    test_x11_clipboard_persistence_without_manager();
+    test_x11_clipboard_persistence_with_manager();
 #endif
     std::cout << "=== ALL DATA INTERCHANGE TESTS PASSED ===" << std::endl;
     return 0;

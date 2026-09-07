@@ -809,12 +809,8 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
 
     void request_selection(Display* dpy, CrystalWindow_X11 *win, Atom selection, Atom target)
     {
-
-        Atom property = NewAge::AppX11->atoms.selection_data; // fallback uses target as property
-
-        // Always use our dedicated receiving property rather than target or None
-        //Atom property = NewAge::AppX11->atoms.selection_data; // e.g., "CRYSTAL_SELECTION"
-        XConvertSelection(dpy, selection, target, property, win->window, win->last_user_time);
+        Atom property = NewAge::AppX11->atoms.selection_data;
+        XConvertSelection(dpy, selection, target, property, win->window, CurrentTime);
         XFlush(dpy);
     }
 }

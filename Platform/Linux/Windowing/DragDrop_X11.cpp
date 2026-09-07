@@ -399,6 +399,21 @@ namespace NewAge {
         std::cerr << "Selection is: " << (sel_name ? sel_name : "<null>") << "\n";
         if (sel_name) XFree(sel_name);
 
+        if (sel == AppX11->atoms.clipboard_manager) {
+            if (event->xselection.target == AppX11->atoms.save_targets) {
+                if (event->xselection.property == None) {
+                    std::cerr << mod_header() << "SAVE_TARGETS failed (property=None)" << std::endl;
+                    handleDataInterchangeError(myHandle, current_clipboard_provide_data, "Clipboard manager refused SAVE_TARGETS request.");
+                    this->clipboard_persist_success = false;
+                } else {
+                    std::cerr << mod_header() << "SAVE_TARGETS succeeded" << std::endl;
+                    this->clipboard_persist_success = true;
+                }
+                this->clipboard_persist_pending = false;
+                return true;
+            }
+        }
+
         DataInterchange * current_data = nullptr;
 
         if (sel == AppX11->atoms.clipboard || sel == AppX11->atoms.primary) {
@@ -702,7 +717,7 @@ namespace NewAge {
                     XFree(prop);
                 }
 
-                //XDeleteProperty(event->xselection.display, event->xselection.requestor, event->xselection.property);
+                XDeleteProperty(event->xselection.display, event->xselection.requestor, event->xselection.property);
             } else {
                 handleDataInterchangeError(myHandle, current_data, ((std::string) mod_header() + "Selection conversion failed.").c_str());
                 if (is_clipboard) this->current_clipboard_receive_data = nullptr;
@@ -875,7 +890,7 @@ namespace NewAge {
         ev.selection = req->selection;
         ev.target = req->target;
         ev.time = req->time;
-        ev.property = req->property;
+        ev.property = (req->property == None) ? req->target : req->property;
 
         DataInterchange *drag_data = nullptr;
 
@@ -887,19 +902,24 @@ namespace NewAge {
             std::cerr << "Handling drag-and-drop selection request" << std::endl;
             if (drag_provide) drag_data = drag_provide->drag_data;
             // Handle drag-and-drop-specific logic if necessary
-        } else throw std::runtime_error("Unknow Selection class ");
+        } else {
+            ev.property = None;
+            XSendEvent(req->display, req->requestor, False, 0, (P_INSTANCE(XEvent) )&ev);
+            return true;
+        }
 
         utf8_string_struct target = XGetAtomName_struct(req->display, req->target);
 
         std::cerr << mod_header() << "SelectionRequest for target: " << target << std::endl;
 
         if (req->target == AppX11->atoms.targets) {
-            Atom *types;
-            int num_types;
+            Atom *types = nullptr;
+            int num_types = 0;
 
             DataImterchange_AtomArrayFromFormats(drag_data, &types, &num_types);
 
-            XChangeProperty(req->display, req->requestor, req->property, XA_ATOM, 32, PropModeReplace, (P_ELEMENTS(uint8_t) )types, num_types);
+            XChangeProperty(req->display, req->requestor, ev.property, XA_ATOM, 32, PropModeReplace, (P_ELEMENTS(uint8_t) )types, num_types);
+            if (types) delete[] types;
         } else if (drag_data != nullptr) {
             utf8_string_struct format = nullptr;
 
@@ -915,16 +935,20 @@ namespace NewAge {
                 format = XGetAtomName(req->display, req->target);
                 if (format == nullptr) {
                     std::cerr << mod_header() << "Unknown target format: " << XGetAtomName(req->display, req->target) << std::endl;
-                    return false;
+                    ev.property = None;
+                    XSendEvent(req->display, req->requestor, False, 0, (P_INSTANCE(XEvent) )&ev);
+                    return true;
                 }
             }
 
             std::cerr << mod_header() << "Chosen format: " << format << std::endl;
 
-            drag_data->provide_chosen(drag_data, format);
+            if (drag_data->provide_chosen) {
+                drag_data->provide_chosen(drag_data, format);
+            }
 
-            P_INSTANCE(void) d;
-            size_t sz;
+            P_INSTANCE(void) d = nullptr;
+            size_t sz = 0;
             DataInterchange_SelectionReveal(drag_data, nullptr, &d, &sz);
 
             std::cerr << mod_header() << "Providing data for format: " << format << std::endl;
@@ -946,14 +970,16 @@ namespace NewAge {
                 }
 
                 std::cerr << mod_header() << "Cleaned URI list: " << cleaned_uri_list << std::endl;
-                XChangeProperty(req->display, req->requestor, req->property, req->target, 8, PropModeReplace, (P_ELEMENTS(uint8_t) )cleaned_uri_list.c_str(), (int) cleaned_uri_list.size());
+                XChangeProperty(req->display, req->requestor, ev.property, req->target, 8, PropModeReplace, (P_ELEMENTS(uint8_t) )cleaned_uri_list.c_str(), (int) cleaned_uri_list.size());
             } else {
-                XChangeProperty(req->display, req->requestor, req->property, req->target, 8, PropModeReplace, (P_ELEMENTS(uint8_t) )d, (int) sz);
+                XChangeProperty(req->display, req->requestor, ev.property, req->target, 8, PropModeReplace, (P_ELEMENTS(uint8_t) )d, (int) sz);
             }
         } else {
             std::cerr << mod_header() << "No current_drag_provide_data available" << std::endl;
+            ev.property = None;
         }
         XSendEvent(req->display, req->requestor, False, 0, (P_INSTANCE(XEvent) )&ev);
+        XFlush(req->display);
 
         return true;
     }
