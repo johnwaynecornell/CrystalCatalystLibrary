@@ -8,25 +8,29 @@ namespace ClipFlow.Format;
 public abstract class ClipEndpoint
 {
     [FluentMethod]
+    [KV_FA(FluentAttribute.Help, "a file endpoint")]
     public static ClipEndpoint file(string path)
     {
         return new File(path);
     }
 
     [FluentMethod]
+    [KV_FA(FluentAttribute.Help, "a console endpoint")]
     public static ClipEndpoint console()
     {
         return new Console();
     }
 
     [FluentMethod]
-    public static ClipEndpoint directory(string path)
+    [KV_FA(FluentAttribute.Help, "a directory endpoint")]
+    public static ClipEndpoint directory([KV_FA(FluentAttribute.Help, "a path potentially with wildcards")] string path)
     {
         return new Directory(path);
     }
 
     [FluentMethod("string")]
-    public static ClipEndpoint stringVal(string value)
+    [KV_FA(FluentAttribute.Help, "a string endpoint")]
+    public static ClipEndpoint stringVal([KV_FA(FluentAttribute.Help, "value to be taken litterally")] string value)
     {
         return new String(value);
     }
