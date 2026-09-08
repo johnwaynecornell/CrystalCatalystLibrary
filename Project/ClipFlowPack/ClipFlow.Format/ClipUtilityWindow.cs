@@ -31,6 +31,8 @@ public class ClipUtilityWindow
         Thread runner = new Thread(() =>
         {
             Application.Init(new string[0]);
+            Application.SetDiagnosticsCallback(context._Diagnostic);
+            
             CrystalWindow wnd = CrystalWindow.CreateSimple(1, 1, "Clip Utility");
             wnd.ApplicationRetain();
 
@@ -120,6 +122,8 @@ public class ClipUtilityWindow
         Thread runner = new Thread(() =>
         {
             Application.Init(new string[0]);
+            Application.SetDiagnosticsCallback(context._Diagnostic);
+            
             CrystalWindow wnd = CrystalWindow.CreateSimple(1, 1, "Clip Utility");
             wnd.ApplicationRetain();
 
@@ -194,6 +198,7 @@ public class ClipUtilityWindow
         Thread runner = new Thread(() =>
         {
             Application.Init([]);
+            Application.SetDiagnosticsCallback(context._Diagnostic);
 
             CrystalWindow wnd =
                 CrystalWindow.CreateSimple(1, 1, "Clip Utility");

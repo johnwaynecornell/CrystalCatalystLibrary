@@ -33,8 +33,8 @@ namespace NewAge
         HRESULT hr = CoInitialize(nullptr);
         if (FAILED(hr)) {
             if (hr == RPC_E_CHANGED_MODE) {
-                std::cerr << "CoInitialize: Thread is already in MTA mode. OLE clipboard and Drag & Drop functions may not work correctly. "
-                             "Please ensure your main thread is in STA mode (e.g., use [STAThread] in .NET)." << std::endl;
+                Application_DiagnosticMessage("CoInitialize: Thread is already in MTA mode. OLE clipboard and Drag & Drop functions may not work correctly. "
+                                              "Please ensure your main thread is in STA mode (e.g., use [STAThread] in .NET).");
             } else {
                 HRESULT_IsError(hr, "CoInitialize");
             }
@@ -43,8 +43,8 @@ namespace NewAge
         hr = OleInitialize(nullptr);
         if (FAILED(hr)) {
             if (hr == RPC_E_CHANGED_MODE) {
-                std::cerr << "OleInitialize: Thread is already in MTA mode. OLE functions REQUIRE STA mode. "
-                             "Clipboard and Drag & Drop will fail. Ensure your main thread is [STAThread]." << std::endl;
+                Application_DiagnosticMessage("OleInitialize: Thread is already in MTA mode. OLE functions REQUIRE STA mode. "
+                                              "Clipboard and Drag & Drop will fail. Ensure your main thread is [STAThread].");
             } else {
                 HRESULT_IsError(hr, "OleInitialize");
             }

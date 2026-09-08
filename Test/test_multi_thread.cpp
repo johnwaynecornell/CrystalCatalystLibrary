@@ -407,6 +407,106 @@ void test_multi_thread_window_isolation() {
     std::cout << "[TEST] test_multi_thread_window_isolation PASSED." << std::endl;
 }
 
+void test_diagnostics_callback_routing() {
+    std::cout << "[TEST] Running test_diagnostics_callback_routing..." << std::endl;
+
+    static thread_local std::vector<std::string> messages;
+
+    struct_array_struct<utf8_string_struct> args;
+    args.Alloc(0);
+    Application_Init(args);
+
+    messages.clear();
+
+    // 1. Setting callback routes diagnostics
+    Application_SetDiagnosticsCallback((void*)+[](utf8_string_struct msg) {
+        messages.push_back(std::string((const char*)msg));
+    });
+
+    Application_DiagnosticMessage("test message 1");
+    assert(messages.size() == 1);
+    assert(messages[0] == "test message 1");
+
+    // 2. Clearing callback restores null
+    Application_SetDiagnosticsCallback(nullptr);
+    assert(TheApplication->on_diagnostic_message == nullptr);
+
+    delete TheApplication;
+    TheApplication = nullptr;
+
+    std::cout << "[TEST] test_diagnostics_callback_routing PASSED." << std::endl;
+}
+
+void test_diagnostics_thread_isolation() {
+    std::cout << "[TEST] Running test_diagnostics_thread_isolation..." << std::endl;
+
+    static thread_local std::vector<std::string> t_messages;
+
+    std::atomic<bool> t1_ready{false};
+    std::atomic<bool> t2_ready{false};
+    std::atomic<bool> proceed{false};
+
+    std::thread t1([&]() {
+        struct_array_struct<utf8_string_struct> args;
+        args.Alloc(0);
+        Application_Init(args);
+
+        t_messages.clear();
+        Application_SetDiagnosticsCallback((void*)+[](utf8_string_struct msg) {
+            t_messages.push_back(std::string("T1:") + (const char*)msg);
+        });
+
+        t1_ready = true;
+        while (!proceed) { std::this_thread::yield(); }
+
+        Application_DiagnosticMessage("Message from T1");
+        assert(t_messages.size() == 1);
+        assert(t_messages[0] == "T1:Message from T1");
+
+        // Clear callback
+        Application_SetDiagnosticsCallback(nullptr);
+        assert(TheApplication->on_diagnostic_message == nullptr);
+
+        delete TheApplication;
+        TheApplication = nullptr;
+    });
+
+    std::thread t2([&]() {
+        struct_array_struct<utf8_string_struct> args;
+        args.Alloc(0);
+        Application_Init(args);
+
+        t_messages.clear();
+        Application_SetDiagnosticsCallback((void*)+[](utf8_string_struct msg) {
+            t_messages.push_back(std::string("T2:") + (const char*)msg);
+        });
+
+        t2_ready = true;
+        while (!proceed) { std::this_thread::yield(); }
+
+        Application_DiagnosticMessage("Message from T2");
+        assert(t_messages.size() == 1);
+        assert(t_messages[0] == "T2:Message from T2");
+
+        // Clear callback
+        Application_SetDiagnosticsCallback(nullptr);
+        assert(TheApplication->on_diagnostic_message == nullptr);
+
+        delete TheApplication;
+        TheApplication = nullptr;
+    });
+
+    while (!t1_ready || !t2_ready) {
+        std::this_thread::yield();
+    }
+
+    proceed = true;
+    t1.join();
+    t2.join();
+
+    std::cout << "[TEST] test_diagnostics_thread_isolation PASSED." << std::endl;
+}
+
 int main() {
     std::cout << "=== Running CrystalCatalyst Multi-Thread Tests ===" << std::endl;
     test_parent_thread_peek();
@@ -416,6 +516,8 @@ int main() {
     test_reinitialization_after_teardown();
     test_double_init_rejected_on_same_thread();
     test_single_thread_lifecycle();
+    test_diagnostics_callback_routing();
+    test_diagnostics_thread_isolation();
     std::cout << "=== ALL TESTS PASSED ===" << std::endl;
     return 0;
 }

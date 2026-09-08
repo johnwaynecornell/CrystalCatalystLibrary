@@ -12,6 +12,8 @@
 using namespace JWCEssentials;
 
 namespace NewAge {
+    using DiagnosticMessageCallback = void (*)(utf8_string_struct message);
+
     class CrystalApplication {
     public:
         virtual ~CrystalApplication();
@@ -24,6 +26,8 @@ namespace NewAge {
         int64_t retain_count = 0;
 
         bool CloseSignalled = false;
+
+        DiagnosticMessageCallback on_diagnostic_message = nullptr;
 
         virtual void SetArguments(struct_array_struct<utf8_string_struct> args);
         virtual void Init();
@@ -61,6 +65,9 @@ namespace NewAge {
 
     _EXPORT_ void Application_WindowAdd(P_INSTANCE(WindowHandle) window_handle);
     _EXPORT_ void Application_WindowRemove(P_INSTANCE(WindowHandle) window_handle);
+
+    _EXPORT_ void Application_SetDiagnosticsCallback(P_INSTANCE(void) callback);
+    _EXPORT_ void Application_DiagnosticMessage(utf8_string_struct message);
 }
 
 #endif //CRYSTALCATALYST_APPLICATION_H

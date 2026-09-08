@@ -3,9 +3,35 @@
 // See LICENSE file in the project root for full license information.
 #include "include/CrystalCatalystLibrary/CrystalCatalystLibrary.h"
 #include <iostream>
+#include <cstring>
 
 namespace NewAge {
     thread_local P_INSTANCE(CrystalApplication) TheApplication = nullptr;
+
+    void Application_DiagnosticMessage(utf8_string_struct message)
+    {
+        if (message == nullptr)
+            return;
+
+        if (TheApplication != nullptr && TheApplication->on_diagnostic_message != nullptr) {
+            TheApplication->on_diagnostic_message(message);
+        } else {
+            std::cerr << message;
+            size_t len = strlen(message);
+            if (len == 0 || message[len - 1] != '\n') {
+                std::cerr << std::endl;
+            }
+        }
+    }
+
+    void Application_SetDiagnosticsCallback(P_INSTANCE(void) callback)
+    {
+        if (!TheApplication)
+            return;
+
+        TheApplication->on_diagnostic_message =
+            reinterpret_cast<DiagnosticMessageCallback>(callback);
+    }
 
 
     P_INSTANCE(CrystalApplication) platform_initialize();

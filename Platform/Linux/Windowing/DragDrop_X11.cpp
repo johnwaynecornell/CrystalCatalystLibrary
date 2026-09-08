@@ -108,7 +108,11 @@ namespace NewAge {
         // Set the XdndAware property on the window to indicate it supports drag-and-drop
         int64_t version = 5; // Xdnd version
         XChangeProperty(display, window, XdndAware, XA_ATOM, 32, PropModeReplace, (P_ELEMENTS(uint8_t) )&version, 1);
-        std::cerr << mod_header() << "Window registered as drag target with XdndAware version " << version << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "Window registered as drag target with XdndAware version " << version;
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
     }
 
     // Function to send XdndStatus message
@@ -145,7 +149,11 @@ namespace NewAge {
             status_message = "accept " + DragDropData_DragActionsString(status.action);
         } else status_message = "reject";
 
-        std::cerr << mod_header() << "XdndStatus event sent to provide feedback to " << status_message << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "XdndStatus event sent to provide feedback to " << status_message;
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
     }
 
     // Function to send XdndFinished message
@@ -162,7 +170,11 @@ namespace NewAge {
         reply.xclient.data.l[2] = AppX11->atoms.xdnd.action.copy; // Action
 
         XSendEvent(display, target_window, False, NoEventMask, &reply);
-        std::cerr << mod_header() << "XdndFinished message sent" << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "XdndFinished message sent";
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
     }
 
     // Function to handle XdndEnter message
@@ -170,7 +182,11 @@ namespace NewAge {
         if (event->type != ClientMessage) return false;
         if (event->xclient.message_type != AppX11->atoms.xdnd.msg.enter) return false;
 
-        std::cerr << mod_header() << "XdndEnter event received" << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "XdndEnter event received";
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
 
         if (callbacks.on_drag_receive_enter) {
             // Enumerate drop types present in XdndEnter
@@ -180,7 +196,11 @@ namespace NewAge {
             bool has_more_than_3_types = event->xclient.data.l[1] & 1;
 
             if (has_more_than_3_types) {
-                std::cerr << mod_header() << "More than 3 types in XdndEnter" << std::endl;
+                {
+                    std::ostringstream oss;
+                    oss << mod_header() << "More than 3 types in XdndEnter";
+                    Application_DiagnosticMessage(oss.str().c_str());
+                }
                 Atom XdndTypeList = AppX11->atoms.xdnd.type_list;
                 Atom actual_type;
                 int32_t actual_format;
@@ -209,13 +229,21 @@ namespace NewAge {
             current_drag_receive_data = DragDropData_Create();
             current_drag_receive_data->selection_type = DataInterchange::E_DND;
 
-            std::cerr << mod_header() << "DragDropData created" << std::endl;
+            {
+                std::ostringstream oss;
+                oss << mod_header() << "DragDropData created";
+                Application_DiagnosticMessage(oss.str().c_str());
+            }
 
             // Store drop types in DragDropData
             for (int32_t i = 0; i < num_types; ++i) {
                 if (drop_types[i] != None) {
                     utf8_string_struct type_name = XGetAtomName_struct(display, drop_types[i]);
-                    std::cerr << mod_header() << "Format: " << type_name << std::endl;
+                    {
+                        std::ostringstream oss;
+                        oss << mod_header() << "Format: " << type_name;
+                        Application_DiagnosticMessage(oss.str().c_str());
+                    }
 
                     if (strcmp(type_name, "text/plain") == 0) {
                         DataInterchange_FormatAdd(current_drag_receive_data, "text/plain");
@@ -262,7 +290,11 @@ namespace NewAge {
             }
 
             callbacks.on_drag_receive_enter(myHandle, current_drag_receive_data);
-            std::cerr << mod_header() << "Drag enter event" << std::endl;
+            {
+                std::ostringstream oss;
+                oss << mod_header() << "Drag enter event";
+                Application_DiagnosticMessage(oss.str().c_str());
+            }
 
             return true;
         }
@@ -281,12 +313,15 @@ namespace NewAge {
 
         CoordsFromRoot(x, y);
 
-        std::cerr << mod_header() << "XdndPosition event received. x="<<x<<" y="<< y
-        << " l[0]=" << std::hex << std::setw(8) << std::setfill('0') << event->xclient.data.l[0] << std::dec
-        << " l[1]=" << std::hex << std::setw(8) << std::setfill('0') << event->xclient.data.l[1] << std::dec
-        << " l[3]=" << std::hex << std::setw(8) << std::setfill('0') << event->xclient.data.l[3] << std::dec
-        << " l[4]=" << std::hex << std::setw(8) << std::setfill('0') << event->xclient.data.l[4] << std::dec
-        << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "XdndPosition event received. x="<<x<<" y="<< y
+                << " l[0]=" << std::hex << std::setw(8) << std::setfill('0') << event->xclient.data.l[0] << std::dec
+                << " l[1]=" << std::hex << std::setw(8) << std::setfill('0') << event->xclient.data.l[1] << std::dec
+                << " l[3]=" << std::hex << std::setw(8) << std::setfill('0') << event->xclient.data.l[3] << std::dec
+                << " l[4]=" << std::hex << std::setw(8) << std::setfill('0') << event->xclient.data.l[4] << std::dec;
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
 
         if (!current_drag_receive_data) return false;
         current_drag_receive_data->status.action = xint64_t_to_drag_actions(event->xclient.data.l[4], display);
@@ -316,7 +351,11 @@ namespace NewAge {
         if (event->type != ClientMessage) return false;
         if (event->xclient.message_type != AppX11->atoms.xdnd.msg.leave) return false;
 
-        std::cerr << mod_header() << "XdndLeave event received" << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "XdndLeave event received";
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
         if (callbacks.on_drag_receive_leave) {
             callbacks.on_drag_receive_leave(myHandle, current_drag_receive_data);
             if (current_drag_receive_data) {
@@ -334,7 +373,11 @@ namespace NewAge {
         if (event->type != ClientMessage) return false;
         if (event->xclient.message_type != AppX11->atoms.xdnd.msg.drop) return false;
 
-        std::cerr << mod_header() << "XdndDrop event received" << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "XdndDrop event received";
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
         if (callbacks.on_drag_receive_select && current_drag_receive_data) {
             utf8_string_struct format = nullptr;
             format = callbacks.on_drag_receive_select(myHandle, current_drag_receive_data);
@@ -354,13 +397,21 @@ namespace NewAge {
                 xformat = format;
             }
 
-            std::cerr << mod_header() << "Selected format: " << xformat << std::endl;
+            {
+                std::ostringstream oss;
+                oss << mod_header() << "Selected format: " << xformat;
+                Application_DiagnosticMessage(oss.str().c_str());
+            }
 
             Atom XdndSelection = AppX11->atoms.xdnd.selection;
             Atom target = XInternAtom(display, xformat, False);
 
             XConvertSelection(display, XdndSelection, target, XdndSelection, window, last_user_time);
-            std::cerr << mod_header() << "XConvertSelection called with target: " << xformat << std::endl;
+            {
+                std::ostringstream oss;
+                oss << mod_header() << "XConvertSelection called with target: " << xformat;
+                Application_DiagnosticMessage(oss.str().c_str());
+            }
             return true;
         }
 
@@ -377,13 +428,21 @@ namespace NewAge {
     bool CrystalWindow_X11::handle_selection_notify(P_INSTANCE(XEvent)  event) {
         if (event->type != SelectionNotify) return false;
 
-        std::cerr << mod_header() << "SelectionNotify event received" << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "SelectionNotify event received";
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
 
         auto log_atom = [&](Display* dpy, Atom a, const char* label){
             char* n;
             bool fr = false;
             if (a == None) n="NONE"; else { n= XGetAtomName(dpy, a); fr = true; }
-            std::cerr << mod_header() << label << ": " << (n ? n : "<null>") << "\n";
+            {
+                std::ostringstream oss;
+                oss << mod_header() << label << ": " << (n ? n : "<null>");
+                Application_DiagnosticMessage(oss.str().c_str());
+            }
             if (n && fr) XFree(n);
         };
         log_atom(event->xselection.display, event->xselection.selection, "selection");
@@ -396,7 +455,11 @@ namespace NewAge {
 
         Atom sel = event->xselection.selection;
         char* sel_name = XGetAtomName(event->xselection.display, sel);
-        std::cerr << "Selection is: " << (sel_name ? sel_name : "<null>") << "\n";
+        {
+            std::ostringstream oss;
+            oss << "Selection is: " << (sel_name ? sel_name : "<null>");
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
         if (sel_name) XFree(sel_name);
 
         if (sel == AppX11->atoms.clipboard_manager) {
@@ -406,7 +469,11 @@ namespace NewAge {
                     handleDataInterchangeError(myHandle, current_clipboard_provide_data, "Clipboard manager refused SAVE_TARGETS request.");
                     this->clipboard_persist_success = false;
                 } else {
-                    std::cerr << mod_header() << "SAVE_TARGETS succeeded" << std::endl;
+                    {
+                        std::ostringstream oss;
+                        oss << mod_header() << "SAVE_TARGETS succeeded";
+                        Application_DiagnosticMessage(oss.str().c_str());
+                    }
                     this->clipboard_persist_success = true;
                 }
                 this->clipboard_persist_pending = false;
@@ -531,7 +598,11 @@ namespace NewAge {
             unsigned long nitems, bytes_after;
             unsigned char* prop;
 
-            std::cerr << mod_header() << "SelectionNotify marker 'has prop'  " << XGetAtomName_struct(display, event->xselection.property) << std::endl;
+            {
+                std::ostringstream oss;
+                oss << mod_header() << "SelectionNotify marker 'has prop'  " << XGetAtomName_struct(display, event->xselection.property);
+                Application_DiagnosticMessage(oss.str().c_str());
+            }
 
             XFlush(event->xselection.display);
 
@@ -609,7 +680,11 @@ namespace NewAge {
             if (XGetWindowProperty(event->xselection.display, event->xselection.requestor, event->xselection.property, 0, (~0L), False, AnyPropertyType, &actual_type, &actual_format, &nitems, &bytes_after, &prop) == Success) {
     */
                 utf8_string_struct format = XGetAtomName_struct(event->xselection.display, actual_type);
-                std::cerr << mod_header() << "SelectionNotify format: " << format << std::endl;
+                {
+                    std::ostringstream oss;
+                    oss << mod_header() << "SelectionNotify format: " << format;
+                    Application_DiagnosticMessage(oss.str().c_str());
+                }
 
                 if (strcmp("ATOM", format) == 0) {
                     current_data->selected_format = format;
@@ -634,12 +709,20 @@ namespace NewAge {
                         text_data = std::string((char *)prop, nitems);
                     }
 
-                    std::cerr << mod_header() << "Setting selection for text/html" << std::endl;
+                    {
+                        std::ostringstream oss;
+                        oss << mod_header() << "Setting selection for text/html";
+                        Application_DiagnosticMessage(oss.str().c_str());
+                    }
 
                     DataInterchange_SelectionSet(current_data, format, (void *) text_data.c_str(), text_data.length());
                     XFree(prop);
                 } else if (strcmp("text/plain", format) == 0) {
-                    std::cerr << mod_header() << "Setting selection for text/plain" << std::endl;
+                    {
+                        std::ostringstream oss;
+                        oss << mod_header() << "Setting selection for text/plain";
+                        Application_DiagnosticMessage(oss.str().c_str());
+                    }
                     DataInterchange_SelectionSet(current_data, format, prop, nitems);
                     XFree(prop);
                 } else if (strcmp("text/uri-list", format) == 0) {
@@ -662,23 +745,37 @@ namespace NewAge {
                         cleaned_uri_list += line + "\n";
                     }
 
-                    std::cerr << mod_header() << "Setting selection for text/uri-list: " << cleaned_uri_list << std::endl;
+                    {
+                        std::ostringstream oss;
+                        oss << mod_header() << "Setting selection for text/uri-list: " << cleaned_uri_list;
+                        Application_DiagnosticMessage(oss.str().c_str());
+                    }
                     DataInterchange_SelectionSet(current_data, "text/file-uri", cleaned_uri_list.data(), cleaned_uri_list.size());
                     XFree(prop);
                 } else if (strcmp("image/png", format) == 0) {
-                    std::cerr << mod_header() << "Setting selection for image/png" << std::endl;
+                    {
+                        std::ostringstream oss;
+                        oss << mod_header() << "Setting selection for image/png";
+                        Application_DiagnosticMessage(oss.str().c_str());
+                    }
                     DataInterchange_SelectionSet(current_data, "image/png", prop, nitems);
                     XFree(prop);
                 } else if (strcmp("image/bmp", format) == 0 || strcmp("image/x-bmp", format) == 0 || strcmp("image/x-MS-bmp", format) == 0) {
-                    std::cerr << mod_header() << "Setting selection for image/bmp" << std::endl;
+                    {
+                        std::ostringstream oss;
+                        oss << mod_header() << "Setting selection for image/bmp";
+                        Application_DiagnosticMessage(oss.str().c_str());
+                    }
                     DataInterchange_SelectionSet(current_data, "image/bmp", prop, nitems);
                     XFree(prop);
                 } else {
                     // Unknown but successfully requested X11 target.
                     // Preserve its actual format and raw payload.
-                    std::cerr << mod_header()
-                              << "Setting raw selection for "
-                              << format << std::endl;
+                    {
+                        std::ostringstream oss;
+                        oss << mod_header() << "Setting raw selection for " << format;
+                        Application_DiagnosticMessage(oss.str().c_str());
+                    }
 
                     if (actual_format == 8) {
 
@@ -797,9 +894,13 @@ namespace NewAge {
            char* n = XGetAtomName(ev->xproperty.display, a);
            std::string s = n ? n : "<null>"; if (n) XFree(n); return s; };
 
-       std::cerr << mod_header() << "[PropNotify] state=" << state_str(ev->xproperty.state)
-                 << " atom=" << name(ev->xproperty.atom)
-                 << " win=0x" << std::hex << ev->xproperty.window << std::dec << "\n";
+       {
+           std::ostringstream oss;
+           oss << mod_header() << "[PropNotify] state=" << state_str(ev->xproperty.state)
+               << " atom=" << name(ev->xproperty.atom)
+               << " win=0x" << std::hex << ev->xproperty.window << std::dec;
+           Application_DiagnosticMessage(oss.str().c_str());
+       }
 
        if (ev->xproperty.state == PropertyDelete) return true;          // ignore
        if (ev->xproperty.state != PropertyNewValue) return false;
@@ -881,7 +982,11 @@ namespace NewAge {
     bool CrystalWindow_X11::handle_selection_request(P_INSTANCE(XEvent) event) {
         if (event->type != SelectionRequest) return false;
 
-        std::cerr << mod_header() << "SelectionRequest event received" << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "SelectionRequest event received";
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
         XSelectionRequestEvent *req = &event->xselectionrequest;
         XSelectionEvent ev = {0};
         ev.type = SelectionNotify;
@@ -895,11 +1000,11 @@ namespace NewAge {
         DataInterchange *drag_data = nullptr;
 
         if (req->selection == AppX11->atoms.clipboard) {
-            std::cerr << "Handling clipboard selection request" << std::endl;
+            Application_DiagnosticMessage("Handling clipboard selection request");
             drag_data = current_clipboard_provide_data;
             // Handle clipboard-specific logic if necessary
         } else if (req->selection == AppX11->atoms.xdnd.selection) {
-            std::cerr << "Handling drag-and-drop selection request" << std::endl;
+            Application_DiagnosticMessage("Handling drag-and-drop selection request");
             if (drag_provide) drag_data = drag_provide->drag_data;
             // Handle drag-and-drop-specific logic if necessary
         } else {
@@ -910,7 +1015,11 @@ namespace NewAge {
 
         utf8_string_struct target = XGetAtomName_struct(req->display, req->target);
 
-        std::cerr << mod_header() << "SelectionRequest for target: " << target << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "SelectionRequest for target: " << target;
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
 
         if (req->target == AppX11->atoms.targets) {
             Atom *types = nullptr;
@@ -941,7 +1050,11 @@ namespace NewAge {
                 }
             }
 
-            std::cerr << mod_header() << "Chosen format: " << format << std::endl;
+            {
+                std::ostringstream oss;
+                oss << mod_header() << "Chosen format: " << format;
+                Application_DiagnosticMessage(oss.str().c_str());
+            }
 
             if (drag_data->provide_chosen) {
                 drag_data->provide_chosen(drag_data, format);
@@ -951,7 +1064,11 @@ namespace NewAge {
             size_t sz = 0;
             DataInterchange_SelectionReveal(drag_data, nullptr, &d, &sz);
 
-            std::cerr << mod_header() << "Providing data for format: " << format << std::endl;
+            {
+                std::ostringstream oss;
+                oss << mod_header() << "Providing data for format: " << format;
+                Application_DiagnosticMessage(oss.str().c_str());
+            }
             if (strcmp(format, "text/file-uri") == 0) {
                 std::string uri_list((char *)d, sz);
                 std::istringstream stream(uri_list);
@@ -959,7 +1076,11 @@ namespace NewAge {
                 std::string cleaned_uri_list;
 
                 while (std::getline(stream, line)) {
-                    std::cerr << mod_header() << "line = \"" << line << "\"" << std::endl;
+                    {
+                        std::ostringstream oss;
+                        oss << mod_header() << "line = \"" << line << "\"";
+                        Application_DiagnosticMessage(oss.str().c_str());
+                    }
 
                     if (!line.empty()) {
                         if (line.find("://") == std::string::npos) {
@@ -969,7 +1090,11 @@ namespace NewAge {
                     }
                 }
 
-                std::cerr << mod_header() << "Cleaned URI list: " << cleaned_uri_list << std::endl;
+                {
+                    std::ostringstream oss;
+                    oss << mod_header() << "Cleaned URI list: " << cleaned_uri_list;
+                    Application_DiagnosticMessage(oss.str().c_str());
+                }
                 XChangeProperty(req->display, req->requestor, ev.property, req->target, 8, PropModeReplace, (P_ELEMENTS(uint8_t) )cleaned_uri_list.c_str(), (int) cleaned_uri_list.size());
             } else {
                 XChangeProperty(req->display, req->requestor, ev.property, req->target, 8, PropModeReplace, (P_ELEMENTS(uint8_t) )d, (int) sz);

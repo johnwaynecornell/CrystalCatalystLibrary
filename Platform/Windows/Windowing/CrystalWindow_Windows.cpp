@@ -11,6 +11,7 @@
 #include <cstring>
 #include <vector>
 #include <cstdio>
+#include <sstream>
 
 // WGL Extensions
 #ifndef WGL_ARB_pixel_format
@@ -107,7 +108,11 @@ namespace NewAge
     }
 
     bool CrystalWindow_Windows::GLInitAdvanced(const GLOptions& options) {
-        std::cerr << mod_header() << " Windows GLInitAdvanced started" << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << " Windows GLInitAdvanced started";
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
 
         if (gl_context) {
             GLMakeCurrent();
@@ -117,10 +122,18 @@ namespace NewAge
             bool satisfies_request =
                 actual_major > options.major ||
                 (actual_major == options.major && actual_minor >= options.minor);
-            std::cerr << mod_header() << " OpenGL context already exists: " << actual_major << "." << actual_minor << std::endl;
+            {
+                std::ostringstream oss;
+                oss << mod_header() << " OpenGL context already exists: " << actual_major << "." << actual_minor;
+                Application_DiagnosticMessage(oss.str().c_str());
+            }
             return options.strict ? satisfies_request : true;
         }
-        std::cerr << mod_header() << " Requested OpenGL version: " << options.major << "." << options.minor << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << " Requested OpenGL version: " << options.major << "." << options.minor;
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
 
         // 1. Create a dummy window for bootstrap
         HINSTANCE hInst = GetModuleHandle(NULL);
@@ -174,8 +187,16 @@ namespace NewAge
         bool has_modern_pf = (wglChoosePixelFormatARB != nullptr);
         bool has_modern_ctx = (wglCreateContextAttribsARB != nullptr);
 
-        std::cout << mod_header() << " WGL_ARB_pixel_format: " << (has_modern_pf ? "YES" : "NO") << std::endl;
-        std::cout << mod_header() << " WGL_ARB_create_context: " << (has_modern_ctx ? "YES" : "NO") << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << " WGL_ARB_pixel_format: " << (has_modern_pf ? "YES" : "NO");
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
+        {
+            std::ostringstream oss;
+            oss << mod_header() << " WGL_ARB_create_context: " << (has_modern_ctx ? "YES" : "NO");
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
 
         // Cleanup bootstrap
         wglMakeCurrent(NULL, NULL);
@@ -204,13 +225,19 @@ namespace NewAge
 
             UINT num_formats = 0;
             if (!wglChoosePixelFormatARB(hdc, pix_attribs.data(), NULL, 1, &pixel_format, &num_formats) || num_formats == 0) {
-                std::cerr << mod_header() << " wglChoosePixelFormatARB failed, falling back to legacy" << std::endl;
+                std::ostringstream oss;
+                oss << mod_header() << " wglChoosePixelFormatARB failed, falling back to legacy";
+                Application_DiagnosticMessage(oss.str().c_str());
                 pixel_format = ChoosePixelFormat(hdc, &pfd);
             } else {
-                std::cout << mod_header() << " Selected accelerated pixel format: " << pixel_format << std::endl;
+                std::ostringstream oss;
+                oss << mod_header() << " Selected accelerated pixel format: " << pixel_format;
+                Application_DiagnosticMessage(oss.str().c_str());
             }
         } else {
-            std::cout << mod_header() << " WGL_ARB_pixel_format not available, using legacy ChoosePixelFormat" << std::endl;
+            std::ostringstream oss;
+            oss << mod_header() << " WGL_ARB_pixel_format not available, using legacy ChoosePixelFormat";
+            Application_DiagnosticMessage(oss.str().c_str());
             pixel_format = ChoosePixelFormat(hdc, &pfd);
         }
 
@@ -229,7 +256,9 @@ namespace NewAge
                 return false;
             }
         } else {
-            std::cout << mod_header() << " Pixel format already set to " << current_pf << ". Skipping SetPixelFormat." << std::endl;
+            std::ostringstream oss;
+            oss << mod_header() << " Pixel format already set to " << current_pf << ". Skipping SetPixelFormat.";
+            Application_DiagnosticMessage(oss.str().c_str());
         }
 
         if (has_modern_ctx) {
@@ -255,11 +284,15 @@ namespace NewAge
 
             gl_context = wglCreateContextAttribsARB(hdc, 0, ctx_attribs.data());
             if (!gl_context) {
-                std::cerr << mod_header() << " wglCreateContextAttribsARB failed, falling back to legacy context" << std::endl;
+                std::ostringstream oss;
+                oss << mod_header() << " wglCreateContextAttribsARB failed, falling back to legacy context";
+                Application_DiagnosticMessage(oss.str().c_str());
                 gl_context = wglCreateContext(hdc);
             }
         } else {
-            std::cout << mod_header() << " WGL_ARB_create_context not available, using legacy wglCreateContext" << std::endl;
+            std::ostringstream oss;
+            oss << mod_header() << " WGL_ARB_create_context not available, using legacy wglCreateContext";
+            Application_DiagnosticMessage(oss.str().c_str());
             gl_context = wglCreateContext(hdc);
         }
 
@@ -281,12 +314,26 @@ namespace NewAge
         const char* gl_vendor = (const char*)glGetString(GL_VENDOR);
         const char* gl_renderer = (const char*)glGetString(GL_RENDERER);
 
-        std::cerr << mod_header() << " Final OpenGL Version: " << (gl_version ? gl_version : "NULL") << std::endl;
-        std::cerr << mod_header() << " Final OpenGL Vendor: " << (gl_vendor ? gl_vendor : "NULL") << std::endl;
-        std::cerr << mod_header() << " Final OpenGL Renderer: " << (gl_renderer ? gl_renderer : "NULL") << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << " Final OpenGL Version: " << (gl_version ? gl_version : "NULL");
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
+        {
+            std::ostringstream oss;
+            oss << mod_header() << " Final OpenGL Vendor: " << (gl_vendor ? gl_vendor : "NULL");
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
+        {
+            std::ostringstream oss;
+            oss << mod_header() << " Final OpenGL Renderer: " << (gl_renderer ? gl_renderer : "NULL");
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
 
         if (gl_renderer && strstr(gl_renderer, "GDI Generic")) {
-            std::cerr << mod_header() << " WARNING: Still using GDI Generic renderer. Acceleration might be missing." << std::endl;
+            std::ostringstream oss;
+            oss << mod_header() << " WARNING: Still using GDI Generic renderer. Acceleration might be missing.";
+            Application_DiagnosticMessage(oss.str().c_str());
         }
 
         if (wglSwapIntervalEXT) {
@@ -304,7 +351,11 @@ namespace NewAge
         }
 
         ReleaseDC(hwnd, hdc);
-        std::cerr << mod_header() << " OpenGL context initialized successfully" << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << " OpenGL context initialized successfully";
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
         return true;
     }
 

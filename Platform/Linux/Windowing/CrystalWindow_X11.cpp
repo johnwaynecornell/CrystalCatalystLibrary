@@ -390,7 +390,11 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
             case KeyPress:
                 if (callbacks.on_key_down) {
                     unicodeChar = ConvertKeyCodeToUnicode(event);
-                    std::cerr << mod_header() << "KeyPress, unicodeChar = " << unicodeChar << std::endl;
+                    {
+                        std::ostringstream oss;
+                        oss << mod_header() << "KeyPress, unicodeChar = " << unicodeChar;
+                        Application_DiagnosticMessage(oss.str().c_str());
+                    }
 
                     callbacks.on_key_down(myHandle, unicodeChar);
                 }
@@ -531,14 +535,20 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
         if (result != GrabSuccess) {
             std::cerr << mod_header() << "Failed to capture mouse pointer" << std::endl;
         } else {
-            std::cerr << mod_header() << "Mouse pointer captured" << std::endl;
+            std::ostringstream oss;
+            oss << mod_header() << "Mouse pointer captured";
+            Application_DiagnosticMessage(oss.str().c_str());
         }
     }
 
     void CrystalWindow_X11::MouseRelease() {
         // Release the pointer
         XUngrabPointer(display, last_user_time);
-        std::cerr << mod_header() << "Mouse pointer released" << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "Mouse pointer released";
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
     }
 
     void CrystalWindow_X11::Activate() {
@@ -591,16 +601,32 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
     typedef GLXContext (*glXCreateContextAttribsARBProc)(Display*, GLXFBConfig, GLXContext, Bool, const int*);
 
     bool CrystalWindow_X11::GLInitAdvanced(const GLOptions& options) {
-        std::cerr << mod_header() << "X11 GLInitAdvanced started" << std::endl;
-        std::cerr << mod_header() << "Requested OpenGL version: " << options.major << "." << options.minor << std::endl;
-        if (options.stereo) std::cerr << mod_header() << "Requested Stereo: YES" << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "X11 GLInitAdvanced started";
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "Requested OpenGL version: " << options.major << "." << options.minor;
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
+        if (options.stereo) {
+            std::ostringstream oss;
+            oss << mod_header() << "Requested Stereo: YES";
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
 
         // Log GLX version
         int glx_major, glx_minor;
         if (glXQueryVersion(display, &glx_major, &glx_minor)) {
-            std::cerr << mod_header() << "GLX version: " << glx_major << "." << glx_minor << std::endl;
+            std::ostringstream oss;
+            oss << mod_header() << "GLX version: " << glx_major << "." << glx_minor;
+            Application_DiagnosticMessage(oss.str().c_str());
         } else {
-            std::cerr << mod_header() << "Warning: Could not query GLX version" << std::endl;
+            std::ostringstream oss;
+            oss << mod_header() << "Warning: Could not query GLX version";
+            Application_DiagnosticMessage(oss.str().c_str());
         }
 
         if (!gl_fb_config || !gl_visual_info) {
@@ -642,13 +668,19 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
                 }
             }
             if (found) {
-                std::cerr << mod_header() << "Found compatible FBConfig matching requested options." << std::endl;
+                std::ostringstream oss;
+                oss << mod_header() << "Found compatible FBConfig matching requested options.";
+                Application_DiagnosticMessage(oss.str().c_str());
             } else {
-                std::cerr << mod_header() << "Warning: Could not find FBConfig matching requested options that is compatible with current window visual." << std::endl;
+                std::ostringstream oss;
+                oss << mod_header() << "Warning: Could not find FBConfig matching requested options that is compatible with current window visual.";
+                Application_DiagnosticMessage(oss.str().c_str());
             }
             XFree(fbc);
         } else {
-            std::cerr << mod_header() << "Warning: glXChooseFBConfig found no configs matching requested options." << std::endl;
+            std::ostringstream oss;
+            oss << mod_header() << "Warning: glXChooseFBConfig found no configs matching requested options.";
+            Application_DiagnosticMessage(oss.str().c_str());
         }
 
         if (gl_context) {
@@ -659,7 +691,11 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
             bool satisfies_request =
                 actual_major > options.major ||
                 (actual_major == options.major && actual_minor >= options.minor);
-            std::cerr << mod_header() << " OpenGL context already exists: " << actual_major << "." << actual_minor << std::endl;
+            {
+                std::ostringstream oss;
+                oss << mod_header() << " OpenGL context already exists: " << actual_major << "." << actual_minor;
+                Application_DiagnosticMessage(oss.str().c_str());
+            }
             return options.strict ? satisfies_request : true;
         }
 
@@ -692,23 +728,39 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
 
             context_attribs.push_back(None);
 
-            std::cerr << mod_header() << "Attempting to create OpenGL context via glXCreateContextAttribsARB..." << std::endl;
+            {
+                std::ostringstream oss;
+                oss << mod_header() << "Attempting to create OpenGL context via glXCreateContextAttribsARB...";
+                Application_DiagnosticMessage(oss.str().c_str());
+            }
             gl_context = glXCreateContextAttribsARB(display, gl_fb_config, nullptr, True, context_attribs.data());
 
             if (!gl_context) {
-                std::cerr << mod_header() << "Failed to create requested OpenGL context. Trying fallback..." << std::endl;
+                std::ostringstream oss;
+                oss << mod_header() << "Failed to create requested OpenGL context. Trying fallback...";
+                Application_DiagnosticMessage(oss.str().c_str());
             }
         } else {
-            std::cerr << mod_header() << "glXCreateContextAttribsARB not available. Falling back to legacy methods." << std::endl;
+            std::ostringstream oss;
+            oss << mod_header() << "glXCreateContextAttribsARB not available. Falling back to legacy methods.";
+            Application_DiagnosticMessage(oss.str().c_str());
         }
 
         if (!gl_context) {
-            std::cerr << mod_header() << "Attempting fallback: glXCreateNewContext..." << std::endl;
+            {
+                std::ostringstream oss;
+                oss << mod_header() << "Attempting fallback: glXCreateNewContext...";
+                Application_DiagnosticMessage(oss.str().c_str());
+            }
             gl_context = glXCreateNewContext(display, gl_fb_config, GLX_RGBA_TYPE, nullptr, True);
         }
 
         if (!gl_context && gl_visual_info) {
-            std::cerr << mod_header() << "Attempting fallback: legacy glXCreateContext..." << std::endl;
+            {
+                std::ostringstream oss;
+                oss << mod_header() << "Attempting fallback: legacy glXCreateContext...";
+                Application_DiagnosticMessage(oss.str().c_str());
+            }
             gl_context = glXCreateContext(display, gl_visual_info, nullptr, True);
         }
 
@@ -731,9 +783,21 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
         const char* gl_vendor = (const char*)glGetString(GL_VENDOR);
         const char* gl_renderer = (const char*)glGetString(GL_RENDERER);
 
-        std::cerr << mod_header() << "Final OpenGL Version: " << (gl_version ? gl_version : "NULL") << std::endl;
-        std::cerr << mod_header() << "Final OpenGL Vendor: " << (gl_vendor ? gl_vendor : "NULL") << std::endl;
-        std::cerr << mod_header() << "Final OpenGL Renderer: " << (gl_renderer ? gl_renderer : "NULL") << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "Final OpenGL Version: " << (gl_version ? gl_version : "NULL");
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "Final OpenGL Vendor: " << (gl_vendor ? gl_vendor : "NULL");
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "Final OpenGL Renderer: " << (gl_renderer ? gl_renderer : "NULL");
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
 
         int actual_major = 0, actual_minor = 0;
         GLGetVersion(actual_major, actual_minor);
@@ -747,7 +811,11 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
             return false;
         }
 
-        std::cerr << mod_header() << "OpenGL context initialized successfully" << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "OpenGL context initialized successfully";
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
         return true;
     }
 

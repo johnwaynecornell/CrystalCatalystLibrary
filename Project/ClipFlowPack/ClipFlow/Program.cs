@@ -18,8 +18,15 @@ The command language and available commands may grow between releases.
 For this build, the generated help is the authoritative reference.
 "));
 
-List<String> cl;
+bool diag = false;
 
+env.EnsureRegistry(typeof(option), "options");
+env.Registries[typeof(option)].AddSource(() =>
+{
+    diag = true;
+} , "-diag", "show diagnostic messages", new string[]{},new string[]{}, new string?[]{});
+
+List<String> cl;
 
 cl = new List<string> { "paste","text", "console" };
 cl = new List<string> { "paste","image", "console" };
@@ -29,7 +36,7 @@ cl = new List<string> { "copy","text", "string", "Hello World" };
 
 cl = new List<String>(args);
 
-env.ServeTypes = new Type[] { typeof(ClipCommand) };
+env.ServeTypes = new Type[] { typeof(ClipCommand), typeof(option) };
 
 int cl_index = 0;
 
@@ -70,6 +77,10 @@ if (cl_index < cl.Count && !env.WantExit)
 if (env.WantExit || env.Status != 0)return env.Status == 0 ? 0 : 1;
 
 ClipContext ctx = new ();
+ctx.Diagnostic = (context, msg) =>
+{
+    if (diag) context.ErrorOutput.WriteLine($"DIAG: {msg}");
+}; 
 
 ClipCommand cmd;
 
@@ -86,3 +97,6 @@ cmd.Execute(ctx);
 
 return ctx.Status == 0 ? 0 : 1;
 
+record option();
+
+record diag_option() : option;

@@ -48,6 +48,11 @@ public partial class Application
     {
         Imports.Application_WindowRemove(window_handle.Handle);
     }
+    public static void DiagnosticMessage(string message)
+    {
+        utf8_string_struct param_message = message;
+        Imports.Application_DiagnosticMessage(ref param_message);
+    }
 
     public class Imports
     {
@@ -86,6 +91,14 @@ public partial class Application
         // void Application_WindowRemove(P_INSTANCE WindowHandle window_handle)
         [DllImport("CrystalCatalystLibrary")]
         public static extern void Application_WindowRemove(IntPtr window_handle);
+
+        // void Application_SetDiagnosticsCallback(P_INSTANCE void callback)
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern void Application_SetDiagnosticsCallback(IntPtr callback);
+
+        // void Application_DiagnosticMessage(utf8_string_struct message)
+        [DllImport("CrystalCatalystLibrary")]
+        public static extern void Application_DiagnosticMessage(ref utf8_string_struct message);
 
     }
 }

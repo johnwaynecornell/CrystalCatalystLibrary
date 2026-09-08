@@ -35,7 +35,11 @@ namespace NewAge {
     }
 
     void DragProvide_X11::StartDrag(P_INSTANCE(DragDropData)  data, int32_t x, int32_t y) {
-        std::cerr << mod_header() << "CrystalWindow_DragStart" << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "CrystalWindow_DragStart";
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
 
         Atom XA_XdndSelection = AppX11->atoms.xdnd.selection;
 
@@ -46,7 +50,11 @@ namespace NewAge {
             return; // Selection not acquired
         }
 
-        std::cerr << mod_header() << "Selection acquired" << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "Selection acquired";
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
 
         drag_data = data;
         dragging = true;
@@ -61,7 +69,11 @@ namespace NewAge {
 
         UpdateMotion(x, y);
 
-        std::cerr << mod_header() << "Drag start setup complete" << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "Drag start setup complete";
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
     }
 
     void DragProvide_X11::clear_target() {
@@ -124,7 +136,11 @@ namespace NewAge {
         if (event->type != ClientMessage) return false;
         if (event->xclient.message_type != AppX11->atoms.xdnd.msg.status) return false;
 
-        std::cerr << mod_header() << std::hex << std::setw(8) << std::setfill('0') << "status receive l[1] = " << event->xclient.data.l[1] << std::dec << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << std::hex << std::setw(8) << std::setfill('0') << "status receive l[1] = " << event->xclient.data.l[1] << std::dec;
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
 
         bool accept = event->xclient.data.l[1] & 1;
         int64_t action = event->xclient.data.l[4];
@@ -138,10 +154,13 @@ namespace NewAge {
         drag_data->status.accept = accept;
         drag_data->status.action = xint64_t_to_drag_actions(action, source_window->display);
 
-        std::cerr << mod_header() << "XdndStatus received. Accept: " << accept
-                      << ", Action: " << DragDropData_DragActionsString(drag_data->status.action)
-                      << ", Rect: [" << x << ", " << y << ", " << width << ", " << height << "]"
-                      << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "XdndStatus received. Accept: " << accept
+                << ", Action: " << DragDropData_DragActionsString(drag_data->status.action)
+                << ", Rect: [" << x << ", " << y << ", " << width << ", " << height << "]";
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
 
         wait_for_status = false;
         drag_data->has_status = true;
@@ -151,7 +170,11 @@ namespace NewAge {
     }
 
     void DragProvide_X11::drag_is_finished(bool success) {
-        std::cerr << mod_header() << "drag_is_finished(success = " << (success ? "true" : "false") << ")" << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "drag_is_finished(success = " << (success ? "true" : "false") << ")";
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
 
         source_window->callbacks.on_drag_provide_finished(source_window->myHandle, drag_data, success);
 
@@ -169,7 +192,11 @@ namespace NewAge {
 
         bool success = event->xclient.data.l[2] != 0;
 
-        std::cerr << mod_header() << "XdndFinished received" << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "XdndFinished received";
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
 
         drag_is_finished(success);
 
@@ -248,7 +275,11 @@ namespace NewAge {
         event.xclient.format = 32;
         event.xclient.data.l[0] = source_window->window;
 
-        std::cerr << mod_header() << "sending XdndEnter message sent to " << target_window << " from " << source_window->window << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "sending XdndEnter message sent to " << target_window << " from " << source_window->window;
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
 
         int32_t type_count = 0;
         Atom *drop_types = new Atom[type_count];
@@ -283,8 +314,12 @@ namespace NewAge {
 
         int64_t actions = drag_actions_to_xint64_t(drag_data->action_selections, source_window->display);
 
-        std::cerr << mod_header() << DragDropData_DragActionsString(drag_data->action_selections) << " translated as "
-            << std::hex << std::setw(8) << std::setfill('0') << actions << std::dec << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << DragDropData_DragActionsString(drag_data->action_selections) << " translated as "
+                << std::hex << std::setw(8) << std::setfill('0') << actions << std::dec;
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
 
         XChangeProperty(
             source_window->display,
@@ -301,7 +336,11 @@ namespace NewAge {
         XSendEvent(source_window->display, target_window, False, NoEventMask, &event);
         XFlush(source_window->display);
 
-        std::cerr << mod_header() << "XdndEnter message sent to " << target_window << " from " << source_window->window << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "XdndEnter message sent to " << target_window << " from " << source_window->window;
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
     }
 
     void DragProvide_X11::send_xdnd_position(int32_t x, int32_t y) {
@@ -322,12 +361,15 @@ namespace NewAge {
         XSendEvent(source_window->display, target_window, False, NoEventMask, &event);
         XFlush(source_window->display);
 
-        std::cerr << mod_header() << "XdndPosition message sent from " << source_window->window << ", to " << target_window << " x=" << x << " y=" << y
-        << " l[0]=" << std::hex << std::setw(8) << std::setfill('0') << event.xclient.data.l[0] << std::dec
-        << " l[1]=" << std::hex << std::setw(8) << std::setfill('0') << event.xclient.data.l[1] << std::dec
-        << " l[3]=" << std::hex << std::setw(8) << std::setfill('0') << event.xclient.data.l[3] << std::dec
-        << " l[4]=" << std::hex << std::setw(8) << std::setfill('0') << event.xclient.data.l[4] << std::dec
-        << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "XdndPosition message sent from " << source_window->window << ", to " << target_window << " x=" << x << " y=" << y
+                << " l[0]=" << std::hex << std::setw(8) << std::setfill('0') << event.xclient.data.l[0] << std::dec
+                << " l[1]=" << std::hex << std::setw(8) << std::setfill('0') << event.xclient.data.l[1] << std::dec
+                << " l[3]=" << std::hex << std::setw(8) << std::setfill('0') << event.xclient.data.l[3] << std::dec
+                << " l[4]=" << std::hex << std::setw(8) << std::setfill('0') << event.xclient.data.l[4] << std::dec;
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
 
         drag_data->has_status = false;
         wait_for_status = true;
@@ -345,7 +387,11 @@ namespace NewAge {
         XSendEvent(source_window->display, target_window, False, NoEventMask, &event);
         XFlush(source_window->display);
 
-        std::cerr << mod_header() << "XdndLeave message sent to " << target_window << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "XdndLeave message sent to " << target_window;
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
     }
 
     void DragProvide_X11::send_xdnd_drop() {
@@ -362,7 +408,11 @@ namespace NewAge {
         XSendEvent(source_window->display, target_window, False, NoEventMask, &event);
         XFlush(source_window->display);
 
-        std::cerr << mod_header() << "XdndDrop message sent to " << target_window << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "XdndDrop message sent to " << target_window;
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
     }
 
     void DragProvide_X11::send_xdnd_finished(bool success) {
@@ -380,6 +430,10 @@ namespace NewAge {
         XSendEvent(source_window->display, target_window, False, NoEventMask, &event);
         XFlush(source_window->display);
 
-        std::cerr << mod_header() << "XdndFinished message sent to " << target_window << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "XdndFinished message sent to " << target_window;
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
     }
 }

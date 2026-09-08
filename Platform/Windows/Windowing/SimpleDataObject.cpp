@@ -655,7 +655,11 @@ HRESULT DataInterchange_ReadFormats(P_INSTANCE(DataInterchange) data, IDataObjec
             if (my_type == nullptr) my_t = "nullptr";
             else my_t = (std::string) "\"" + my_type.c_str + "\"";
 
-            std::cerr << mod_header() << "\ttype:" << my_t << "\tformat:" << fmt.cfFormat << "\tName:\"" << name << "\"" << std::endl;
+            {
+                std::ostringstream oss;
+                oss << mod_header() << "\ttype:" << my_t << "\tformat:" << fmt.cfFormat << "\tName:\"" << name << "\"";
+                Application_DiagnosticMessage(oss.str().c_str());
+            }
 
             if (my_type != nullptr) {
                 if (!DataInterchange_FormatExists(data, my_type)) {

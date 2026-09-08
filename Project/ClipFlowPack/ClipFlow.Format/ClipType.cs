@@ -79,7 +79,7 @@ public abstract class ClipType
         }
         else
         {
-            context.ErrorOutput.WriteLine($"Clipboard paste format {format}");
+            Application.DiagnosticMessage($"Clipboard paste format {format}");
             di.Select(format);
         }
     }

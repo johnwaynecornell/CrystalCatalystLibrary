@@ -40,7 +40,9 @@ namespace NewAge {
             if (types[i] != None) {
                 xwin->advertised_atoms.push_back(types[i]);
                 utf8_string_struct type_name = XGetAtomName_struct(display, types[i]);
-                std::cerr << mod_header() << "Format: " << type_name << std::endl;
+                std::ostringstream oss;
+                oss << mod_header() << "Format: " << type_name;
+                Application_DiagnosticMessage(oss.str().c_str());
 
                 if (strcmp(type_name, "text/uri-list") == 0) {
                     if (!DataInterchange_FormatExists(dataInterchange, "text/file-uri"))
@@ -126,7 +128,11 @@ namespace NewAge {
 
         Window oc = XGetSelectionOwner(xwin->display, AppX11->atoms.clipboard);
         Window op = XGetSelectionOwner(xwin->display, AppX11->atoms.primary);
-        std::cerr << "Owners: CLIPBOARD=" << std::hex << oc << " PRIMARY=" << op << std::dec << "\n";
+        {
+            std::ostringstream oss;
+            oss << "Owners: CLIPBOARD=" << std::hex << oc << " PRIMARY=" << op << std::dec;
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
 
         if (oc == None && Clipboard_Wayland::IsAvailable()) {
             if (Clipboard_Wayland::Paste(handle, data)) {
@@ -221,7 +227,11 @@ namespace NewAge {
 
         xwin->current_clipboard_provide_data = data;
 
-        std::cerr << mod_header() << "CrystalWindow_ClipboardCopyPersist()"  << std::endl;
+        {
+            std::ostringstream oss;
+            oss << mod_header() << "CrystalWindow_ClipboardCopyPersist()";
+            Application_DiagnosticMessage(oss.str().c_str());
+        }
 
         // 1. Check for CLIPBOARD_MANAGER first
         Window manager = XGetSelectionOwner(xwin->display, AppX11->atoms.clipboard_manager);
@@ -297,7 +307,7 @@ namespace NewAge {
 
         Window selection_owner = XGetSelectionOwner(display, clipboard);
         if (selection_owner == None) {
-            std::cerr << "No selection owner for clipboard to clear" << std::endl;
+            Application_DiagnosticMessage("No selection owner for clipboard to clear");
             return;
         }
 
@@ -323,7 +333,7 @@ namespace NewAge {
         // Clear the selection owner
         XSetSelectionOwner(display, clipboard, None, CurrentTime);
 
-        std::cerr << "Clipboard cleared" << std::endl;
+        Application_DiagnosticMessage("Clipboard cleared");
         /*
         if (!OpenClipboard(nullptr)) {
             std::cerr << "Failed to open clipboard." << std::endl;
