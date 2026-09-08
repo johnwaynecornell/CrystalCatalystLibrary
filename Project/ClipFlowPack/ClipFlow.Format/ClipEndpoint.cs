@@ -387,23 +387,37 @@ public abstract class ClipEndpoint
         {
             if (System.IO.Directory.Exists(src))
             {
+                if (System.IO.File.Exists(dst))
+                    System.IO.File.Delete(dst);
+
                 if (!System.IO.Directory.Exists(dst))
-                {
                     System.IO.Directory.CreateDirectory(dst);
-                }
-                
+
                 foreach (string directory in System.IO.Directory.GetDirectories(src))
                 {
-                    string newDst = System.IO.Path.Combine(dst, System.IO.Path.GetFileName(directory));
+                    string newDst = Path.Combine(
+                        dst,
+                        Path.GetFileName(directory));
+
                     CopyHelper(directory, newDst);
                 }
-                
+
                 foreach (string file in System.IO.Directory.GetFiles(src))
                 {
-                    string newDst = System.IO.Path.Combine(dst, System.IO.Path.GetFileName(file));
-                    System.IO.File.Copy(file, newDst, overwrite: true);
+                    string newDst = Path.Combine(
+                        dst,
+                        Path.GetFileName(file));
+
+                    CopyHelper(file, newDst);
                 }
-            } else System.IO.File.Copy(src, dst, overwrite: true);
+            }
+            else
+            {
+                if (System.IO.Directory.Exists(dst))
+                    System.IO.Directory.Delete(dst, recursive: true);
+
+                System.IO.File.Copy(src, dst, overwrite: true);
+            }
         }
         
         
