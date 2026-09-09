@@ -23,6 +23,7 @@ namespace NewAge
     LRESULT CALLBACK CrystalWindow_Windows_WindowProc(HWND hwnd, uint32_t  uMsg, WPARAM wParam, LPARAM lParam);
 
     CrystalApplication_Windows::~CrystalApplication_Windows() {
+        DestroyAllWindows();
         OleUninitialize();
         CoUninitialize();
     }
@@ -104,6 +105,7 @@ namespace NewAge
 
         Application_WindowAdd(window_handle);
         window->SetStandardCursor(CRYSTAL_CURSOR_ARROW);
+        window->ready = true;
 
         return window_handle;
     }
@@ -142,6 +144,7 @@ namespace NewAge
 
         Application_WindowAdd(window_handle);
         window->SetStandardCursor(CRYSTAL_CURSOR_ARROW);
+        window->ready = true;
 
         return window_handle;
     }

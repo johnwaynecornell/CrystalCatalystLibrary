@@ -29,6 +29,7 @@ namespace NewAge {
 
         DiagnosticMessageCallback on_diagnostic_message = nullptr;
 
+        virtual void DestroyAllWindows();
         virtual void SetArguments(struct_array_struct<utf8_string_struct> args);
         virtual void Init();
         virtual int32_t Run();

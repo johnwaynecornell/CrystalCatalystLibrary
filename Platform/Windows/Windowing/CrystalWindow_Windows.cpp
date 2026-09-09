@@ -392,6 +392,7 @@ namespace NewAge
     void CrystalWindow_Windows::Show(bool restore)
     {
         ShowWindow(hwnd, restore ? SW_SHOWNORMAL : SW_SHOW);
+        UpdateWindow(hwnd);
     }
 
     void CrystalWindow_Windows::Close()
@@ -680,8 +681,10 @@ namespace NewAge
         switch (uMsg) {
         case WM_CREATE: {
                 int32_t rc = DefWindowProc(hwnd, uMsg, wParam, lParam);
-                if (rc == 0)
+                if (rc == 0) {
+                    wnd->ready = true;
                     PostMessage(hwnd, WM_USER_POSTCREATE, 0, 0);
+                }
                 return rc;
         }
         case WM_USER_POSTCREATE: {
@@ -890,6 +893,16 @@ namespace NewAge
     }
 
     CrystalWindow_Windows::~CrystalWindow_Windows() {
+        if (gl_context) {
+            wglMakeCurrent(nullptr, nullptr);
+            wglDeleteContext(gl_context);
+            gl_context = nullptr;
+        }
+        if (hwnd) {
+            SetWindowLongPtr(hwnd, GWLP_USERDATA, 0);
+            DestroyWindow(hwnd);
+            hwnd = nullptr;
+        }
         if (current_hIcon) DestroyIcon(current_hIcon);
         if (current_hCursor && owns_cursor) DestroyCursor(current_hCursor);
     }

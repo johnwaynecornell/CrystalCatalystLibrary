@@ -35,13 +35,21 @@ public class ApplicationDiagnosticsTests
             Application.SetDiagnosticsCallback(cb1);
             Application.SetDiagnosticsCallback(null);
         });
-
+        if (OperatingSystem.IsWindows())
+        {
+            t1.SetApartmentState(ApartmentState.STA);
+        }
+        
         var t2 = new Thread(() =>
         {
             Action<string>? cb2 = msg => thread2Messages.Add("T2:" + msg);
             Application.SetDiagnosticsCallback(cb2);
             Application.SetDiagnosticsCallback(null);
         });
+        if (OperatingSystem.IsWindows())
+        {
+            t2.SetApartmentState(ApartmentState.STA);
+        }
 
         t1.Start();
         t2.Start();
@@ -69,6 +77,10 @@ public class ApplicationDiagnosticsTests
 
             Application.SetDiagnosticsCallback(null);
         });
+        if (OperatingSystem.IsWindows())
+        {
+            t.SetApartmentState(ApartmentState.STA);
+        }
         t.Start();
         t.Join();
 
@@ -89,6 +101,10 @@ public class ApplicationDiagnosticsTests
             Application.DiagnosticMessage("Message from T1");
             Application.SetDiagnosticsCallback(null);
         });
+        if (OperatingSystem.IsWindows())
+        {
+            t1.SetApartmentState(ApartmentState.STA);
+        }
 
         var t2 = new Thread(() =>
         {
@@ -97,6 +113,10 @@ public class ApplicationDiagnosticsTests
             Application.DiagnosticMessage("Message from T2");
             Application.SetDiagnosticsCallback(null);
         });
+        if (OperatingSystem.IsWindows())
+        {
+            t2.SetApartmentState(ApartmentState.STA);
+        }
 
         t1.Start();
         t2.Start();

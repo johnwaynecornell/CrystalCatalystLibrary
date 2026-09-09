@@ -31,6 +31,8 @@ namespace NewAge {
     thread_local CrystalApplication_X11 *AppX11 = nullptr;
 
     CrystalApplication_X11::~CrystalApplication_X11() {
+        DestroyAllWindows();
+
         if (AppX11 == this) {
             AppX11 = nullptr;
         }
@@ -133,7 +135,6 @@ namespace NewAge {
         XSetWMProtocols(globalDisplay, win, protos, 2);
 
         XStoreName(globalDisplay, win, title);
-        XMapWindow(globalDisplay, win);
 
         XSelectInput(globalDisplay, win, ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | StructureNotifyMask | PropertyChangeMask | EnterWindowMask | LeaveWindowMask);
         XFlush(globalDisplay);  // Ensure commands are sent to the X server
@@ -151,6 +152,7 @@ namespace NewAge {
         window_structure->gl_fb_config = fb_config;
         window_structure->gl_visual_info = visual_info;
         window_structure->gl_colormap = colormap;
+        window_structure->ready = true;
 
         auto* window_handle = (P_INSTANCE(WindowHandle))malloc(sizeof(WindowHandle));
         if (!window_handle) {
@@ -195,7 +197,6 @@ namespace NewAge {
 
 
         XStoreName(globalDisplay, win, title);
-        XMapWindow(globalDisplay, win);
 
         XSelectInput(globalDisplay, win, ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | StructureNotifyMask | PropertyChangeMask | EnterWindowMask | LeaveWindowMask);
         XFlush(globalDisplay);  // Ensure commands are sent to the X server
@@ -218,6 +219,7 @@ namespace NewAge {
         window_structure->window = win;
         window_structure->display = globalDisplay;
         window_structure->gl_context = nullptr;
+        window_structure->ready = true;
 
         auto* window_handle = (P_INSTANCE(WindowHandle))malloc(sizeof(WindowHandle));
         if (!window_handle) {

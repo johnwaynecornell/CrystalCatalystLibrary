@@ -16,9 +16,14 @@
          test_data_interchange.cpp
  )
 
+ add_executable(test_window_lifecycle
+         test_window_lifecycle.cpp
+ )
+
  find_library(LIBJWCEssentials JWCEssentials)
  find_package(Threads)
 
  target_link_libraries(test_client PUBLIC CrystalCatalystLibrary ${LIBJWCEssentials})
  target_link_libraries(test_multi_thread PUBLIC CrystalCatalystLibrary ${LIBJWCEssentials} ${CMAKE_THREAD_LIBS_INIT})
  target_link_libraries(test_data_interchange PUBLIC CrystalCatalystLibrary ${LIBJWCEssentials} ${CMAKE_THREAD_LIBS_INIT})
+ target_link_libraries(test_window_lifecycle PUBLIC CrystalCatalystLibrary ${LIBJWCEssentials} ${CMAKE_THREAD_LIBS_INIT})

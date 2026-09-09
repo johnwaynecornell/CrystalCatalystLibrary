@@ -37,11 +37,16 @@ P_INSTANCE(DataInterchange)  CrystalWindow_ClipboardPaste(P_INSTANCE(WindowHandl
 
 void CrystalWindow_ClipboardCopy(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) data)
 {
-    DataInterchange_CreateContext(data);
+    if (!data) return;
     data->m_handle = handle;
-	data->selection_type = DataInterchange::E_CLIPBOARD;
+    data->selection_type = DataInterchange::E_CLIPBOARD;
+    DataInterchange_CreateContext(data);
 
     IDataObject* pDataObject = (IDataObject *)data->context;
+    if (!pDataObject) {
+        handleDataInterchangeError(handle, data, "Failed to set clipboard data: no valid data object created.");
+        return;
+    }
 
     HRESULT hr = OleSetClipboard(pDataObject);
     if (FAILED(hr)) {
@@ -62,10 +67,15 @@ void CrystalWindow_ClipboardCopy(P_INSTANCE(WindowHandle) handle, P_INSTANCE(Dat
 
 void CrystalWindow_ClipboardCopyWithCallback(void (*provide)(P_INSTANCE(DataInterchange)  data, utf8_string_struct format), P_INSTANCE(DataInterchange)  data)
 {
+    if (!data) return;
+    data->selection_type = DataInterchange::E_CLIPBOARD;
     DataInterchange_CreateContext(data);
-	data->selection_type = DataInterchange::E_CLIPBOARD;
 
     IDataObject* pDataObject = (IDataObject *)data->context;
+    if (!pDataObject) {
+        handleDataInterchangeError(data ? data->m_handle : nullptr, data, "Failed to set clipboard data: no valid data object created.");
+        return;
+    }
 
     HRESULT hr = OleSetClipboard(pDataObject);
     if (FAILED(hr)) {
@@ -109,7 +119,24 @@ void CrystalWindow_ClipboardCopyPersist(P_INSTANCE(WindowHandle) handle, P_INSTA
 
         hGlobal = DataInterchange_MakeHGLOBAl(dataInterchange, node->type, &cfFormat);
         if (hGlobal) {
-            SetClipboardData(cfFormat, hGlobal);
+            HANDLE result = SetClipboardData(cfFormat, hGlobal);
+
+            if (!result) {
+                DWORD error = GetLastError();
+
+                std::ostringstream ss;
+                ss << "SetClipboardData failed for format "
+                   << cfFormat
+                   << ", error "
+                   << error;
+
+                handleDataInterchangeError(
+                    dataInterchange->m_handle,
+                    dataInterchange,
+                    ss.str());
+
+                GlobalFree(hGlobal);
+            }
         } else {
             handleDataInterchangeError(dataInterchange->m_handle, dataInterchange, "Failed to allocate global memory for format: " + std::string(node->type.c_str ? node->type.c_str : ""));
         }

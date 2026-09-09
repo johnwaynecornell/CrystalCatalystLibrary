@@ -533,6 +533,12 @@ HRESULT CreateDataObject(P_INSTANCE(DataInterchange)dta, FORMATETC *fmt, int32_t
 
 void DataInterchange_CreateContext(P_INSTANCE(DataInterchange) data)
 {
+    if (!data) return;
+
+    if (data->selected_format.c_str && !DataInterchange_FormatExists(data, data->selected_format)) {
+        DataInterchange_FormatAdd(data, data->selected_format);
+    }
+
     IDataObject* pDataObject = nullptr;
     SingleLink_Node<FORMATETC> head = {};
     SingleLink_Node<FORMATETC>* current = &head;
@@ -622,55 +628,114 @@ void DataInterchange_CreateContext(P_INSTANCE(DataInterchange) data)
 
 HRESULT DataInterchange_ReadFormats(P_INSTANCE(DataInterchange) data, IDataObject * pDataObject)
 {
-    IEnumFORMATETC *E;
+    if (!data) return E_POINTER;
 
-    HRESULT hr = pDataObject->EnumFormatEtc(DATADIR_GET, &E);
-    if (FAILED(hr)) {
-        std::stringstream ss;
-        ss << mod_header() << " EnumFormatEtc failed. HRESULT: " << std::hex << hr;
-        handleDataInterchangeError(data ? data->m_handle : nullptr, data, ss.str());
-        return hr;
+    if (pDataObject) {
+        IEnumFORMATETC *E = nullptr;
+        HRESULT hr = pDataObject->EnumFormatEtc(DATADIR_GET, &E);
+        if (SUCCEEDED(hr) && E) {
+            ULONG fetched = 0;
+            FORMATETC fmt;
+            char name[1024];
+            UINT cf_png = RegisterClipboardFormatA("PNG");
+            UINT cf_html = RegisterClipboardFormat(CFSTR_HTML);
+
+            do {
+                fetched = 0;
+                hr = E->Next(1, &fmt, &fetched);
+                if (fetched > 0) {
+                    utf8_string_struct my_type = nullptr;
+
+                    if (fmt.cfFormat == CF_UNICODETEXT || fmt.cfFormat == CF_TEXT) my_type = "text/plain";
+                    else if (fmt.cfFormat == cf_html) my_type = "text/html";
+                    else if (fmt.cfFormat == CF_HDROP) my_type = "text/file-uri";
+                    else if (fmt.cfFormat == cf_png) my_type = "image/png";
+                    else if (fmt.cfFormat == CF_DIB || fmt.cfFormat == CF_DIBV5) my_type = "image/bmp";
+
+                    name[0] = 0;
+                    if (GetClipboardFormatNameA(fmt.cfFormat, name, 1023) > 0) {
+                        name[1023] = 0;
+                    }
+
+                    std::string my_t = (my_type == nullptr) ? "nullptr" : (std::string)"\"" + my_type.c_str + "\"";
+                    {
+                        std::ostringstream oss;
+                        oss << mod_header() << "\ttype:" << my_t << "\tformat:" << fmt.cfFormat << "\tName:\"" << name << "\"";
+                        Application_DiagnosticMessage(oss.str().c_str());
+                    }
+
+                    if (my_type != nullptr) {
+                        if (!DataInterchange_FormatExists(data, my_type)) {
+                            DataInterchange_FormatAdd(data, my_type);
+                        }
+                    }
+                }
+            } while (fetched > 0);
+
+            E->Release();
+        }
     }
 
-    ULONG fetched = 0;
-
-    FORMATETC fmt;
-    char name[1024];
-    UINT cf_png = RegisterClipboardFormatA("PNG");
-
-    do {
-        E->Next(1, &fmt, &fetched);
-        if (fetched) {
-            utf8_string_struct my_type = nullptr;
-
-            if (fmt.cfFormat == CF_UNICODETEXT) my_type = "text/plain";
-            else if (fmt.cfFormat == RegisterClipboardFormat(CFSTR_HTML)) my_type = "text/html";
-            else if (fmt.cfFormat == CF_HDROP) my_type = "text/file-uri";
-            else if (fmt.cfFormat == cf_png) my_type = "image/png";
-            else if (fmt.cfFormat == CF_DIB || fmt.cfFormat == CF_DIBV5) my_type = "image/bmp";
-
-            name[GetClipboardFormatNameA(fmt.cfFormat, name, 1023)] = 0;
-
-            std::string my_t;
-            if (my_type == nullptr) my_t = "nullptr";
-            else my_t = (std::string) "\"" + my_type.c_str + "\"";
-
-            {
-                std::ostringstream oss;
-                oss << mod_header() << "\ttype:" << my_t << "\tformat:" << fmt.cfFormat << "\tName:\"" << name << "\"";
-                Application_DiagnosticMessage(oss.str().c_str());
+    // Direct format queries via IDataObject QueryGetData for standard supported formats
+    if (pDataObject) {
+        if (!DataInterchange_FormatExists(data, "text/file-uri")) {
+            FORMATETC fmt_hdrop = { CF_HDROP, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+            if (pDataObject->QueryGetData(&fmt_hdrop) == S_OK) {
+                DataInterchange_FormatAdd(data, "text/file-uri");
             }
-
-            if (my_type != nullptr) {
-                if (!DataInterchange_FormatExists(data, my_type)) {
-                    DataInterchange_FormatAdd(data, my_type);
+        }
+        if (!DataInterchange_FormatExists(data, "text/plain")) {
+            FORMATETC fmt_text = { CF_UNICODETEXT, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+            if (pDataObject->QueryGetData(&fmt_text) == S_OK) {
+                DataInterchange_FormatAdd(data, "text/plain");
+            }
+        }
+        if (!DataInterchange_FormatExists(data, "text/html")) {
+            FORMATETC fmt_html = { (CLIPFORMAT)RegisterClipboardFormat(CFSTR_HTML), nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+            if (pDataObject->QueryGetData(&fmt_html) == S_OK) {
+                DataInterchange_FormatAdd(data, "text/html");
+            }
+        }
+        if (!DataInterchange_FormatExists(data, "image/png")) {
+            FORMATETC fmt_png = { (CLIPFORMAT)RegisterClipboardFormatA("PNG"), nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+            if (pDataObject->QueryGetData(&fmt_png) == S_OK) {
+                DataInterchange_FormatAdd(data, "image/png");
+            }
+        }
+        if (!DataInterchange_FormatExists(data, "image/bmp")) {
+            FORMATETC fmt_dib = { CF_DIB, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+            if (pDataObject->QueryGetData(&fmt_dib) == S_OK) {
+                DataInterchange_FormatAdd(data, "image/bmp");
+            } else {
+                FORMATETC fmt_dibv5 = { CF_DIBV5, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+                if (pDataObject->QueryGetData(&fmt_dibv5) == S_OK) {
+                    DataInterchange_FormatAdd(data, "image/bmp");
                 }
             }
         }
+    }
 
-    } while (fetched);
+    // Also check standard Win32 clipboard formats if this is a clipboard operation
+    if (data->selection_type == DataInterchange::E_CLIPBOARD) {
+        if (!DataInterchange_FormatExists(data, "text/file-uri") && IsClipboardFormatAvailable(CF_HDROP)) {
+            DataInterchange_FormatAdd(data, "text/file-uri");
+        }
+        if (!DataInterchange_FormatExists(data, "text/plain") && (IsClipboardFormatAvailable(CF_UNICODETEXT) || IsClipboardFormatAvailable(CF_TEXT))) {
+            DataInterchange_FormatAdd(data, "text/plain");
+        }
+        UINT cf_html = RegisterClipboardFormat(CFSTR_HTML);
+        if (!DataInterchange_FormatExists(data, "text/html") && cf_html && IsClipboardFormatAvailable(cf_html)) {
+            DataInterchange_FormatAdd(data, "text/html");
+        }
+        UINT cf_png = RegisterClipboardFormatA("PNG");
+        if (!DataInterchange_FormatExists(data, "image/png") && cf_png && IsClipboardFormatAvailable(cf_png)) {
+            DataInterchange_FormatAdd(data, "image/png");
+        }
+        if (!DataInterchange_FormatExists(data, "image/bmp") && (IsClipboardFormatAvailable(CF_DIB) || IsClipboardFormatAvailable(CF_DIBV5))) {
+            DataInterchange_FormatAdd(data, "image/bmp");
+        }
+    }
 
-    E->Release();
     return S_OK;
 }
 
@@ -750,13 +815,16 @@ void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_struct
 
                 std::string uri = "";
                 for (uint32_t i = 0; i < fileCount; i++) {
-                    WCHAR filePath[MAX_PATH];
-                    if (DragQueryFileW(hDrop, i, filePath, MAX_PATH)) {
-                        int size_needed = WideCharToMultiByte(CP_UTF8, 0, filePath, -1, NULL, 0, NULL, NULL);
-                        if (size_needed > 1) {
-                            std::string filePathStr(size_needed - 1, 0);
-                            WideCharToMultiByte(CP_UTF8, 0, filePath, -1, &filePathStr[0], size_needed, NULL, NULL);
-                            uri += filePathStr + "\n";
+                    UINT cch = DragQueryFileW(hDrop, i, nullptr, 0);
+                    if (cch > 0) {
+                        std::vector<WCHAR> filePath(cch + 1, 0);
+                        if (DragQueryFileW(hDrop, i, filePath.data(), cch + 1)) {
+                            int size_needed = WideCharToMultiByte(CP_UTF8, 0, filePath.data(), -1, NULL, 0, NULL, NULL);
+                            if (size_needed > 1) {
+                                std::string filePathStr(size_needed - 1, 0);
+                                WideCharToMultiByte(CP_UTF8, 0, filePath.data(), -1, &filePathStr[0], size_needed, NULL, NULL);
+                                uri += filePathStr + "\n";
+                            }
                         }
                     }
                 }

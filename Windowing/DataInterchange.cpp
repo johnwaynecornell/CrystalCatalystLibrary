@@ -105,6 +105,11 @@ namespace NewAge {
     }
 
     void DataInterchange_SelectionSet(P_INSTANCE(DataInterchange) drag, utf8_string_struct format, P_INSTANCE(void) data, size_t size) {
+        if (!drag) return;
+
+        if (format.c_str && !DataInterchange_FormatExists(drag, format)) {
+            DataInterchange_FormatAdd(drag, format);
+        }
 
         drag->selected_format = format;
 

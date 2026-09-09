@@ -147,11 +147,17 @@ HRESULT __stdcall CrystalWindow_Windows::GiveFeedback(DWORD dwEffect) {
 }
 
 void CrystalWindow_Windows::DragStart(P_INSTANCE(DragDropData)  data, int32_t x, int32_t y) {
+    if (!data) return;
     data->m_handle = myHandle;
     DataInterchange_CreateContext(data);
     data->provide_chosen = DataInterchange::provide_for_drag;
 
     IDataObject *pDataObject = (IDataObject *) data->context;
+    if (!pDataObject) {
+        handleDataInterchangeError(myHandle, data, "DoDragDrop failed: no valid data object created.");
+        return;
+    }
+
     DWORD dwEffect = drag_actions_to_dropeffect(data->action_selections);
 
     DWORD _dwEffect;

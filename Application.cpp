@@ -37,20 +37,26 @@ namespace NewAge {
     P_INSTANCE(CrystalApplication) platform_initialize();
     void platform_uninitialize();
 
-    CrystalApplication::~CrystalApplication() {
+    void CrystalApplication::DestroyAllWindows() {
         P_INSTANCE(HandleNode) cur = window_head.next;
         while (cur != nullptr) {
             P_INSTANCE(HandleNode) next = cur->next;
             if (cur->handle) {
                 if (cur->handle->crystal_window) {
                     delete cur->handle->crystal_window;
+                    cur->handle->crystal_window = nullptr;
                 }
                 free(cur->handle);
+                cur->handle = nullptr;
             }
             free(cur);
             cur = next;
         }
         window_head.next = nullptr;
+    }
+
+    CrystalApplication::~CrystalApplication() {
+        DestroyAllWindows();
     }
 
     void Application_Init(struct_array_struct<utf8_string_struct> args)

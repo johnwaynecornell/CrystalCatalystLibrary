@@ -34,28 +34,61 @@ namespace NewAge {
     CrystalWindow_X11::CrystalWindow_X11() {}
 
     CrystalWindow_X11::~CrystalWindow_X11() {
-        if (drag_provide) delete drag_provide;
+        if (drag_provide) {
+            delete drag_provide;
+            drag_provide = nullptr;
+        }
         if (gl_context) {
             glXMakeCurrent(display, None, nullptr);
             glXDestroyContext(display, gl_context);
+            gl_context = nullptr;
         }
-        if (gl_visual_info) XFree(gl_visual_info);
-        if (gl_colormap) XFreeColormap(display, gl_colormap);
+        if (gl_visual_info) {
+            XFree(gl_visual_info);
+            gl_visual_info = nullptr;
+        }
+        if (gl_colormap) {
+            XFreeColormap(display, gl_colormap);
+            gl_colormap = None;
+        }
+        if (display && window) {
+            if (AppX11 && AppX11->windowContext) {
+                XDeleteContext(display, window, AppX11->windowContext);
+            }
+            XDestroyWindow(display, window);
+            window = 0;
+        }
     }
 
     void CrystalWindow_X11::Show(bool restore) {
-        XRaiseWindow(display, window);
+        XMapWindow(display, window);
+        if (restore) {
+            XRaiseWindow(display, window);
+        }
+        XFlush(display);
     }
 
     void CrystalWindow_X11::Close(){
         if (is_closed) return;
         is_closed = true;
 
-        if (callbacks.on_close) {
-            callbacks.on_close(myHandle);
+        Display* dpy = display;
+        Window win = window;
+        P_INSTANCE(WindowHandle) handle = myHandle;
+        auto on_close_cb = callbacks.on_close;
+
+        if (AppX11 && AppX11->windowContext && dpy && win) {
+            XDeleteContext(dpy, win, AppX11->windowContext);
         }
 
-        XDestroyWindow(display, window);
+        if (dpy && win) {
+            XUnmapWindow(dpy, win);
+            XFlush(dpy);
+        }
+
+        if (on_close_cb && handle) {
+            on_close_cb(handle);
+        }
     }
 
     void CrystalWindow_X11::PostClose() {
@@ -385,7 +418,6 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
                 }
 
                 draw_queued = false;
-                ready = true;
                 return true;
             case KeyPress:
                 if (callbacks.on_key_down) {
