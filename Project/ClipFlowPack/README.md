@@ -110,7 +110,7 @@ ClipFlow paste image file output.png
 ### Files & Directories
 ```bash
 # Pipe file lists from git into the clipboard
-git ls-files | ClipFlow copy files console
+ls | ClipFlow copy files console
 
 # Paste clipboard file paths to a list file
 ClipFlow paste files file file-list.txt

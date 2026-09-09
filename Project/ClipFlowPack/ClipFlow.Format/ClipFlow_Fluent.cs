@@ -12,7 +12,7 @@ public class ClipFlow_Fluent
         env.AddModule<ClipEndpoint>();
     }
     
-    // git ls-files | ClipFlow copy files console
+    // ls | ClipFlow copy files console
     
     [FluentMethod("-help")]
     [KV_FA(FluentAttribute.Help, "show this help output")]
