@@ -10,6 +10,7 @@ public class Program
         string? caseFilter = null;
         bool keepTemp = false;
         bool verbose = false;
+        bool diag = false;
         TimeSpan timeout = TimeSpan.FromSeconds(10);
 
         for (int i = 0; i < args.Length; i++)
@@ -30,6 +31,10 @@ public class Program
             {
                 verbose = true;
             }
+            else if (args[i] == "--diag")
+            {
+                diag = true;
+            }
             else if (args[i] == "--timeout" && i + 1 < args.Length)
             {
                 if (double.TryParse(args[++i], out double sec))
@@ -43,6 +48,8 @@ public class Program
                 return 0;
             }
         }
+
+        ProcessRunner.EnableDiagnostics = diag;
 
         string resolvedExe = ResolveClipFlowExecutable(clipFlowPath);
         if (!File.Exists(resolvedExe))
@@ -67,6 +74,7 @@ public class Program
         Console.WriteLine($"  wl-copy: {(env.WlCopyAvailable ? "available" : "not found")}");
         Console.WriteLine($"  wl-paste: {(env.WlPasteAvailable ? "available" : "not found")}");
         Console.WriteLine($"  Persistence route: {env.PersistenceRoute}");
+        Console.WriteLine($"  Diagnostics: {(diag ? "enabled" : "disabled")}");
         Console.WriteLine();
 
         using var fixture = new SmokeFixture(keepTemp);
@@ -194,6 +202,7 @@ public class Program
         Console.WriteLine("  --case <filter>     Filter test cases by name substring (e.g. image, text, files)");
         Console.WriteLine("  --keep-temp         Preserve temporary test fixtures directory");
         Console.WriteLine("  --verbose, -v       Show stdout/stderr for passed tests as well");
+        Console.WriteLine("  --diag              Pass -diag to every ClipFlow process");
         Console.WriteLine("  --timeout <sec>     Execution timeout per process (default: 10s)");
         Console.WriteLine("  --help, -h          Show this help message");
     }

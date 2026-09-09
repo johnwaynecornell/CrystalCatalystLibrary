@@ -12,6 +12,8 @@ public record RunResult(
 
 public static class ProcessRunner
 {
+    public static bool EnableDiagnostics { get; set; }
+
     public static RunResult Run(
         string executablePath,
         IEnumerable<string> arguments,
@@ -21,6 +23,12 @@ public static class ProcessRunner
     {
         var effectiveTimeout = timeout ?? TimeSpan.FromSeconds(10);
         var stopwatch = Stopwatch.StartNew();
+
+        var argsList = arguments.ToList();
+        if (EnableDiagnostics && !argsList.Contains("-diag"))
+        {
+            argsList.Insert(0, "-diag");
+        }
 
         var startInfo = new ProcessStartInfo
         {
@@ -40,12 +48,12 @@ public static class ProcessRunner
             startInfo.StandardInputEncoding = new System.Text.UTF8Encoding(false);
         }
 
-        foreach (var arg in arguments)
+        foreach (var arg in argsList)
         {
             startInfo.ArgumentList.Add(arg);
         }
 
-        string cmdDesc = $"{Path.GetFileName(executablePath)} {string.Join(" ", arguments)}";
+        string cmdDesc = $"{Path.GetFileName(executablePath)} {string.Join(" ", argsList)}";
 
         using var process = new Process { StartInfo = startInfo };
 

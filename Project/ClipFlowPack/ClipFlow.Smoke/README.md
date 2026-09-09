@@ -81,6 +81,7 @@ dotnet run --project Project/ClipFlowPack/ClipFlow.Smoke/ClipFlow.Smoke.csproj -
 ### Command-Line Flags
 - `--case <filter>`: Substring filter to execute a specific test case or category.
 - `--verbose`, `-v`: Display child process invocation arguments, execution duration, exit codes, stdout, and stderr for all test runs.
+- `--diag`: Pass -diag to every ClipFlow process.
 - `--keep-temp`: Retain temporary test workspace and artifacts on disk for inspection after test execution.
 - `--timeout <sec>`: Per-process execution timeout in seconds (default: 10s).
 - `--clipflow <path>`: Explicitly specify the path to the `ClipFlow` binary under test.
