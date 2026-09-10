@@ -117,7 +117,17 @@ public class ClipUtilityWindow
         runner.Join();
     }
     
+    public static void Paste(ClipContext context, ClipType type)
+    {
+        PasteCore(context, type, null);
+    }
+
     public static void Paste(ClipContext context, ClipType type, ClipEndpoint endpoint)
+    {
+        PasteCore(context, type, () => endpoint.Write(context, type));
+    }
+
+    private static void PasteCore(ClipContext context, ClipType type, Action? complete)
     {
         Thread runner = new Thread(() =>
         {
@@ -157,10 +167,9 @@ public class ClipUtilityWindow
                 }
             
                 type.Receive(context, di, format, data, size);
-                if (context.Status == 0) endpoint.Write(context, type);
+                if (context.Status == 0) complete?.Invoke();
                 
                 wnd.PostClose();
-              
             };
             
             work_queue.Enqueue((wnd) =>
@@ -180,7 +189,6 @@ public class ClipUtilityWindow
                 }
             };
             
-            
             Application.Run();
         });
 
@@ -193,7 +201,17 @@ public class ClipUtilityWindow
         runner.Join();
     }
     
+    public static void Copy(ClipContext context, ClipType type)
+    {
+        CopyCore(context, type, null);
+    }
+
     public static void Copy(ClipContext context, ClipType type, ClipEndpoint endpoint)
+    {
+        CopyCore(context, type, () => endpoint.Read(context, type));
+    }
+
+    private static void CopyCore(ClipContext context, ClipType type, Action? prepare)
     {
         Thread runner = new Thread(() =>
         {
@@ -260,8 +278,7 @@ public class ClipUtilityWindow
                 if (executed) return;
                 executed = true;
 
-                // execute once somehow
-                endpoint.Read(context, type);
+                prepare?.Invoke();
 
                 if (context.Status != 0)
                 {

@@ -25,4 +25,26 @@ public class ClipContext : StandardContext
         if (Diagnostic != null) Diagnostic(this, message);
         else ErrorOutput.WriteLine(message);
     }
+    
+    public void Paste(ClipType type)
+    {
+        ClipUtilityWindow.Paste(this, type);
+    }
+
+    public void Paste(ClipType type, ClipEndpoint endpoint)
+    {
+        ClipUtilityWindow.Paste(this, type, endpoint);
+    }
+    
+    public void Copy(ClipType type)
+    {
+        ClipUtilityWindow.Copy(this, type);
+    }
+
+    public void Copy(ClipType type, ClipEndpoint endpoint)
+    {
+        ClipUtilityWindow.Copy(this, type, endpoint);
+    }
+
+
 }
