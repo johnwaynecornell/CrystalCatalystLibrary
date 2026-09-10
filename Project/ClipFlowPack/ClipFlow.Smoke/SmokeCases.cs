@@ -30,7 +30,8 @@ public static class SmokeCases
         new("files/console relative stdin -> file", Case10_FilesConsoleRelativeStdinToFile),
         new("files/file-list relative entries -> file", Case11_FilesFileListRelativeEntriesToFile),
         new("files/console invalid path error", Case12_FilesConsoleInvalidPathError),
-        new("files/directory expansion -> directory", Case13_FilesDirectoryExpansionToDirectory)
+        new("files/directory expansion -> directory", Case13_FilesDirectoryExpansionToDirectory),
+        new("files/path exact-file -> console", Case14_FilesPathExactFileToConsole)
     };
 
     public static CaseResult Case1_TextStringToFile(string exe, SmokeFixture fixture, TimeSpan timeout)
@@ -712,5 +713,41 @@ public static class SmokeCases
         }
 
         return new CaseResult("files/directory expansion -> directory", true, "Directory tree and standalone files expanded and copied recursively with contents preserved", runs, sw.Elapsed);
+    }
+
+    public static CaseResult Case14_FilesPathExactFileToConsole(string exe, SmokeFixture fixture, TimeSpan timeout)
+    {
+        var sw = Stopwatch.StartNew();
+        var runs = new List<RunResult>();
+        string targetFile = fixture.CreateTextFile("case14_exact.txt", "exact file content for path test");
+        string normalizedExpected = Path.GetFullPath(targetFile);
+
+        var copyRun = ProcessRunner.Run(exe, new[] { "copy", "files", "path", targetFile }, timeout: timeout);
+        runs.Add(copyRun);
+
+        if (copyRun.ExitCode != 0 || copyRun.TimedOut)
+        {
+            sw.Stop();
+            return new CaseResult("files/path exact-file -> console", false, $"Copy exact file via path failed (exit {copyRun.ExitCode}, timedOut={copyRun.TimedOut})", runs, sw.Elapsed);
+        }
+
+        var pasteRun = ProcessRunner.Run(exe, new[] { "paste", "files", "console" }, timeout: timeout);
+        runs.Add(pasteRun);
+
+        sw.Stop();
+        if (pasteRun.ExitCode != 0 || pasteRun.TimedOut)
+        {
+            return new CaseResult("files/path exact-file -> console", false, $"Paste files console failed (exit {pasteRun.ExitCode}, timedOut={pasteRun.TimedOut})", runs, sw.Elapsed);
+        }
+
+        string stdout = pasteRun.StdOut.Trim();
+        var lines = stdout.Split('\n').Select(l => l.Trim()).Where(l => !string.IsNullOrEmpty(l)).ToList();
+
+        if (lines.Count != 1 || lines[0] != normalizedExpected)
+        {
+            return new CaseResult("files/path exact-file -> console", false, $"Expected exactly 1 line matching '{normalizedExpected}', got {lines.Count} lines: {stdout}", runs, sw.Elapsed);
+        }
+
+        return new CaseResult("files/path exact-file -> console", true, "Exact file copied via path endpoint and pasted to console as normalized absolute path", runs, sw.Elapsed);
     }
 }

@@ -41,7 +41,7 @@ At startup, `ClipFlow.Smoke` inspects the host runtime environment and logs sess
 
 ## Canonical Smoke Cases
 
-The suite runs 13 end-to-end integration test scenarios:
+The suite runs 14 end-to-end integration test scenarios:
 
 1. **`text/string -> file`**: Verifies UTF-8 string copy (with Unicode, spaces, and multi-line content) into an output file.
 2. **`text/file -> console`**: Verifies copying text from a source file and pasting directly to console stdout.
@@ -56,6 +56,7 @@ The suite runs 13 end-to-end integration test scenarios:
 11. **`files/file-list relative entries -> file`**: Verifies relative entries in file-lists correctly resolve against the working directory.
 12. **`files/console invalid path error`**: Verifies invalid or missing paths piped to stdin fail cleanly with non-zero exit code and error diagnostics.
 13. **`files/directory expansion -> directory`**: Verifies recursive directory copy and merge behavior into destination directories.
+14. **`files/path exact-file -> console`**: Verifies copying an exact file via the `path` endpoint and pasting to console stdout produces the normalized absolute path.
 
 ---
 

@@ -23,14 +23,23 @@ public abstract class ClipEndpoint
 
     [FluentMethod]
     [KV_FA(FluentAttribute.Help, "a directory endpoint")]
-    public static ClipEndpoint directory([KV_FA(FluentAttribute.Help, "a path potentially with wildcards")] string path)
+    public static ClipEndpoint directory([KV_FA(FluentAttribute.Help, "a file, directory, or wildcard path")] string path)
+    {
+        return new Directory(path);
+    }
+
+    [FluentMethod]
+    [KV_FA(FluentAttribute.Help, "a filesystem path endpoint")]
+    public static ClipEndpoint path(
+        [KV_FA(FluentAttribute.Help, "a file, directory, or wildcard path")]
+        string path)
     {
         return new Directory(path);
     }
 
     [FluentMethod("string")]
     [KV_FA(FluentAttribute.Help, "a string endpoint")]
-    public static ClipEndpoint stringVal([KV_FA(FluentAttribute.Help, "value to be taken litterally")] string value)
+    public static ClipEndpoint stringVal([KV_FA(FluentAttribute.Help, "value to be taken literally")] string value)
     {
         return new String(value);
     }
@@ -45,7 +54,7 @@ public abstract class ClipEndpoint
             this.path = path;
         }
 
-        public string path;
+        public new string path;
 
         public override void Write(ClipContext context, ClipType type)
         {
@@ -385,7 +394,7 @@ public abstract class ClipEndpoint
             this.path = path;
         }
 
-        public string path;
+        public new string path;
 
         public void CopyHelper(string src, string dst)
         {
@@ -491,22 +500,13 @@ public abstract class ClipEndpoint
                     break;
 
                 case ClipType.Files files:
-                    string searchPattern = "*";
-                    string directoryPath = path;
-
-                    // Check if path contains wildcard pattern
-                    string fileName = Path.GetFileName(path);
-                    if (fileName.Contains('*') || fileName.Contains('?'))
+                    if (System.IO.File.Exists(path))
                     {
-                        searchPattern = fileName;
-                        directoryPath = Path.GetDirectoryName(path) ?? path;
-                        if (string.IsNullOrEmpty(directoryPath))
-                            directoryPath = ".";
+                        files.Identity = new List<string> { Path.GetFullPath(path) };
                     }
-
-                    if (System.IO.Directory.Exists(directoryPath))
+                    else if (System.IO.Directory.Exists(path))
                     {
-                        string[] rawFiles = System.IO.Directory.GetFiles(directoryPath, searchPattern);
+                        string[] rawFiles = System.IO.Directory.GetFiles(path, "*");
                         List<string> normalized = new(rawFiles.Length);
                         foreach (string f in rawFiles)
                         {
@@ -516,7 +516,28 @@ public abstract class ClipEndpoint
                     }
                     else
                     {
-                        context.ErrorOutput.WriteLine($"Directory not found: {directoryPath}");
+                        string fileName = Path.GetFileName(path);
+                        if (fileName.Contains('*') || fileName.Contains('?'))
+                        {
+                            string searchPattern = fileName;
+                            string directoryPath = Path.GetDirectoryName(path) ?? "";
+                            if (string.IsNullOrEmpty(directoryPath))
+                                directoryPath = ".";
+
+                            if (System.IO.Directory.Exists(directoryPath))
+                            {
+                                string[] rawFiles = System.IO.Directory.GetFiles(directoryPath, searchPattern);
+                                List<string> normalized = new(rawFiles.Length);
+                                foreach (string f in rawFiles)
+                                {
+                                    normalized.Add(Path.GetFullPath(f));
+                                }
+                                files.Identity = normalized;
+                                return;
+                            }
+                        }
+
+                        context.ErrorOutput.WriteLine($"Path not found: {path}");
                         context.Status = 1;
                     }
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using ClipFlow.Format;
+using FluentCommandLine;
 using Xunit;
 
 namespace ClipFlow.Tests;
@@ -149,6 +150,42 @@ public class DirectoryEndpointTests : IDisposable
     }
 
     [Fact]
+    public void Read_Files_ExactFile_ReturnsSingleNormalizedPath()
+    {
+        string filePath = Path.Combine(_tempDirectory, "single_file.txt");
+        File.WriteAllText(filePath, "test exact file content");
+
+        var endpoint = new ClipEndpoint.Directory(filePath);
+        var files = new ClipType.Files();
+        using var testCtx = new TestClipContext();
+
+        endpoint.Read(testCtx.Context, files);
+
+        Assert.Equal(0, testCtx.Status);
+        Assert.NotNull(files.Identity);
+        Assert.Single(files.Identity);
+        Assert.Equal(Path.GetFullPath(filePath), files.Identity[0]);
+    }
+
+    [Fact]
+    public void Read_Files_ExactFile_ViaPathFactory_ReturnsSingleNormalizedPath()
+    {
+        string filePath = Path.Combine(_tempDirectory, "single_via_path.txt");
+        File.WriteAllText(filePath, "test exact file content via path");
+
+        var endpoint = ClipEndpoint.path(filePath);
+        var files = new ClipType.Files();
+        using var testCtx = new TestClipContext();
+
+        endpoint.Read(testCtx.Context, files);
+
+        Assert.Equal(0, testCtx.Status);
+        Assert.NotNull(files.Identity);
+        Assert.Single(files.Identity);
+        Assert.Equal(Path.GetFullPath(filePath), files.Identity[0]);
+    }
+
+    [Fact]
     public void Read_Files_NonExistentDirectory_SetsStatusAndError()
     {
         string nonExistentPath = Path.Combine(_tempDirectory, "does_not_exist", "*.txt");
@@ -159,8 +196,50 @@ public class DirectoryEndpointTests : IDisposable
         endpoint.Read(testCtx.Context, files);
 
         Assert.NotEqual(0, testCtx.Status);
-        Assert.Contains("Directory not found", testCtx.ErrorText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Path not found", testCtx.ErrorText, StringComparison.OrdinalIgnoreCase);
         Assert.Null(files.Identity);
+    }
+
+    [Fact]
+    public void Read_Files_NonExistentPath_SetsStatusAndError()
+    {
+        string nonExistentPath = Path.Combine(_tempDirectory, "does_not_exist.txt");
+        var endpoint = ClipEndpoint.path(nonExistentPath);
+        var files = new ClipType.Files();
+        using var testCtx = new TestClipContext();
+
+        endpoint.Read(testCtx.Context, files);
+
+        Assert.NotEqual(0, testCtx.Status);
+        Assert.Contains("Path not found", testCtx.ErrorText, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(files.Identity);
+    }
+
+    [Fact]
+    public void FluentCommandLine_Recognizes_Path_And_Directory_Endpoints()
+    {
+        string filePath = Path.Combine(_tempDirectory, "cli_test.txt");
+        File.WriteAllText(filePath, "cli test");
+
+        var env = new FluentEnvironment();
+        env.AddModule<ClipFlow_Fluent>();
+        env.ServeTypes = new[] { typeof(ClipCommand) };
+
+        // Test "path" endpoint parsing
+        var pathArgs = new List<string> { "copy", "files", "path", filePath };
+        int pathIndex = 0;
+        var pathResult = env.ParseOne(pathArgs, ref pathIndex);
+        Assert.NotNull(pathResult);
+        Assert.IsAssignableFrom<ClipCommand>(pathResult.Result);
+        Assert.Equal(4, pathIndex);
+
+        // Test "directory" endpoint parsing
+        var dirArgs = new List<string> { "copy", "files", "directory", filePath };
+        int dirIndex = 0;
+        var dirResult = env.ParseOne(dirArgs, ref dirIndex);
+        Assert.NotNull(dirResult);
+        Assert.IsAssignableFrom<ClipCommand>(dirResult.Result);
+        Assert.Equal(4, dirIndex);
     }
 
     [Fact]
