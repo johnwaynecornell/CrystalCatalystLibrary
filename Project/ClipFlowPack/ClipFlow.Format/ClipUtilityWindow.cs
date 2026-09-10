@@ -25,8 +25,14 @@ public class ClipUtilityWindow
        format selection by ClipType
        real copy/paste payloads
     */
-    
     public static void ShowAvail(ClipContext context)
+    {
+        ShowAvail(
+            context,
+            header => context.Output.WriteLine(header.CommandName));
+    }
+    
+    public static void ShowAvail(ClipContext context, Action<ClipTypeHeader> available)
     {
         Thread runner = new Thread(() =>
         {
@@ -78,7 +84,7 @@ public class ClipUtilityWindow
 
                         if (provider.Formats.Contains(drop_format))
                         {
-                            context.Output.WriteLine(provider.CommandName);
+                            available(provider);
                             seen.Add(provider.CommandName);
                             found = true;
                             break;
