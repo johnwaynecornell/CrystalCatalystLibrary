@@ -92,6 +92,7 @@ namespace NewAge {
 
     void DataImterchange_FormatsFromAtomArray(P_INSTANCE(DataInterchange) dataInterchange, P_ELEMENTS(Atom) types, int num_types);
     void DataImterchange_AtomArrayFromFormats(P_INSTANCE(DataInterchange) dataInterchange, P_INSTANCE(P_ELEMENTS(Atom)) types, P_INSTANCE(int) num_types);
+    bool ClipboardTargetWasAdvertised(Display* display, P_INSTANCE(DataInterchange) data, Atom requested, P_OUT(utf8_string_struct) out_format);
 
     // Issue XConvertSelection with either property=None (first try) or property=target (retry).
     void request_selection(Display* dpy, P_INSTANCE(CrystalWindow_X11) win, Atom selection, Atom target);

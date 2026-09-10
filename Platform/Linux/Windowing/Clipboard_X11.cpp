@@ -72,6 +72,51 @@ namespace NewAge {
         return *atom != None;
     }
 
+    bool ClipboardTargetWasAdvertised(
+        Display* display,
+        P_INSTANCE(DataInterchange) data,
+        Atom requested,
+        P_OUT(utf8_string_struct) out_format)
+    {
+        if (!display || !data || requested == None) return false;
+
+        for (P_INSTANCE(DragDropData::Node) node = DataInterchange_FormatEnum(data); node != nullptr; node = DataInterchange_FormatEnumNext(node)) {
+            utf8_string_struct ty;
+            DataInterchange_FormatEnumText(node, &ty);
+            if (!ty.c_str) continue;
+
+            if (strcmp(ty, "text/file-uri") == 0) {
+                if (requested == XInternAtom(display, "text/uri-list", False)) {
+                    if (out_format) *out_format = "text/file-uri";
+                    return true;
+                }
+            } else if (strcmp(ty, "image/bmp") == 0) {
+                if (requested == XInternAtom(display, "image/bmp", False) ||
+                    requested == XInternAtom(display, "image/x-bmp", False) ||
+                    requested == XInternAtom(display, "image/x-MS-bmp", False)) {
+                    if (out_format) *out_format = "image/bmp";
+                    return true;
+                }
+            } else if (strcmp(ty, "text/plain") == 0) {
+                if (requested == XInternAtom(display, "text/plain", False) ||
+                    requested == XInternAtom(display, "text/plain;charset=utf-8", False) ||
+                    requested == XInternAtom(display, "UTF8_STRING", False) ||
+                    requested == XInternAtom(display, "STRING", False) ||
+                    requested == XInternAtom(display, "TEXT", False)) {
+                    if (out_format) *out_format = "text/plain";
+                    return true;
+                }
+            } else {
+                Atom direct_atom = XInternAtom(display, ty, False);
+                if (direct_atom != None && requested == direct_atom) {
+                    if (out_format) *out_format = ty;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     void DataImterchange_AtomArrayFromFormats(P_INSTANCE(DataInterchange) dataInterchange, P_INSTANCE(P_ELEMENTS(Atom)) types, P_INSTANCE(int) num_types) {
         Display *display = ((CrystalWindow_X11 *) dataInterchange->m_handle->crystal_window)->display;
 
@@ -135,6 +180,10 @@ namespace NewAge {
         }
 
         if (oc == None && Clipboard_Wayland::IsAvailable()) {
+            std::ostringstream oss;
+            oss << "Wayland";
+
+            Application_DiagnosticMessage(oss.str().c_str());
             if (Clipboard_Wayland::Paste(handle, data)) {
                 return data;
             }

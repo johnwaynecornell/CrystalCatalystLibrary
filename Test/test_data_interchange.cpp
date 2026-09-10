@@ -550,6 +550,412 @@ void test_x11_clipboard_persistence_with_manager() {
     std::cout << "[TEST] test_x11_clipboard_persistence_with_manager PASSED." << std::endl;
 }
 
+void test_x11_files_advertisement_and_validation() {
+    std::cout << "[TEST] Running test_x11_files_advertisement_and_validation..." << std::endl;
+
+    struct_array_struct<utf8_string_struct> args;
+    args.Alloc(0);
+    Application_Init(args);
+
+    P_INSTANCE(WindowHandle) win = CrystalWindow_CreateSimple(100, 100, "Files Ad Validation Window");
+    assert(win != nullptr);
+    auto* xwin = static_cast<CrystalWindow_X11*>(win->crystal_window);
+    Display* dpy = xwin->display;
+
+    // 1. Files-only DataInterchange
+    P_INSTANCE(DataInterchange) di = DataInterchange_Create();
+    di->m_handle = win;
+    DataInterchange_FormatAdd(di, "text/file-uri");
+
+    // Test ClipboardTargetWasAdvertised for Files
+    utf8_string_struct out_fmt = nullptr;
+    Atom uri_list_atom = XInternAtom(dpy, "text/uri-list", False);
+    Atom plain_atom = XInternAtom(dpy, "text/plain", False);
+    Atom utf8_atom = XInternAtom(dpy, "UTF8_STRING", False);
+    Atom string_atom = XInternAtom(dpy, "STRING", False);
+    Atom text_atom = XInternAtom(dpy, "TEXT", False);
+    Atom html_atom = XInternAtom(dpy, "text/html", False);
+    Atom png_atom = XInternAtom(dpy, "image/png", False);
+
+    assert(ClipboardTargetWasAdvertised(dpy, di, uri_list_atom, &out_fmt));
+    assert(out_fmt != nullptr && strcmp(out_fmt, "text/file-uri") == 0);
+
+    assert(!ClipboardTargetWasAdvertised(dpy, di, plain_atom, &out_fmt));
+    assert(!ClipboardTargetWasAdvertised(dpy, di, utf8_atom, &out_fmt));
+    assert(!ClipboardTargetWasAdvertised(dpy, di, string_atom, &out_fmt));
+    assert(!ClipboardTargetWasAdvertised(dpy, di, text_atom, &out_fmt));
+    assert(!ClipboardTargetWasAdvertised(dpy, di, html_atom, &out_fmt));
+    assert(!ClipboardTargetWasAdvertised(dpy, di, png_atom, &out_fmt));
+
+    // Test DataImterchange_AtomArrayFromFormats produces ONLY text/uri-list
+    Atom* types = nullptr;
+    int num_types = 0;
+    DataImterchange_AtomArrayFromFormats(di, &types, &num_types);
+    assert(num_types == 1);
+    assert(types != nullptr);
+    assert(types[0] == uri_list_atom);
+    delete[] types;
+
+    DataInterchange_Free(di);
+
+    // 2. Text-only DataInterchange
+    P_INSTANCE(DataInterchange) di_text = DataInterchange_Create();
+    di_text->m_handle = win;
+    DataInterchange_FormatAdd(di_text, "text/plain");
+
+    assert(ClipboardTargetWasAdvertised(dpy, di_text, plain_atom, &out_fmt));
+    assert(out_fmt != nullptr && strcmp(out_fmt, "text/plain") == 0);
+    assert(ClipboardTargetWasAdvertised(dpy, di_text, utf8_atom, &out_fmt));
+    assert(out_fmt != nullptr && strcmp(out_fmt, "text/plain") == 0);
+    assert(ClipboardTargetWasAdvertised(dpy, di_text, string_atom, &out_fmt));
+    assert(out_fmt != nullptr && strcmp(out_fmt, "text/plain") == 0);
+    assert(ClipboardTargetWasAdvertised(dpy, di_text, text_atom, &out_fmt));
+    assert(out_fmt != nullptr && strcmp(out_fmt, "text/plain") == 0);
+    assert(!ClipboardTargetWasAdvertised(dpy, di_text, uri_list_atom, &out_fmt));
+    assert(!ClipboardTargetWasAdvertised(dpy, di_text, png_atom, &out_fmt));
+
+    DataInterchange_Free(di_text);
+
+    delete TheApplication;
+    TheApplication = nullptr;
+
+    std::cout << "[TEST] test_x11_files_advertisement_and_validation PASSED." << std::endl;
+}
+
+static std::atomic<int> s_file_provide_called(0);
+static std::atomic<int> s_text_provide_called(0);
+static std::string s_last_provided_format;
+
+static void on_files_provide_cb(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) data, utf8_string_struct format) {
+    if (format && strcmp(format, "text/file-uri") == 0) {
+        s_file_provide_called++;
+        s_last_provided_format = format.c_str;
+        const char* payload = "/home/jwc/Edge.txt\n";
+        DataInterchange_SelectionSet(data, format, (void*)payload, strlen(payload));
+    } else if (format && strcmp(format, "text/plain") == 0) {
+        s_text_provide_called++;
+        s_last_provided_format = format.c_str;
+    }
+}
+
+void test_x11_files_selection_request_allowed_and_rejected() {
+    std::cout << "[TEST] Running test_x11_files_selection_request_allowed_and_rejected..." << std::endl;
+
+    struct_array_struct<utf8_string_struct> args;
+    args.Alloc(0);
+    Application_Init(args);
+
+    P_INSTANCE(WindowHandle) win = CrystalWindow_CreateSimple(100, 100, "Files Request Test Window");
+    assert(win != nullptr);
+    win->crystal_window->callbacks.on_clipboard_provide_chosen = on_files_provide_cb;
+
+    s_file_provide_called = 0;
+    s_text_provide_called = 0;
+    s_last_provided_format.clear();
+
+    // Copy text/file-uri to clipboard
+    P_INSTANCE(DataInterchange) copy_data = DataInterchange_Create();
+    DataInterchange_FormatAdd(copy_data, "text/file-uri");
+    CrystalWindow_ClipboardCopy(win, copy_data);
+
+    auto* xwin = static_cast<CrystalWindow_X11*>(win->crystal_window);
+    Display* dpy = xwin->display;
+    Atom cb_atom = AppX11->atoms.clipboard;
+    Atom targets_atom = AppX11->atoms.targets;
+    Atom uri_list_atom = XInternAtom(dpy, "text/uri-list", False);
+    Atom plain_atom = XInternAtom(dpy, "text/plain", False);
+    Atom utf8_atom = XInternAtom(dpy, "UTF8_STRING", False);
+    Atom string_atom = XInternAtom(dpy, "STRING", False);
+    Atom text_atom = XInternAtom(dpy, "TEXT", False);
+    Atom prop_atom = XInternAtom(dpy, "TEST_CLIENT_PROP", False);
+
+    // Create a client window to request selections
+    int screen = DefaultScreen(dpy);
+    Window root = RootWindow(dpy, screen);
+    Window client_win = XCreateSimpleWindow(dpy, root, -100, -100, 10, 10, 0, 0, 0);
+
+    // Helper lambda to send XConvertSelection and wait for SelectionNotify
+    auto request_and_get_notify = [&](Atom target) -> XSelectionEvent {
+        XConvertSelection(dpy, cb_atom, target, prop_atom, client_win, CurrentTime);
+        XFlush(dpy);
+
+        XEvent ev;
+        while (true) {
+            XNextEvent(dpy, &ev);
+            // Dispatch to application so window handles SelectionRequest
+            static_cast<CrystalApplication_X11*>(TheApplication)->DispatchEvent(ev);
+            if (ev.type == SelectionNotify && ev.xselection.requestor == client_win && ev.xselection.target == target) {
+                return ev.xselection;
+            }
+        }
+    };
+
+    // 1. Request TARGETS -> should succeed and contain only text/uri-list
+    {
+        XSelectionEvent notify = request_and_get_notify(targets_atom);
+        assert(notify.property != None);
+
+        Atom actual_type;
+        int actual_format;
+        unsigned long nitems, bytes_after;
+        unsigned char* prop = nullptr;
+        XGetWindowProperty(dpy, client_win, prop_atom, 0, ~0, True, AnyPropertyType,
+                           &actual_type, &actual_format, &nitems, &bytes_after, &prop);
+        assert(prop != nullptr);
+        assert(actual_type == XA_ATOM);
+        assert(nitems == 1);
+        Atom* atms = (Atom*)prop;
+        assert(atms[0] == uri_list_atom);
+        XFree(prop);
+    }
+
+    // 2. Request text/uri-list -> should succeed, invoke provider, and return cleaned uri list
+    {
+        int initial_calls = s_file_provide_called.load();
+        XSelectionEvent notify = request_and_get_notify(uri_list_atom);
+        assert(notify.property != None);
+        assert(s_file_provide_called.load() == initial_calls + 1);
+
+        Atom actual_type;
+        int actual_format;
+        unsigned long nitems, bytes_after;
+        unsigned char* prop = nullptr;
+        XGetWindowProperty(dpy, client_win, prop_atom, 0, ~0, True, AnyPropertyType,
+                           &actual_type, &actual_format, &nitems, &bytes_after, &prop);
+        assert(prop != nullptr);
+        std::string returned_data((char*)prop, nitems);
+        assert(returned_data.find("file:///home/jwc/Edge.txt") != std::string::npos);
+        XFree(prop);
+    }
+
+    // 3. Request text/plain -> should be REJECTED (property == None) and provider NOT called
+    {
+        int file_calls = s_file_provide_called.load();
+        int text_calls = s_text_provide_called.load();
+        XSelectionEvent notify = request_and_get_notify(plain_atom);
+        assert(notify.property == None);
+        assert(s_file_provide_called.load() == file_calls);
+        assert(s_text_provide_called.load() == text_calls);
+    }
+
+    // 4. Request UTF8_STRING -> should be REJECTED (property == None) and provider NOT called
+    {
+        int file_calls = s_file_provide_called.load();
+        int text_calls = s_text_provide_called.load();
+        XSelectionEvent notify = request_and_get_notify(utf8_atom);
+        assert(notify.property == None);
+        assert(s_file_provide_called.load() == file_calls);
+        assert(s_text_provide_called.load() == text_calls);
+    }
+
+    // 5. Request STRING -> should be REJECTED (property == None)
+    {
+        XSelectionEvent notify = request_and_get_notify(string_atom);
+        assert(notify.property == None);
+    }
+
+    // 6. Request TEXT -> should be REJECTED (property == None)
+    {
+        XSelectionEvent notify = request_and_get_notify(text_atom);
+        assert(notify.property == None);
+    }
+
+    DataInterchange_Free(copy_data);
+    XDestroyWindow(dpy, client_win);
+
+    delete TheApplication;
+    TheApplication = nullptr;
+
+    std::cout << "[TEST] test_x11_files_selection_request_allowed_and_rejected PASSED." << std::endl;
+}
+
+void test_x11_files_clipboard_persistence_with_manager() {
+    std::cout << "[TEST] Running test_x11_files_clipboard_persistence_with_manager..." << std::endl;
+
+    std::atomic<bool> manager_ready(false);
+    std::atomic<bool> manager_done(false);
+    std::atomic<bool> manager_success(false);
+    std::string mgr_saved_uri_list;
+    bool mgr_saw_plain_text = false;
+
+    // Spawn Thread M: Simulated Clipboard Manager
+    std::thread manager_thread([&]() {
+        Display* dpy = XOpenDisplay(nullptr);
+        if (!dpy) return;
+
+        Atom cm_atom = XInternAtom(dpy, "CLIPBOARD_MANAGER", False);
+        Atom cb_atom = XInternAtom(dpy, "CLIPBOARD", False);
+        Atom st_atom = XInternAtom(dpy, "SAVE_TARGETS", False);
+        Atom targets_atom = XInternAtom(dpy, "TARGETS", False);
+        Atom sel_prop_atom = XInternAtom(dpy, "MGR_SAVED_DATA", False);
+        Atom uri_list_atom = XInternAtom(dpy, "text/uri-list", False);
+        Atom plain_atom = XInternAtom(dpy, "text/plain", False);
+
+        int screen = DefaultScreen(dpy);
+        Window root = RootWindow(dpy, screen);
+        Window mgr_win = XCreateSimpleWindow(dpy, root, -100, -100, 10, 10, 0, 0, 0);
+
+        XSelectInput(dpy, mgr_win, PropertyChangeMask);
+        XSetSelectionOwner(dpy, cm_atom, mgr_win, CurrentTime);
+        XFlush(dpy);
+
+        assert(XGetSelectionOwner(dpy, cm_atom) == mgr_win);
+        manager_ready = true;
+
+        // Process events for manager
+        XEvent ev;
+        bool save_targets_done = false;
+        while (!save_targets_done) {
+            XNextEvent(dpy, &ev);
+            if (ev.type == SelectionRequest && ev.xselectionrequest.selection == cm_atom) {
+                auto* req = &ev.xselectionrequest;
+                if (req->target == st_atom) {
+                    Window producer_win = XGetSelectionOwner(dpy, cb_atom);
+
+                    // Manager queries TARGETS from producer
+                    XConvertSelection(dpy, cb_atom, targets_atom, sel_prop_atom, mgr_win, CurrentTime);
+                    XFlush(dpy);
+
+                    XEvent notify_ev;
+                    bool got_targets = false;
+                    std::vector<Atom> targets_to_save;
+
+                    while (!got_targets) {
+                        XNextEvent(dpy, &notify_ev);
+                        if (notify_ev.type == SelectionNotify && notify_ev.xselection.target == targets_atom) {
+                            if (notify_ev.xselection.property != None) {
+                                Atom actual_type;
+                                int actual_format;
+                                unsigned long nitems, bytes_after;
+                                unsigned char* prop = nullptr;
+                                XGetWindowProperty(dpy, mgr_win, sel_prop_atom, 0, ~0, True, AnyPropertyType,
+                                                   &actual_type, &actual_format, &nitems, &bytes_after, &prop);
+                                if (prop) {
+                                    Atom* atms = (Atom*)prop;
+                                    for (unsigned long i = 0; i < nitems; ++i) {
+                                        targets_to_save.push_back(atms[i]);
+                                    }
+                                    XFree(prop);
+                                }
+                            }
+                            got_targets = true;
+                        }
+                    }
+
+                    // Verify TARGETS contains only text/uri-list
+                    assert(targets_to_save.size() == 1);
+                    assert(targets_to_save[0] == uri_list_atom);
+
+                    // Manager probes text/plain to see if producer erroneously answers
+                    {
+                        XConvertSelection(dpy, cb_atom, plain_atom, sel_prop_atom, mgr_win, CurrentTime);
+                        XFlush(dpy);
+
+                        bool got_reply = false;
+                        while (!got_reply) {
+                            XNextEvent(dpy, &notify_ev);
+                            if (notify_ev.type == SelectionNotify && notify_ev.xselection.target == plain_atom) {
+                                if (notify_ev.xselection.property != None) {
+                                    mgr_saw_plain_text = true;
+                                    XDeleteProperty(dpy, mgr_win, sel_prop_atom);
+                                }
+                                got_reply = true;
+                            }
+                        }
+                    }
+
+                    // Manager queries text/uri-list
+                    {
+                        XConvertSelection(dpy, cb_atom, uri_list_atom, sel_prop_atom, mgr_win, CurrentTime);
+                        XFlush(dpy);
+
+                        bool got_data = false;
+                        while (!got_data) {
+                            XNextEvent(dpy, &notify_ev);
+                            if (notify_ev.type == SelectionNotify && notify_ev.xselection.target == uri_list_atom) {
+                                if (notify_ev.xselection.property != None) {
+                                    Atom actual_type;
+                                    int actual_format;
+                                    unsigned long nitems, bytes_after;
+                                    unsigned char* prop = nullptr;
+                                    XGetWindowProperty(dpy, mgr_win, sel_prop_atom, 0, ~0, True, AnyPropertyType,
+                                                       &actual_type, &actual_format, &nitems, &bytes_after, &prop);
+                                    if (prop) {
+                                        mgr_saved_uri_list.assign((char*)prop, nitems);
+                                        XFree(prop);
+                                    }
+                                }
+                                got_data = true;
+                            }
+                        }
+                    }
+
+                    // Respond to SAVE_TARGETS SelectionRequest with success
+                    XSelectionEvent resp = {0};
+                    resp.type = SelectionNotify;
+                    resp.display = req->display;
+                    resp.requestor = req->requestor;
+                    resp.selection = req->selection;
+                    resp.target = req->target;
+                    resp.property = req->property;
+                    resp.time = req->time;
+                    XSendEvent(dpy, req->requestor, False, 0, (XEvent*)&resp);
+                    XFlush(dpy);
+
+                    save_targets_done = true;
+                }
+            }
+        }
+
+        manager_success = true;
+        while (!manager_done) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+
+        XSetSelectionOwner(dpy, cm_atom, None, CurrentTime);
+        XDestroyWindow(dpy, mgr_win);
+        XCloseDisplay(dpy);
+    });
+
+    // Wait until manager thread is ready
+    while (!manager_ready) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+
+    // Thread P (Producer): initialize, persist, and teardown
+    {
+        struct_array_struct<utf8_string_struct> args;
+        args.Alloc(0);
+        Application_Init(args);
+
+        P_INSTANCE(WindowHandle) win = CrystalWindow_CreateSimple(100, 100, "Persistence Producer Window");
+        assert(win != nullptr);
+        win->crystal_window->callbacks.on_clipboard_provide_chosen = on_files_provide_cb;
+
+        P_INSTANCE(DataInterchange) copy_data = DataInterchange_Create();
+        DataInterchange_FormatAdd(copy_data, "text/file-uri");
+
+        // Execute persistent copy
+        CrystalWindow_ClipboardCopyPersist(win, copy_data);
+
+        DataInterchange_Free(copy_data);
+
+        // Teardown application & window completely (simulating process exit)
+        delete TheApplication;
+        TheApplication = nullptr;
+    }
+
+    // Verify simulated manager results
+    assert(manager_success == true);
+    assert(!mgr_saw_plain_text);
+    assert(mgr_saved_uri_list.find("file:///home/jwc/Edge.txt") != std::string::npos);
+
+    manager_done = true;
+    manager_thread.join();
+
+    std::cout << "[TEST] test_x11_files_clipboard_persistence_with_manager PASSED." << std::endl;
+}
+
 #endif
 
 int main() {
@@ -562,6 +968,9 @@ int main() {
     test_x11_bmp_alias_roundtrip();
     test_x11_clipboard_persistence_without_manager();
     test_x11_clipboard_persistence_with_manager();
+    test_x11_files_advertisement_and_validation();
+    test_x11_files_selection_request_allowed_and_rejected();
+    test_x11_files_clipboard_persistence_with_manager();
 #endif
     std::cout << "=== ALL DATA INTERCHANGE TESTS PASSED ===" << std::endl;
     return 0;

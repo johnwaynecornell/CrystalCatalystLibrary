@@ -15,6 +15,7 @@
 
 #include "../CrystalApplication_X11.h"
 #include "DragProvide_X11.h"
+#include "Clipboard_X11.h"
 
 #ifdef mod_header
 #undef mod_header
@@ -1022,85 +1023,82 @@ namespace NewAge {
         }
 
         if (req->target == AppX11->atoms.targets) {
-            Atom *types = nullptr;
-            int num_types = 0;
+            if (drag_data != nullptr) {
+                Atom *types = nullptr;
+                int num_types = 0;
 
-            DataImterchange_AtomArrayFromFormats(drag_data, &types, &num_types);
+                DataImterchange_AtomArrayFromFormats(drag_data, &types, &num_types);
 
-            XChangeProperty(req->display, req->requestor, ev.property, XA_ATOM, 32, PropModeReplace, (P_ELEMENTS(uint8_t) )types, num_types);
-            if (types) delete[] types;
+                XChangeProperty(req->display, req->requestor, ev.property, XA_ATOM, 32, PropModeReplace, (P_ELEMENTS(uint8_t) )types, num_types);
+                if (types) delete[] types;
+            } else {
+                ev.property = None;
+            }
         } else if (drag_data != nullptr) {
             utf8_string_struct format = nullptr;
 
-            if (req->target == XInternAtom(req->display, "text/plain", False)) format = "text/plain";
-            else if (req->target == XInternAtom(req->display, "text/html", False)) format = "text/html";
-            else if (req->target == XInternAtom(req->display, "text/uri-list", False)) format = "text/file-uri";
-            else if (req->target == XInternAtom(req->display, "image/png", False)) format = "image/png";
-            else if (req->target == XInternAtom(req->display, "image/bmp", False)) format = "image/bmp";
-            else if (req->target == XInternAtom(req->display, "image/x-bmp", False)) format = "image/bmp";
-            else if (req->target == XInternAtom(req->display, "image/x-MS-bmp", False)) format = "image/bmp";
-            else
-            {
-                format = XGetAtomName(req->display, req->target);
-                if (format == nullptr) {
-                    std::cerr << mod_header() << "Unknown target format: " << XGetAtomName(req->display, req->target) << std::endl;
-                    ev.property = None;
-                    XSendEvent(req->display, req->requestor, False, 0, (P_INSTANCE(XEvent) )&ev);
-                    return true;
+            if (!ClipboardTargetWasAdvertised(req->display, drag_data, req->target, &format)) {
+                {
+                    std::ostringstream oss;
+                    oss << mod_header() << "SelectionRequest target " << (target.c_str ? target.c_str : "(null)") << " rejected: not advertised";
+                    Application_DiagnosticMessage(oss.str().c_str());
                 }
-            }
-
-            {
-                std::ostringstream oss;
-                oss << mod_header() << "Chosen format: " << format;
-                Application_DiagnosticMessage(oss.str().c_str());
-            }
-
-            if (drag_data->provide_chosen) {
-                drag_data->provide_chosen(drag_data, format);
-            }
-
-            P_INSTANCE(void) d = nullptr;
-            size_t sz = 0;
-            DataInterchange_SelectionReveal(drag_data, nullptr, &d, &sz);
-
-            {
-                std::ostringstream oss;
-                oss << mod_header() << "Providing data for format: " << format;
-                Application_DiagnosticMessage(oss.str().c_str());
-            }
-            if (strcmp(format, "text/file-uri") == 0) {
-                std::string uri_list((char *)d, sz);
-                std::istringstream stream(uri_list);
-                std::string line;
-                std::string cleaned_uri_list;
-
-                while (std::getline(stream, line)) {
-                    {
-                        std::ostringstream oss;
-                        oss << mod_header() << "line = \"" << line << "\"";
-                        Application_DiagnosticMessage(oss.str().c_str());
-                    }
-
-                    if (!line.empty()) {
-                        if (line.find("://") == std::string::npos) {
-                            line = "file://" + line; // Add 'file://' prefix if not present
-                        }
-                        cleaned_uri_list += line + "\n";
-                    }
+                ev.property = None;
+            } else {
+                {
+                    std::ostringstream oss;
+                    oss << mod_header() << "Chosen format: " << format;
+                    Application_DiagnosticMessage(oss.str().c_str());
                 }
+
+                if (drag_data->provide_chosen) {
+                    drag_data->provide_chosen(drag_data, format);
+                }
+
+                P_INSTANCE(void) d = nullptr;
+                size_t sz = 0;
+                DataInterchange_SelectionReveal(drag_data, nullptr, &d, &sz);
 
                 {
                     std::ostringstream oss;
-                    oss << mod_header() << "Cleaned URI list: " << cleaned_uri_list;
+                    oss << mod_header() << "Providing data for format: " << format;
                     Application_DiagnosticMessage(oss.str().c_str());
                 }
-                XChangeProperty(req->display, req->requestor, ev.property, req->target, 8, PropModeReplace, (P_ELEMENTS(uint8_t) )cleaned_uri_list.c_str(), (int) cleaned_uri_list.size());
-            } else {
-                XChangeProperty(req->display, req->requestor, ev.property, req->target, 8, PropModeReplace, (P_ELEMENTS(uint8_t) )d, (int) sz);
+                if (strcmp(format, "text/file-uri") == 0) {
+                    std::string uri_list((char *)d, sz);
+                    std::istringstream stream(uri_list);
+                    std::string line;
+                    std::string cleaned_uri_list;
+
+                    while (std::getline(stream, line)) {
+                        {
+                            std::ostringstream oss;
+                            oss << mod_header() << "line = \"" << line << "\"";
+                            Application_DiagnosticMessage(oss.str().c_str());
+                        }
+
+                        if (!line.empty()) {
+                            if (line.find("://") == std::string::npos) {
+                                line = "file://" + line; // Add 'file://' prefix if not present
+                            }
+                            cleaned_uri_list += line + "\n";
+                        }
+                    }
+
+                    {
+                        std::ostringstream oss;
+                        oss << mod_header() << "Cleaned URI list: " << cleaned_uri_list;
+                        Application_DiagnosticMessage(oss.str().c_str());
+                    }
+                    XChangeProperty(req->display, req->requestor, ev.property, req->target, 8, PropModeReplace, (P_ELEMENTS(uint8_t) )cleaned_uri_list.c_str(), (int) cleaned_uri_list.size());
+                } else {
+                    XChangeProperty(req->display, req->requestor, ev.property, req->target, 8, PropModeReplace, (P_ELEMENTS(uint8_t) )d, (int) sz);
+                }
             }
         } else {
-            std::cerr << mod_header() << "No current_drag_provide_data available" << std::endl;
+            std::ostringstream oss;
+            oss << mod_header() << "No current_drag_provide_data / clipboard data available";
+            Application_DiagnosticMessage(oss.str().c_str());
             ev.property = None;
         }
         XSendEvent(req->display, req->requestor, False, 0, (P_INSTANCE(XEvent) )&ev);
