@@ -31,7 +31,8 @@ public static class SmokeCases
         new("files/file-list relative entries -> file", Case11_FilesFileListRelativeEntriesToFile),
         new("files/console invalid path error", Case12_FilesConsoleInvalidPathError),
         new("files/directory expansion -> directory", Case13_FilesDirectoryExpansionToDirectory),
-        new("files/path exact-file -> console", Case14_FilesPathExactFileToConsole)
+        new("files/path exact-file -> console", Case14_FilesPathExactFileToConsole),
+        new("files advertisement and special chars roundtrip", Case15_FilesAdvertisementAndSpecialCharsRoundTrip)
     };
 
     public static CaseResult Case1_TextStringToFile(string exe, SmokeFixture fixture, TimeSpan timeout)
@@ -749,5 +750,69 @@ public static class SmokeCases
         }
 
         return new CaseResult("files/path exact-file -> console", true, "Exact file copied via path endpoint and pasted to console as normalized absolute path", runs, sw.Elapsed);
+    }
+
+    public static CaseResult Case15_FilesAdvertisementAndSpecialCharsRoundTrip(string exe, SmokeFixture fixture, TimeSpan timeout)
+    {
+        var sw = Stopwatch.StartNew();
+        var runs = new List<RunResult>();
+
+        string fileName = "clip flow # ünicode %.txt";
+        string targetFile = fixture.CreateTextFile(fileName, "strong fixture content for special char uri encoding test");
+        string normalizedExpected = Path.GetFullPath(targetFile);
+
+        // 1. Copy files path <fixture-file>
+        var copyRun = ProcessRunner.Run(exe, new[] { "copy", "files", "path", targetFile }, timeout: timeout);
+        runs.Add(copyRun);
+
+        if (copyRun.ExitCode != 0 || copyRun.TimedOut)
+        {
+            sw.Stop();
+            return new CaseResult("files advertisement and special chars roundtrip", false, $"Copy exact file via path failed (exit {copyRun.ExitCode}, timedOut={copyRun.TimedOut}, stderr={copyRun.StdErr})", runs, sw.Elapsed);
+        }
+
+        // 2. Show avail: must contain "files" and must NOT contain "text"
+        var availRun = ProcessRunner.Run(exe, new[] { "show", "avail" }, timeout: timeout);
+        runs.Add(availRun);
+
+        if (availRun.ExitCode != 0 || availRun.TimedOut)
+        {
+            sw.Stop();
+            return new CaseResult("files advertisement and special chars roundtrip", false, $"Show avail failed (exit {availRun.ExitCode}, timedOut={availRun.TimedOut}, stderr={availRun.StdErr})", runs, sw.Elapsed);
+        }
+
+        var availLines = availRun.StdOut.Split('\n').Select(l => l.Trim()).Where(l => !string.IsNullOrEmpty(l)).ToList();
+
+        if (!availLines.Contains("files"))
+        {
+            sw.Stop();
+            return new CaseResult("files advertisement and special chars roundtrip", false, $"Show avail did not report 'files'. StdOut: {availRun.StdOut}, StdErr: {availRun.StdErr}", runs, sw.Elapsed);
+        }
+
+        if (availLines.Contains("text"))
+        {
+            sw.Stop();
+            return new CaseResult("files advertisement and special chars roundtrip", false, $"Show avail incorrectly reported 'text' alongside 'files'. StdOut: {availRun.StdOut}", runs, sw.Elapsed);
+        }
+
+        // 3. Paste files console: must return original normalized path
+        var pasteRun = ProcessRunner.Run(exe, new[] { "paste", "files", "console" }, timeout: timeout);
+        runs.Add(pasteRun);
+
+        sw.Stop();
+        if (pasteRun.ExitCode != 0 || pasteRun.TimedOut)
+        {
+            return new CaseResult("files advertisement and special chars roundtrip", false, $"Paste files console failed (exit {pasteRun.ExitCode}, timedOut={pasteRun.TimedOut}, stderr={pasteRun.StdErr})", runs, sw.Elapsed);
+        }
+
+        string stdout = pasteRun.StdOut.Trim();
+        var pasteLines = stdout.Split('\n').Select(l => l.Trim()).Where(l => !string.IsNullOrEmpty(l)).ToList();
+
+        if (pasteLines.Count != 1 || pasteLines[0] != normalizedExpected)
+        {
+            return new CaseResult("files advertisement and special chars roundtrip", false, $"Expected exactly 1 line matching '{normalizedExpected}', got {pasteLines.Count} lines: {stdout}", runs, sw.Elapsed);
+        }
+
+        return new CaseResult("files advertisement and special chars roundtrip", true, "Files advertised exclusively (without plain text fallback) and special character filename roundtrips perfectly", runs, sw.Elapsed);
     }
 }

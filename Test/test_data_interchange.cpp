@@ -13,6 +13,7 @@
 #include "../Platform/Linux/CrystalApplication_X11.h"
 #include "../Platform/Linux/Windowing/CrystalWindow_X11.h"
 #include "../Platform/Linux/Windowing/Clipboard_X11.h"
+#include "../Platform/Linux/Windowing/FileUri_Linux.h"
 #endif
 
 using namespace NewAge;
@@ -956,6 +957,97 @@ void test_x11_files_clipboard_persistence_with_manager() {
     std::cout << "[TEST] test_x11_files_clipboard_persistence_with_manager PASSED." << std::endl;
 }
 
+void test_native_file_uri_helpers() {
+    std::cout << "[TEST] Running test_native_file_uri_helpers..." << std::endl;
+
+    // 1. Plain path roundtrip
+    {
+        std::string path = "/home/test/file.txt";
+        std::string uri = LocalPathToFileUri(path);
+        assert(uri == "file:///home/test/file.txt");
+        std::string decoded;
+        assert(FileUriToLocalPath(uri, decoded));
+        assert(decoded == path);
+    }
+
+    // 2. Spaces
+    {
+        std::string path = "/home/test/a b.txt";
+        std::string uri = LocalPathToFileUri(path);
+        assert(uri == "file:///home/test/a%20b.txt");
+        std::string decoded;
+        assert(FileUriToLocalPath(uri, decoded));
+        assert(decoded == path);
+    }
+
+    // 3. Reserved characters (#, %)
+    {
+        std::string path = "/tmp/clip flow # %.txt";
+        std::string uri = LocalPathToFileUri(path);
+        assert(uri == "file:///tmp/clip%20flow%20%23%20%25.txt");
+        std::string decoded;
+        assert(FileUriToLocalPath(uri, decoded));
+        assert(decoded == path);
+    }
+
+    // 4. UTF-8 filename
+    {
+        std::string path = "/tmp/ünicode.txt";
+        std::string uri = LocalPathToFileUri(path);
+        assert(uri == "file:///tmp/%C3%BCnicode.txt");
+        std::string decoded;
+        assert(FileUriToLocalPath(uri, decoded));
+        assert(decoded == path);
+    }
+
+    // 5. Multiple URI-list entries, CRLF and line splitting
+    {
+        std::string local_paths = "/home/test/one.txt\n/home/test/two.txt\n";
+        std::string uri_list = LocalPathsToUriList(local_paths);
+        assert(uri_list == "file:///home/test/one.txt\r\nfile:///home/test/two.txt\r\n");
+
+        std::string roundtrip_paths = UriListToLocalPaths(uri_list);
+        assert(roundtrip_paths == "/home/test/one.txt\n/home/test/two.txt\n");
+    }
+
+    // 6. Comments in URI-list
+    {
+        std::string uri_list_with_comments = "# A comment line\r\nfile:///home/test/file.txt\r\n# Another comment\r\n";
+        std::string decoded_paths = UriListToLocalPaths(uri_list_with_comments);
+        assert(decoded_paths == "/home/test/file.txt\n");
+    }
+
+    // 7. localhost normalization
+    {
+        std::string localhost_uri = "file://localhost/home/test/file.txt";
+        std::string decoded_path;
+        assert(FileUriToLocalPath(localhost_uri, decoded_path));
+        assert(decoded_path == "/home/test/file.txt");
+    }
+
+    // 8. Rejection of remote hosts and non-file schemes
+    {
+        std::string remote_uri = "file://remotehost/share/file.txt";
+        std::string decoded_path;
+        assert(!FileUriToLocalPath(remote_uri, decoded_path));
+
+        std::string http_uri = "http://example.com/file.txt";
+        assert(!FileUriToLocalPath(http_uri, decoded_path));
+
+        std::string raw_path = "/home/test/file.txt";
+        assert(!FileUriToLocalPath(raw_path, decoded_path));
+    }
+
+    // 9. Do not double-encode existing file:// URI
+    {
+        std::string existing_uri = "file:///home/test/a%20b.txt";
+        std::string re_encoded = LocalPathToFileUri(existing_uri);
+        assert(re_encoded == existing_uri);
+    }
+
+    std::cout << "[TEST] test_native_file_uri_helpers PASSED." << std::endl;
+}
+
 #endif
 
 int main() {
@@ -963,6 +1055,7 @@ int main() {
     test_common_data_interchange_formats();
     test_bmp_dib_conversion_invariants();
 #if defined(__linux__)
+    test_native_file_uri_helpers();
     test_x11_atom_format_mapping_and_aliases();
     test_x11_clipboard_image_roundtrip();
     test_x11_bmp_alias_roundtrip();

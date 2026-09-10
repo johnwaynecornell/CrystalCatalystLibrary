@@ -1,4 +1,5 @@
 #include "Clipboard_Wayland.h"
+#include "FileUri_Linux.h"
 
 #include <iostream>
 #include <sstream>
@@ -127,17 +128,8 @@ namespace NewAge {
         if (!pipe) return false;
 
         if (target_format == "text/file-uri") {
-            std::string uris((const char*)d, sz);
-            std::string cleaned;
-            std::istringstream stream(uris);
-            std::string line;
-            while (std::getline(stream, line)) {
-                if (!line.empty() && line.back() == '\r') line.pop_back();
-                if (!line.empty()) {
-                    cleaned += line + "\r\n";
-                }
-            }
-            fwrite(cleaned.c_str(), 1, cleaned.size(), pipe);
+            std::string uri_list = LocalPathsToUriList((const char*)d, sz);
+            fwrite(uri_list.c_str(), 1, uri_list.size(), pipe);
         } else {
             fwrite(d, 1, sz, pipe);
         }
@@ -151,11 +143,22 @@ namespace NewAge {
         FILE* pipe = popen("wl-paste --list-types 2>/dev/null", "r");
         if (!pipe) return false;
         char buf[256];
-        bool anyAdded = false;
+        std::vector<std::string> raw_types;
+        bool has_uri_list = false;
         while (fgets(buf, sizeof(buf), pipe) != nullptr) {
             std::string line(buf);
             while (!line.empty() && (line.back() == '\n' || line.back() == '\r')) line.pop_back();
             if (line.empty()) continue;
+            if (line == "text/uri-list") {
+                has_uri_list = true;
+            }
+            raw_types.push_back(line);
+        }
+        int status = pclose(pipe);
+        if (status != 0) return false;
+
+        bool anyAdded = false;
+        for (const auto& line : raw_types) {
             if (line == "text/uri-list") {
                 if (!DataInterchange_FormatExists(data, "text/file-uri")) {
                     DataInterchange_FormatAdd(data, "text/file-uri");
@@ -166,6 +169,10 @@ namespace NewAge {
                     DataInterchange_FormatAdd(data, "image/bmp");
                     anyAdded = true;
                 }
+            } else if (has_uri_list && (line == "text/plain" || line == "text/plain;charset=utf-8" ||
+                                        line == "UTF8_STRING" || line == "STRING" || line == "TEXT")) {
+                // When text/uri-list is present, ignore plain-text fallback types synthesized by wl-copy
+                continue;
             } else {
                 if (!DataInterchange_FormatExists(data, (utf8_string_struct)line.c_str())) {
                     DataInterchange_FormatAdd(data, (utf8_string_struct)line.c_str());
@@ -173,8 +180,7 @@ namespace NewAge {
                 }
             }
         }
-        int status = pclose(pipe);
-        return (status == 0 && anyAdded);
+        return anyAdded;
     }
 
     bool Clipboard_Wayland::Select(P_INSTANCE(DataInterchange) data, utf8_string_struct format) {
@@ -220,7 +226,12 @@ namespace NewAge {
         }
 
         if (!buffer.empty()) {
-            DataInterchange_SelectionSet(data, format, buffer.data(), buffer.size());
+            if (strcmp(fmt_str, "text/file-uri") == 0) {
+                std::string local_paths = UriListToLocalPaths((const char*)buffer.data(), buffer.size());
+                DataInterchange_SelectionSet(data, format, (void*)local_paths.data(), local_paths.size());
+            } else {
+                DataInterchange_SelectionSet(data, format, buffer.data(), buffer.size());
+            }
             if (data->m_handle && data->m_handle->crystal_window && data->m_handle->crystal_window->callbacks.on_clipboard_receive_data) {
                 data->m_handle->crystal_window->callbacks.on_clipboard_receive_data(data->m_handle, data);
             }

@@ -16,6 +16,7 @@
 #include "../CrystalApplication_X11.h"
 #include "DragProvide_X11.h"
 #include "Clipboard_X11.h"
+#include "FileUri_Linux.h"
 
 #ifdef mod_header
 #undef mod_header
@@ -727,31 +728,13 @@ namespace NewAge {
                     DataInterchange_SelectionSet(current_data, format, prop, nitems);
                     XFree(prop);
                 } else if (strcmp("text/uri-list", format) == 0) {
-                    utf8_string_struct uri_list;
-                    uri_list.Alloc(nitems);
-
-                    for (int i=0; i<nitems && ((char *) prop)[i]; i++)
-                        uri_list.c_str[i] = ((char *) prop)[i];
-
-
-                    //std::string uri_list(std::string((char *) prop), nitems);
-                    std::istringstream stream(uri_list.c_str);
-                    std::string line;
-                    std::string cleaned_uri_list;
-
-                    while (std::getline(stream, line)) {
-                        if (line.rfind("file://", 0) == 0) {
-                            line = line.substr(7); // Remove 'file://' prefix
-                        }
-                        cleaned_uri_list += line + "\n";
-                    }
-
+                    std::string local_paths = UriListToLocalPaths((const char*)prop, nitems);
                     {
                         std::ostringstream oss;
-                        oss << mod_header() << "Setting selection for text/uri-list: " << cleaned_uri_list;
+                        oss << mod_header() << "Setting selection for text/uri-list: " << local_paths;
                         Application_DiagnosticMessage(oss.str().c_str());
                     }
-                    DataInterchange_SelectionSet(current_data, "text/file-uri", cleaned_uri_list.data(), cleaned_uri_list.size());
+                    DataInterchange_SelectionSet(current_data, "text/file-uri", (void*)local_paths.data(), local_paths.size());
                     XFree(prop);
                 } else if (strcmp("image/png", format) == 0) {
                     {
@@ -1065,32 +1048,13 @@ namespace NewAge {
                     Application_DiagnosticMessage(oss.str().c_str());
                 }
                 if (strcmp(format, "text/file-uri") == 0) {
-                    std::string uri_list((char *)d, sz);
-                    std::istringstream stream(uri_list);
-                    std::string line;
-                    std::string cleaned_uri_list;
-
-                    while (std::getline(stream, line)) {
-                        {
-                            std::ostringstream oss;
-                            oss << mod_header() << "line = \"" << line << "\"";
-                            Application_DiagnosticMessage(oss.str().c_str());
-                        }
-
-                        if (!line.empty()) {
-                            if (line.find("://") == std::string::npos) {
-                                line = "file://" + line; // Add 'file://' prefix if not present
-                            }
-                            cleaned_uri_list += line + "\n";
-                        }
-                    }
-
+                    std::string uri_list = LocalPathsToUriList((const char*)d, sz);
                     {
                         std::ostringstream oss;
-                        oss << mod_header() << "Cleaned URI list: " << cleaned_uri_list;
+                        oss << mod_header() << "Converted URI list: " << uri_list;
                         Application_DiagnosticMessage(oss.str().c_str());
                     }
-                    XChangeProperty(req->display, req->requestor, ev.property, req->target, 8, PropModeReplace, (P_ELEMENTS(uint8_t) )cleaned_uri_list.c_str(), (int) cleaned_uri_list.size());
+                    XChangeProperty(req->display, req->requestor, ev.property, req->target, 8, PropModeReplace, (P_ELEMENTS(uint8_t) )uri_list.c_str(), (int) uri_list.size());
                 } else {
                     XChangeProperty(req->display, req->requestor, ev.property, req->target, 8, PropModeReplace, (P_ELEMENTS(uint8_t) )d, (int) sz);
                 }
