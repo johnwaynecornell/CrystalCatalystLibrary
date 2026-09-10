@@ -37,18 +37,6 @@ public class ClipContext : StandardContext
         return result;
     }
     
-    public ClipType Paste(ClipType type)
-    {
-        ClipUtilityWindow.Paste(this, type);
-        return type;
-    }
-
-    public ClipType Paste(ClipType type, ClipEndpoint endpoint)
-    {
-        ClipUtilityWindow.Paste(this, type, endpoint);
-        return type;
-    }
-    
     public void Copy(ClipType type)
     {
         ClipUtilityWindow.Copy(this, type);
