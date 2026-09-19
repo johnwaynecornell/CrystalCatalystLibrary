@@ -70,7 +70,28 @@ public class PathEndpointTests : IDisposable
         Assert.NotNull(files.Identity);
         // Desired semantics: copy that one directory as a single filesystem entry, not its expanded children
         Assert.Single(files.Identity);
-        Assert.Equal(Path.GetFullPath(subDir), files.Identity[0]);
+        Assert.Equal(Path.TrimEndingDirectorySeparator(Path.GetFullPath(subDir)), files.Identity[0]);
+    }
+
+    [Fact]
+    public void Read_Files_ExactDirectoryWithTrailingSlash_CleansesTrailingSeparator()
+    {
+        string subDir = Path.Combine(_tempDirectory, "target_slash_sub");
+        Directory.CreateDirectory(subDir);
+
+        string inputWithTrailingSlash = subDir + Path.DirectorySeparatorChar;
+        var endpoint = ClipEndpoint.path(inputWithTrailingSlash);
+        var files = new ClipType.Files();
+        using var testCtx = new TestClipContext();
+
+        endpoint.Read(testCtx.Context, files);
+
+        Assert.Equal(0, testCtx.Status);
+        Assert.NotNull(files.Identity);
+        Assert.Single(files.Identity);
+        string expected = Path.TrimEndingDirectorySeparator(Path.GetFullPath(subDir));
+        Assert.Equal(expected, files.Identity[0]);
+        Assert.False(files.Identity[0].EndsWith('/') || files.Identity[0].EndsWith('\\'));
     }
 
     [Fact]

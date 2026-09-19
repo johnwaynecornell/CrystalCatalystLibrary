@@ -115,7 +115,7 @@ public abstract class ClipEndpoint
                     foreach (string line in rawLines)
                     {
                         if (string.IsNullOrWhiteSpace(line)) continue;
-                        string fullPath = System.IO.Path.GetFullPath(line);
+                        string fullPath = ClipType.Files.NormalizePath(line);
                         if (!System.IO.File.Exists(fullPath) && !System.IO.Directory.Exists(fullPath))
                         {
                             context.ErrorOutput.WriteLine($"Path not found: {line}");
@@ -331,7 +331,7 @@ public abstract class ClipEndpoint
                     List<string> normalizedPaths = new();
                     foreach (string raw in lines)
                     {
-                        string fullPath = System.IO.Path.GetFullPath(raw);
+                        string fullPath = ClipType.Files.NormalizePath(raw);
                         if (!System.IO.File.Exists(fullPath) && !System.IO.Directory.Exists(fullPath))
                         {
                             context.ErrorOutput.WriteLine($"Path not found: {raw}");
@@ -502,7 +502,7 @@ public abstract class ClipEndpoint
                 case ClipType.Files files:
                     if (System.IO.File.Exists(path))
                     {
-                        files.Identity = new List<string> { System.IO.Path.GetFullPath(path) };
+                        files.Identity = new List<string> { ClipType.Files.NormalizePath(path) };
                     }
                     else if (System.IO.Directory.Exists(path))
                     {
@@ -510,7 +510,7 @@ public abstract class ClipEndpoint
                         List<string> normalized = new(rawFiles.Length);
                         foreach (string f in rawFiles)
                         {
-                            normalized.Add(System.IO.Path.GetFullPath(f));
+                            normalized.Add(ClipType.Files.NormalizePath(f));
                         }
                         files.Identity = normalized;
                     }
@@ -530,7 +530,7 @@ public abstract class ClipEndpoint
                                 List<string> normalized = new(rawFiles.Length);
                                 foreach (string f in rawFiles)
                                 {
-                                    normalized.Add(System.IO.Path.GetFullPath(f));
+                                    normalized.Add(ClipType.Files.NormalizePath(f));
                                 }
                                 files.Identity = normalized;
                                 return;
@@ -634,11 +634,11 @@ public abstract class ClipEndpoint
                 case ClipType.Files files:
                     if (System.IO.File.Exists(path))
                     {
-                        files.Identity = new List<string> { System.IO.Path.GetFullPath(path) };
+                        files.Identity = new List<string> { ClipType.Files.NormalizePath(path) };
                     }
                     else if (System.IO.Directory.Exists(path))
                     {
-                        files.Identity = new List<string> { System.IO.Path.GetFullPath(path) };
+                        files.Identity = new List<string> { ClipType.Files.NormalizePath(path) };
                     }
                     else
                     {
@@ -673,7 +673,7 @@ public abstract class ClipEndpoint
                                 List<string> normalized = new(rawEntries.Length);
                                 foreach (string f in rawEntries)
                                 {
-                                    normalized.Add(System.IO.Path.GetFullPath(f));
+                                    normalized.Add(ClipType.Files.NormalizePath(f));
                                 }
                                 files.Identity = normalized;
                                 return;

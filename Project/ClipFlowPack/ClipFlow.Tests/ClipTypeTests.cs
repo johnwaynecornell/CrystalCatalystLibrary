@@ -466,11 +466,27 @@ public class ClipTypeTests
     [InlineData("file:///home/user/my%20file.txt", "/home/user/my file.txt")]
     [InlineData("file:///home/user/caf%C3%A9.txt", "/home/user/café.txt")]
     [InlineData("/home/user/already_local.txt", "/home/user/already_local.txt")]
+    [InlineData("/home/user/my_folder/", "/home/user/my_folder")]
+    [InlineData("file:///home/user/my_folder/", "/home/user/my_folder")]
     public void Files_NormalizePathOrUri_HandlesVariousSchemes(string input, string expectedLocalPath)
     {
         string result = ClipType.Files.NormalizePathOrUri(input);
-        string expected = Path.GetFullPath(expectedLocalPath);
+        string expected = Path.TrimEndingDirectorySeparator(Path.GetFullPath(expectedLocalPath));
         Assert.Equal(expected, result);
+        Assert.False(result.EndsWith('/') || result.EndsWith('\\'));
+    }
+
+    [Fact]
+    public void Files_NormalizePath_CleansesTrailingSeparators()
+    {
+        string dirPath = Path.Combine(Path.GetTempPath(), "test_cleanse_dir");
+        string withSlash = dirPath + Path.DirectorySeparatorChar;
+
+        string normalized = ClipType.Files.NormalizePath(withSlash);
+        string expected = Path.TrimEndingDirectorySeparator(Path.GetFullPath(dirPath));
+
+        Assert.Equal(expected, normalized);
+        Assert.False(normalized.EndsWith('/') || normalized.EndsWith('\\'));
     }
 
     #endregion

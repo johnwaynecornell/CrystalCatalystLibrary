@@ -301,7 +301,7 @@ public abstract class ClipType
             StringWriter writer = new StringWriter();
             foreach (string s in Identity)
             {
-                writer.WriteLine(s);
+                writer.WriteLine(Path.TrimEndingDirectorySeparator(s));
             }
 
             return Encoding.UTF8.GetBytes(writer.ToString());
@@ -331,6 +331,12 @@ public abstract class ClipType
             }
         }
 
+        public static string NormalizePath(string path)
+        {
+            string fullPath = Path.GetFullPath(path);
+            return Path.TrimEndingDirectorySeparator(fullPath);
+        }
+
         public static string NormalizePathOrUri(string line)
         {
             string trimmed = line.Trim();
@@ -357,7 +363,7 @@ public abstract class ClipType
 
                 if (Uri.TryCreate(trimmed, UriKind.Absolute, out Uri? uri) && uri.IsFile)
                 {
-                    return Path.GetFullPath(uri.LocalPath);
+                    return NormalizePath(uri.LocalPath);
                 }
 
                 string raw = trimmed.Substring(5);
@@ -370,10 +376,10 @@ public abstract class ClipType
                 {
                     raw = "/" + raw;
                 }
-                return Path.GetFullPath(raw);
+                return NormalizePath(raw);
             }
 
-            return Path.GetFullPath(line);
+            return NormalizePath(line);
         }
     }
     

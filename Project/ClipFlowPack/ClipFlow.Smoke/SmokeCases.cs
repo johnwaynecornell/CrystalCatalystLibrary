@@ -35,7 +35,8 @@ public static class SmokeCases
         new("files advertisement and special chars roundtrip", Case15_FilesAdvertisementAndSpecialCharsRoundTrip),
         new("files/path exact-directory -> console", Case16_FilesPathExactDirectoryToConsole),
         new("files/path wildcard -> console", Case17_FilesPathWildcardToConsole),
-        new("files/path wildcard no-match -> error", Case18_FilesPathWildcardNoMatchError)
+        new("files/path wildcard no-match -> error", Case18_FilesPathWildcardNoMatchError),
+        new("files/path exact-directory trailing slash -> console", Case19_FilesPathExactDirectoryTrailingSlashToConsole)
     };
 
     public static CaseResult Case1_TextStringToFile(string exe, SmokeFixture fixture, TimeSpan timeout)
@@ -921,5 +922,49 @@ public static class SmokeCases
         }
 
         return new CaseResult("files/path wildcard no-match -> error", true, "Non-matching wildcard produced non-zero exit code and validation error", runs, sw.Elapsed);
+    }
+
+    public static CaseResult Case19_FilesPathExactDirectoryTrailingSlashToConsole(string exe, SmokeFixture fixture, TimeSpan timeout)
+    {
+        var sw = Stopwatch.StartNew();
+        var runs = new List<RunResult>();
+        string targetDir = fixture.GetPath("case19_slash_dir");
+        Directory.CreateDirectory(targetDir);
+        fixture.CreateTextFile(Path.Combine("case19_slash_dir", "dummy.txt"), "d");
+        string inputPathWithSlash = targetDir + Path.DirectorySeparatorChar;
+        string normalizedExpected = Path.TrimEndingDirectorySeparator(Path.GetFullPath(targetDir));
+
+        var copyRun = ProcessRunner.Run(exe, new[] { "copy", "files", "path", inputPathWithSlash }, timeout: timeout);
+        runs.Add(copyRun);
+
+        if (copyRun.ExitCode != 0 || copyRun.TimedOut)
+        {
+            sw.Stop();
+            return new CaseResult("files/path exact-directory trailing slash -> console", false, $"Copy directory with trailing slash via path failed (exit {copyRun.ExitCode}, timedOut={copyRun.TimedOut})", runs, sw.Elapsed);
+        }
+
+        var pasteRun = ProcessRunner.Run(exe, new[] { "paste", "files", "console" }, timeout: timeout);
+        runs.Add(pasteRun);
+
+        sw.Stop();
+        if (pasteRun.ExitCode != 0 || pasteRun.TimedOut)
+        {
+            return new CaseResult("files/path exact-directory trailing slash -> console", false, $"Paste files console failed (exit {pasteRun.ExitCode}, timedOut={pasteRun.TimedOut})", runs, sw.Elapsed);
+        }
+
+        string stdout = pasteRun.StdOut.Trim();
+        var lines = stdout.Split('\n').Select(l => l.Trim()).Where(l => !string.IsNullOrEmpty(l)).ToList();
+
+        if (lines.Count != 1 || lines[0] != normalizedExpected)
+        {
+            return new CaseResult("files/path exact-directory trailing slash -> console", false, $"Expected exactly 1 line matching directory without trailing slash '{normalizedExpected}', got {lines.Count} lines: {stdout}", runs, sw.Elapsed);
+        }
+
+        if (lines[0].EndsWith('/') || lines[0].EndsWith('\\'))
+        {
+            return new CaseResult("files/path exact-directory trailing slash -> console", false, $"Pasted output retained trailing path separator: {lines[0]}", runs, sw.Elapsed);
+        }
+
+        return new CaseResult("files/path exact-directory trailing slash -> console", true, "Exact directory with trailing slash cleansed of trailing path separator before entering clipboard", runs, sw.Elapsed);
     }
 }
