@@ -1,6 +1,9 @@
 using System;
 using System.IO;
 using ClipFlow.Format;
+using Xunit;
+
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
 
 namespace ClipFlow.Tests;
 

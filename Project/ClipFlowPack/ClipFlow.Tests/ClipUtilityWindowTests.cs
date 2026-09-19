@@ -6,6 +6,7 @@ using Xunit;
 
 namespace ClipFlow.Tests;
 
+[Collection("ClipboardTests")]
 public class ClipUtilityWindowTests
 {
     private class TrackingEndpoint : ClipEndpoint

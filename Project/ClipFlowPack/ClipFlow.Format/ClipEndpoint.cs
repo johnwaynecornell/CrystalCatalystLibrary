@@ -34,7 +34,7 @@ public abstract class ClipEndpoint
         [KV_FA(FluentAttribute.Help, "a file, directory, or wildcard path")]
         string path)
     {
-        return new Directory(path);
+        return new Path(path);
     }
 
     [FluentMethod("string")]
@@ -115,7 +115,7 @@ public abstract class ClipEndpoint
                     foreach (string line in rawLines)
                     {
                         if (string.IsNullOrWhiteSpace(line)) continue;
-                        string fullPath = Path.GetFullPath(line);
+                        string fullPath = System.IO.Path.GetFullPath(line);
                         if (!System.IO.File.Exists(fullPath) && !System.IO.Directory.Exists(fullPath))
                         {
                             context.ErrorOutput.WriteLine($"Path not found: {line}");
@@ -141,7 +141,7 @@ public abstract class ClipEndpoint
 
         private static SKEncodedImageFormat GetImageFormatFromPath(string path)
         {
-            string extension = Path.GetExtension(path).ToLowerInvariant();
+            string extension = System.IO.Path.GetExtension(path).ToLowerInvariant();
             return extension switch
             {
                 ".jpg" or ".jpeg" => SKEncodedImageFormat.Jpeg,
@@ -331,7 +331,7 @@ public abstract class ClipEndpoint
                     List<string> normalizedPaths = new();
                     foreach (string raw in lines)
                     {
-                        string fullPath = Path.GetFullPath(raw);
+                        string fullPath = System.IO.Path.GetFullPath(raw);
                         if (!System.IO.File.Exists(fullPath) && !System.IO.Directory.Exists(fullPath))
                         {
                             context.ErrorOutput.WriteLine($"Path not found: {raw}");
@@ -367,8 +367,8 @@ public abstract class ClipEndpoint
                 return;
             }
 
-            string path = Path.Combine(
-                Path.GetTempPath(),
+            string path = System.IO.Path.Combine(
+                System.IO.Path.GetTempPath(),
                 $"clipflow-{Guid.NewGuid():N}.png");
 
             using (SKData data =
@@ -396,7 +396,7 @@ public abstract class ClipEndpoint
 
         public new string path;
 
-        public void CopyHelper(string src, string dst)
+        public static void CopyHelper(string src, string dst)
         {
             if (System.IO.Directory.Exists(src))
             {
@@ -408,18 +408,18 @@ public abstract class ClipEndpoint
 
                 foreach (string directory in System.IO.Directory.GetDirectories(src))
                 {
-                    string newDst = Path.Combine(
+                    string newDst = System.IO.Path.Combine(
                         dst,
-                        Path.GetFileName(directory));
+                        System.IO.Path.GetFileName(directory));
 
                     CopyHelper(directory, newDst);
                 }
 
                 foreach (string file in System.IO.Directory.GetFiles(src))
                 {
-                    string newDst = Path.Combine(
+                    string newDst = System.IO.Path.Combine(
                         dst,
-                        Path.GetFileName(file));
+                        System.IO.Path.GetFileName(file));
 
                     CopyHelper(file, newDst);
                 }
@@ -454,8 +454,8 @@ public abstract class ClipEndpoint
                         System.IO.Directory.CreateDirectory(path);
                         foreach (string file in files.Identity)
                         {
-                            string fileName = Path.GetFileName(file);
-                            string destPath = Path.Combine(path, fileName);
+                            string fileName = System.IO.Path.GetFileName(file);
+                            string destPath = System.IO.Path.Combine(path, fileName);
 
                             try
                             {
@@ -502,7 +502,7 @@ public abstract class ClipEndpoint
                 case ClipType.Files files:
                     if (System.IO.File.Exists(path))
                     {
-                        files.Identity = new List<string> { Path.GetFullPath(path) };
+                        files.Identity = new List<string> { System.IO.Path.GetFullPath(path) };
                     }
                     else if (System.IO.Directory.Exists(path))
                     {
@@ -510,17 +510,17 @@ public abstract class ClipEndpoint
                         List<string> normalized = new(rawFiles.Length);
                         foreach (string f in rawFiles)
                         {
-                            normalized.Add(Path.GetFullPath(f));
+                            normalized.Add(System.IO.Path.GetFullPath(f));
                         }
                         files.Identity = normalized;
                     }
                     else
                     {
-                        string fileName = Path.GetFileName(path);
+                        string fileName = System.IO.Path.GetFileName(path);
                         if (fileName.Contains('*') || fileName.Contains('?'))
                         {
                             string searchPattern = fileName;
-                            string directoryPath = Path.GetDirectoryName(path) ?? "";
+                            string directoryPath = System.IO.Path.GetDirectoryName(path) ?? "";
                             if (string.IsNullOrEmpty(directoryPath))
                                 directoryPath = ".";
 
@@ -530,7 +530,7 @@ public abstract class ClipEndpoint
                                 List<string> normalized = new(rawFiles.Length);
                                 foreach (string f in rawFiles)
                                 {
-                                    normalized.Add(Path.GetFullPath(f));
+                                    normalized.Add(System.IO.Path.GetFullPath(f));
                                 }
                                 files.Identity = normalized;
                                 return;
@@ -545,6 +545,149 @@ public abstract class ClipEndpoint
 
                 case ClipType.Image image:
                     context.ErrorOutput.WriteLine("image is not readable at a directory endpoint.");
+                    context.Status = 1;
+                    break;
+
+                default:
+                    context.ErrorOutput.WriteLine(
+                        $"{GetType().Name} endpoint does not support {type.GetType().Name}");
+                    context.Status = 1;
+                    break;
+            }
+        }
+    }
+
+    public class Path : ClipEndpoint
+    {
+        public Path(string path)
+        {
+            this.path = path;
+        }
+
+        public new string path;
+
+        public override void Write(ClipContext context, ClipType type)
+        {
+            switch (type)
+            {
+                case ClipType.Text text:
+                    context.ErrorOutput.WriteLine("text is not writable at a path endpoint.");
+                    context.Status = 1;
+                    break;
+
+                case ClipType.Html html:
+                    context.ErrorOutput.WriteLine("html is not writable at a path endpoint.");
+                    context.Status = 1;
+                    break;
+
+                case ClipType.Files files:
+                    if (files.Identity != null)
+                    {
+                        System.IO.Directory.CreateDirectory(path);
+                        foreach (string file in files.Identity)
+                        {
+                            string fileName = System.IO.Path.GetFileName(file);
+                            string destPath = System.IO.Path.Combine(path, fileName);
+
+                            try
+                            {
+                                Directory.CopyHelper(file, destPath);
+                            }
+                            catch (Exception ex)
+                            {
+                                context.ErrorOutput.WriteLine($"Error copying {file}: {ex.Message}");
+                                context.Status = 1;
+                                return;
+                            }
+                        }
+                    }
+
+                    break;
+
+                case ClipType.Image image:
+                    context.ErrorOutput.WriteLine("image is not writable at a path endpoint.");
+                    context.Status = 1;
+                    break;
+
+                default:
+                    context.ErrorOutput.WriteLine(
+                        $"{GetType().Name} endpoint does not support {type.GetType().Name}");
+                    context.Status = 1;
+                    break;
+            }
+        }
+
+        public override void Read(ClipContext context, ClipType type)
+        {
+            switch (type)
+            {
+                case ClipType.Text text:
+                    context.ErrorOutput.WriteLine("text is not readable at a path endpoint.");
+                    context.Status = 1;
+                    break;
+
+                case ClipType.Html html:
+                    context.ErrorOutput.WriteLine("html is not readable at a path endpoint.");
+                    context.Status = 1;
+                    break;
+
+                case ClipType.Files files:
+                    if (System.IO.File.Exists(path))
+                    {
+                        files.Identity = new List<string> { System.IO.Path.GetFullPath(path) };
+                    }
+                    else if (System.IO.Directory.Exists(path))
+                    {
+                        files.Identity = new List<string> { System.IO.Path.GetFullPath(path) };
+                    }
+                    else
+                    {
+                        string trimmedPath = path;
+                        if (trimmedPath.Length > 1 && (trimmedPath.EndsWith('/') || trimmedPath.EndsWith('\\')))
+                        {
+                            string withoutSlash = trimmedPath.TrimEnd('/', '\\');
+                            if (!string.IsNullOrEmpty(withoutSlash) && (withoutSlash.Contains('*') || withoutSlash.Contains('?')))
+                            {
+                                trimmedPath = withoutSlash;
+                            }
+                        }
+
+                        string fileName = System.IO.Path.GetFileName(trimmedPath);
+                        if (fileName.Contains('*') || fileName.Contains('?'))
+                        {
+                            string searchPattern = fileName;
+                            string directoryPath = System.IO.Path.GetDirectoryName(trimmedPath) ?? "";
+                            if (string.IsNullOrEmpty(directoryPath))
+                                directoryPath = ".";
+
+                            if (System.IO.Directory.Exists(directoryPath))
+                            {
+                                string[] rawEntries = System.IO.Directory.GetFileSystemEntries(directoryPath, searchPattern);
+                                if (rawEntries.Length == 0)
+                                {
+                                    context.ErrorOutput.WriteLine($"No filesystem entries matched: {path}");
+                                    context.Status = 1;
+                                    return;
+                                }
+
+                                List<string> normalized = new(rawEntries.Length);
+                                foreach (string f in rawEntries)
+                                {
+                                    normalized.Add(System.IO.Path.GetFullPath(f));
+                                }
+                                files.Identity = normalized;
+                                return;
+                            }
+                        }
+
+                        context.ErrorOutput.WriteLine($"Path not found: {path}");
+                        context.Status = 1;
+                    }
+
+                    break;
+
+                case ClipType.Image image:
+                    context.ErrorOutput.WriteLine("image is not readable at a path endpoint.");
                     context.Status = 1;
                     break;
 

@@ -32,7 +32,10 @@ public static class SmokeCases
         new("files/console invalid path error", Case12_FilesConsoleInvalidPathError),
         new("files/directory expansion -> directory", Case13_FilesDirectoryExpansionToDirectory),
         new("files/path exact-file -> console", Case14_FilesPathExactFileToConsole),
-        new("files advertisement and special chars roundtrip", Case15_FilesAdvertisementAndSpecialCharsRoundTrip)
+        new("files advertisement and special chars roundtrip", Case15_FilesAdvertisementAndSpecialCharsRoundTrip),
+        new("files/path exact-directory -> console", Case16_FilesPathExactDirectoryToConsole),
+        new("files/path wildcard -> console", Case17_FilesPathWildcardToConsole),
+        new("files/path wildcard no-match -> error", Case18_FilesPathWildcardNoMatchError)
     };
 
     public static CaseResult Case1_TextStringToFile(string exe, SmokeFixture fixture, TimeSpan timeout)
@@ -814,5 +817,109 @@ public static class SmokeCases
         }
 
         return new CaseResult("files advertisement and special chars roundtrip", true, "Files advertised exclusively (without plain text fallback) and special character filename roundtrips perfectly", runs, sw.Elapsed);
+    }
+
+    public static CaseResult Case16_FilesPathExactDirectoryToConsole(string exe, SmokeFixture fixture, TimeSpan timeout)
+    {
+        var sw = Stopwatch.StartNew();
+        var runs = new List<RunResult>();
+        string targetDir = fixture.GetPath("case16_dir");
+        Directory.CreateDirectory(targetDir);
+        fixture.CreateTextFile(Path.Combine("case16_dir", "child1.txt"), "c1");
+        fixture.CreateTextFile(Path.Combine("case16_dir", "child2.txt"), "c2");
+        string normalizedExpected = Path.GetFullPath(targetDir);
+
+        var copyRun = ProcessRunner.Run(exe, new[] { "copy", "files", "path", targetDir }, timeout: timeout);
+        runs.Add(copyRun);
+
+        if (copyRun.ExitCode != 0 || copyRun.TimedOut)
+        {
+            sw.Stop();
+            return new CaseResult("files/path exact-directory -> console", false, $"Copy exact directory via path failed (exit {copyRun.ExitCode}, timedOut={copyRun.TimedOut})", runs, sw.Elapsed);
+        }
+
+        var pasteRun = ProcessRunner.Run(exe, new[] { "paste", "files", "console" }, timeout: timeout);
+        runs.Add(pasteRun);
+
+        sw.Stop();
+        if (pasteRun.ExitCode != 0 || pasteRun.TimedOut)
+        {
+            return new CaseResult("files/path exact-directory -> console", false, $"Paste files console failed (exit {pasteRun.ExitCode}, timedOut={pasteRun.TimedOut})", runs, sw.Elapsed);
+        }
+
+        string stdout = pasteRun.StdOut.Trim();
+        var lines = stdout.Split('\n').Select(l => l.Trim()).Where(l => !string.IsNullOrEmpty(l)).ToList();
+
+        if (lines.Count != 1 || lines[0] != normalizedExpected)
+        {
+            return new CaseResult("files/path exact-directory -> console", false, $"Expected exactly 1 line matching directory '{normalizedExpected}', got {lines.Count} lines: {stdout}", runs, sw.Elapsed);
+        }
+
+        return new CaseResult("files/path exact-directory -> console", true, "Exact directory copied via path endpoint as a single filesystem entry", runs, sw.Elapsed);
+    }
+
+    public static CaseResult Case17_FilesPathWildcardToConsole(string exe, SmokeFixture fixture, TimeSpan timeout)
+    {
+        var sw = Stopwatch.StartNew();
+        var runs = new List<RunResult>();
+        string rootDir = fixture.GetPath("case17_root");
+        Directory.CreateDirectory(rootDir);
+        string fileItem = fixture.CreateTextFile(Path.Combine("case17_root", "item_file.txt"), "f");
+        string dirItem = fixture.GetPath(Path.Combine("case17_root", "item_dir"));
+        Directory.CreateDirectory(dirItem);
+        string otherFile = fixture.CreateTextFile(Path.Combine("case17_root", "other.txt"), "o");
+
+        string wildcardArg = Path.Combine(rootDir, "item*");
+        var copyRun = ProcessRunner.Run(exe, new[] { "copy", "files", "path", wildcardArg }, timeout: timeout);
+        runs.Add(copyRun);
+
+        if (copyRun.ExitCode != 0 || copyRun.TimedOut)
+        {
+            sw.Stop();
+            return new CaseResult("files/path wildcard -> console", false, $"Copy wildcard via path failed (exit {copyRun.ExitCode}, timedOut={copyRun.TimedOut})", runs, sw.Elapsed);
+        }
+
+        var pasteRun = ProcessRunner.Run(exe, new[] { "paste", "files", "console" }, timeout: timeout);
+        runs.Add(pasteRun);
+
+        sw.Stop();
+        if (pasteRun.ExitCode != 0 || pasteRun.TimedOut)
+        {
+            return new CaseResult("files/path wildcard -> console", false, $"Paste files console failed (exit {pasteRun.ExitCode}, timedOut={pasteRun.TimedOut})", runs, sw.Elapsed);
+        }
+
+        string stdout = pasteRun.StdOut.Trim();
+        var lines = stdout.Split('\n').Select(l => l.Trim()).Where(l => !string.IsNullOrEmpty(l)).OrderBy(x => x).ToList();
+        var expected = new[] { fileItem, dirItem }.Select(Path.GetFullPath).OrderBy(x => x).ToList();
+
+        if (lines.Count != expected.Count || !lines.SequenceEqual(expected))
+        {
+            return new CaseResult("files/path wildcard -> console", false, $"Expected matching items [{string.Join(", ", expected)}], got: {stdout}", runs, sw.Elapsed);
+        }
+
+        return new CaseResult("files/path wildcard -> console", true, "Wildcard expanded to both files and directories", runs, sw.Elapsed);
+    }
+
+    public static CaseResult Case18_FilesPathWildcardNoMatchError(string exe, SmokeFixture fixture, TimeSpan timeout)
+    {
+        var sw = Stopwatch.StartNew();
+        var runs = new List<RunResult>();
+        string nonMatchingWildcard = Path.Combine(fixture.TempDirectory, "no_match_at_all*");
+
+        var copyRun = ProcessRunner.Run(exe, new[] { "copy", "files", "path", nonMatchingWildcard }, timeout: timeout);
+        runs.Add(copyRun);
+        sw.Stop();
+
+        if (copyRun.ExitCode == 0)
+        {
+            return new CaseResult("files/path wildcard no-match -> error", false, "Expected non-zero exit code on non-matching wildcard, but got 0", runs, sw.Elapsed);
+        }
+
+        if (!copyRun.StdErr.Contains("No filesystem entries matched:"))
+        {
+            return new CaseResult("files/path wildcard no-match -> error", false, $"Expected stderr to contain 'No filesystem entries matched:', got: {copyRun.StdErr}", runs, sw.Elapsed);
+        }
+
+        return new CaseResult("files/path wildcard no-match -> error", true, "Non-matching wildcard produced non-zero exit code and validation error", runs, sw.Elapsed);
     }
 }
