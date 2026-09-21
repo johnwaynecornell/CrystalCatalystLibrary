@@ -2,6 +2,7 @@
 // Copyright (c) 2024 John W. Cornell
 // See LICENSE file in the project root for full license information.
 #include "CrystalWindow_Windows.h"
+#include "KeyCode_Windows.h"
 #include <windows.h>
 #include <windowsx.h>
 #include <shlobj.h>
@@ -65,12 +66,22 @@ using namespace JWCEssentials;
 
 namespace NewAge
 {
-    wchar_t ConvertKeyCodeToUnicode(uint32_t  keyCode) {
-        BYTE keyboardState[256];
-        GetKeyboardState(keyboardState);
+    static int32_t TranslateWindowsKeyCode(uint32_t keyCode, LPARAM keyInfo) {
+        const uint32_t scanCode = (static_cast<uintptr_t>(keyInfo) >> 16) & 0xFF;
+        const bool extended = (static_cast<uintptr_t>(keyInfo) & (1U << 24)) != 0;
+        const int32_t namedKey = TranslateWindowsNamedKey(keyCode, scanCode, extended);
+        if (namedKey) return namedKey;
 
-        wchar_t unicodeChar[2];
-        int32_t result = ToUnicode(keyCode, 0, keyboardState, unicodeChar, 2, 0);
+        // Preserve the legacy printable-key callback behavior. This is not a
+        // composed-text API: one callback still carries one integer. Do not
+        // change dead-key state already handled by TranslateMessage (bit 2,
+        // supported since Windows 10 version 1607).
+        BYTE keyboardState[256] = {};
+        if (!GetKeyboardState(keyboardState)) return 0;
+
+        wchar_t unicodeChar[2] = {};
+        int32_t result = ToUnicodeEx(keyCode, scanCode, keyboardState, unicodeChar, 2,
+                                    1U << 2, GetKeyboardLayout(0));
 
         if (result > 0) {
             return unicodeChar[0];
@@ -720,18 +731,22 @@ namespace NewAge
         }
             break;
         case WM_KEYDOWN:
+        case WM_SYSKEYDOWN:
             if (wnd->callbacks.on_key_down) {
-                int32_t key = ConvertKeyCodeToUnicode((int) wParam);
+                int32_t key = TranslateWindowsKeyCode((uint32_t) wParam, lParam);
                 wnd->callbacks.on_key_down(handle, key);
             }
+            if (uMsg == WM_SYSKEYDOWN) return DefWindowProc(hwnd, uMsg, wParam, lParam);
             break;
         case WM_KEYUP:
+        case WM_SYSKEYUP:
             if (wnd->callbacks.on_key_up) {
-                int32_t key = ConvertKeyCodeToUnicode((int) wParam);
+                int32_t key = TranslateWindowsKeyCode((uint32_t) wParam, lParam);
                 wnd->callbacks.
                         on_key_up(handle,
                                   (int) key);
             }
+            if (uMsg == WM_SYSKEYUP) return DefWindowProc(hwnd, uMsg, wParam, lParam);
             break;
         case WM_MOUSEMOVE:
             if (!wnd->mouse_tracked) {

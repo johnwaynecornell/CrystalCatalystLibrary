@@ -1,5 +1,7 @@
 namespace CrystalCatalystLibrary.net;
 
+// Named-key callback values shared by the Windows and X11 backends. Numeric
+// values follow X11 KeySyms, not Windows virtual keys or Unicode text input.
 public enum KeyCode
 {
     // Modifier Keys
@@ -26,6 +28,7 @@ public enum KeyCode
 
     // Editing Keys
     BackSpace = 0xFF08,
+    Clear = 0xFF0B,
     Delete = 0xFFFF,
     Insert = 0xFF63,
 
@@ -49,6 +52,18 @@ public enum KeyCode
     F10 = 0xFFC7,
     F11 = 0xFFC8,
     F12 = 0xFFC9,
+    F13 = 0xFFCA,
+    F14 = 0xFFCB,
+    F15 = 0xFFCC,
+    F16 = 0xFFCD,
+    F17 = 0xFFCE,
+    F18 = 0xFFCF,
+    F19 = 0xFFD0,
+    F20 = 0xFFD1,
+    F21 = 0xFFD2,
+    F22 = 0xFFD3,
+    F23 = 0xFFD4,
+    F24 = 0xFFD5,
 
     // Alphanumeric Keys
     A = 0x0061,
@@ -107,6 +122,7 @@ public enum KeyCode
     KP_Down = 0xFF99,
     KP_Home = 0xFF95,
     KP_End = 0xFF9C,
+    KP_Begin = 0xFF9D,
     KP_PageUp = 0xFF9A,
     KP_PageDown = 0xFF9B,
     KP_Insert = 0xFF9E,

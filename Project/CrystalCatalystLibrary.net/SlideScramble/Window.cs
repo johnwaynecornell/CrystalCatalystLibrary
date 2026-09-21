@@ -173,7 +173,7 @@ public class Window
 
         wnd.OnKeyDown = (handle, keycode) =>
         {
-            if (keycode == 0xFF1B) // Escape
+            if (keycode == (int)KeyCode.Escape)
             {
                 if (drag != null)
                 {

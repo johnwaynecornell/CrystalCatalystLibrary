@@ -1,0 +1,4 @@
+#pragma once
+
+// Test the native translation against the enum consumed by managed clients.
+static const char ManagedKeyCodeContract[] = R"contract(@MANAGED_KEYCODE_CONTRACT@)contract";

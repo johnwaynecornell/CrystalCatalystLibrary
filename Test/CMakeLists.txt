@@ -36,3 +36,16 @@
  else()
      target_compile_options(test_clipboard_persistence PRIVATE -UNDEBUG)
  endif()
+
+ file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../Project/CrystalCatalystLibrary.net/CrystalCatalystLibrary.net/KeyCode.cs" MANAGED_KEYCODE_CONTRACT)
+ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+     "${CMAKE_CURRENT_SOURCE_DIR}/../Project/CrystalCatalystLibrary.net/CrystalCatalystLibrary.net/KeyCode.cs")
+ configure_file(keycode_contract.h.in keycode_contract.h @ONLY)
+ add_executable(test_keycodes test_keycodes.cpp)
+ target_include_directories(test_keycodes PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+ target_link_libraries(test_keycodes PUBLIC CrystalCatalystLibrary ${LIBJWCEssentials})
+ if(MSVC)
+     target_compile_options(test_keycodes PRIVATE /UNDEBUG)
+ else()
+     target_compile_options(test_keycodes PRIVATE -UNDEBUG)
+ endif()

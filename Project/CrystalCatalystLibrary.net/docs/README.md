@@ -43,6 +43,35 @@ CrystalCatalystLibrary should own:
 
 This separation allows a custom composited UI to move between backends without being tied to a specific desktop toolkit lifecycle.
 
+Keyboard Callbacks
+------------------
+
+`OnKeyDown` and `OnKeyUp` use the existing `KeyCode` enum values for named keys
+on both Windows and Linux. These values follow X11 keysyms; for example,
+`KeyCode.Escape` is `0xFF1B`, including on Windows. Compare against the enum
+instead of Windows virtual-key values or control characters.
+
+Windows translates virtual keys together with the message's scan code and
+extended-key bit. This distinguishes left/right modifiers, keypad Enter, and
+keypad navigation with NumLock off. Function keys, navigation, locks, and keypad
+operators also use the shared values. System-key messages deliver callbacks and
+still receive normal Windows default processing. Shift+Tab reports `KeyCode.Tab`
+on both platforms; Shift is available through its own modifier-key callbacks.
+
+Printable keys retain the legacy, layout-sensitive callback behavior (for
+example, `s` versus `S`). These callbacks are not a composed-text or IME API.
+Linux preserves keysyms, including Unicode-encoded keysyms; they are not all
+Unicode code points. Windows retains its single UTF-16-unit printable result
+and uses non-mutating `ToUnicodeEx` translation to avoid consuming dead-key
+state a second time. This flag requires Windows 10 version 1607 or later.
+
+The native `test_keycodes` target checks Windows mappings against the managed
+enum on either host. `test_keycodes --mapping-only` needs no display; running
+without arguments also exercises each host's key-down/up callback dispatch.
+Linux event tests expect a US X11 layout (a fresh Xvfb display supplies one).
+Windows event tests temporarily select a US layout for the calling thread and
+restore its original layout afterward.
+
 Pixel Presentation
 ------------------
 

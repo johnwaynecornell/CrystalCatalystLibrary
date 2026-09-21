@@ -3,6 +3,7 @@
 // See LICENSE file in the project root for full license information.
 #include "../CrystalApplication_X11.h"
 #include "CrystalWindow_X11.h"
+#include "KeyCode_X11.h"
 #include "DragProvide_X11.h"
 #include <unistd.h>
 #include <iostream>
@@ -227,19 +228,6 @@ namespace NewAge {
         }
     }
 
-    // Function to convert X11 keycode to Unicode
-    int32_t ConvertKeyCodeToUnicode(P_INSTANCE(XEvent)  event) {
-        char buffer[4];
-        KeySym keySym;
-        XLookupString(&event->xkey, buffer, sizeof(buffer), &keySym, nullptr);
-
-        // Check if the keysym is a valid Unicode code point
-        if (keySym >= 0x20 && keySym <= 0x10FFFF) {
-            return static_cast<int>(keySym);
-        }
-        return 0;
-    }
-
     /*
     void handle_xevent(P_INSTANCE(WindowHandle) window_handle, P_INSTANCE(XEvent)  event) {
         if (!window_handle) {
@@ -410,7 +398,7 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
             char* n = XGetAtomName(event->xproperty.display, a);
             std::string s = n ? n : "<null>"; if (n) XFree(n); return s; };
 
-        int32_t unicodeChar;
+        int32_t keyCode;
         switch (event->type) {
             case Expose:
                 if (callbacks.on_draw) {
@@ -421,20 +409,20 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
                 return true;
             case KeyPress:
                 if (callbacks.on_key_down) {
-                    unicodeChar = ConvertKeyCodeToUnicode(event);
+                    keyCode = TranslateX11KeyCode(&event->xkey);
                     {
                         std::ostringstream oss;
-                        oss << mod_header() << "KeyPress, unicodeChar = " << unicodeChar;
+                        oss << mod_header() << "KeyPress, keyCode = " << keyCode;
                         Application_DiagnosticMessage(oss.str().c_str());
                     }
 
-                    callbacks.on_key_down(myHandle, unicodeChar);
+                    callbacks.on_key_down(myHandle, keyCode);
                 }
             return true;
             case KeyRelease:
                 if (callbacks.on_key_up) {
-                    unicodeChar = ConvertKeyCodeToUnicode(event);
-                    callbacks.on_key_up(myHandle, unicodeChar);
+                    keyCode = TranslateX11KeyCode(&event->xkey);
+                    callbacks.on_key_up(myHandle, keyCode);
                 }
             return true;
             case MotionNotify:
@@ -914,4 +902,3 @@ Time CrystalWindow_X11::get_user_time(XEvent* ev) {
         XFlush(dpy);
     }
 }
-

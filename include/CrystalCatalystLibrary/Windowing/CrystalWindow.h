@@ -65,6 +65,9 @@ namespace NewAge {
     typedef struct {
         void (*on_draw)(P_INSTANCE(WindowHandle) window_handle);
 
+        // Named keys use the X11 keysym values exposed by managed KeyCode on
+        // both platforms (e.g. Escape=0xFF1B), not Windows VK_* values. Legacy
+        // printable-key translation is retained; these are not text callbacks.
         void (*on_key_down)(P_INSTANCE(WindowHandle) window_handle, int32_t keycode);
         void (*on_key_up)(P_INSTANCE(WindowHandle) window_handle, int32_t keycode);
 
