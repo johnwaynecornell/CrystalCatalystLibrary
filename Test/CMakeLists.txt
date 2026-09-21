@@ -27,3 +27,12 @@
  target_link_libraries(test_multi_thread PUBLIC CrystalCatalystLibrary ${LIBJWCEssentials} ${CMAKE_THREAD_LIBS_INIT})
  target_link_libraries(test_data_interchange PUBLIC CrystalCatalystLibrary ${LIBJWCEssentials} ${CMAKE_THREAD_LIBS_INIT})
  target_link_libraries(test_window_lifecycle PUBLIC CrystalCatalystLibrary ${LIBJWCEssentials} ${CMAKE_THREAD_LIBS_INIT})
+
+ add_executable(test_clipboard_persistence test_clipboard_persistence.cpp)
+ target_link_libraries(test_clipboard_persistence PUBLIC CrystalCatalystLibrary ${LIBJWCEssentials})
+ # Assertions are the native regression contract, including Release builds.
+ if(MSVC)
+     target_compile_options(test_clipboard_persistence PRIVATE /UNDEBUG)
+ else()
+     target_compile_options(test_clipboard_persistence PRIVATE -UNDEBUG)
+ endif()

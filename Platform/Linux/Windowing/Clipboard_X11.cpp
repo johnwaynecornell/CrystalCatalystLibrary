@@ -25,7 +25,16 @@
 using namespace JWCEssentials;
 
 namespace NewAge {
-    //#include "SimpleDataObject.h"
+    // Session routing must not depend on transient X11 owners or managers.
+    // Missing/broken Wayland tools are an error, never a reason to read XWayland.
+    static bool UseWaylandClipboard(const char* operation) {
+        const char* display = getenv("WAYLAND_DISPLAY");
+        bool wayland = display && *display;
+        std::string message = std::string("Clipboard backend: ") +
+            (wayland ? "Wayland (wl-copy/wl-paste)" : "X11") + " operation=" + operation;
+        Application_DiagnosticMessage(message.c_str());
+        return wayland;
+    }
 
     struct DataContext {
         CrystalWindow_X11 *window;
@@ -171,24 +180,10 @@ namespace NewAge {
         auto* xwin = static_cast<CrystalWindow_X11*>(handle->crystal_window);
         xwin->current_clipboard_receive_data = data;
 
-        Window oc = XGetSelectionOwner(xwin->display, AppX11->atoms.clipboard);
-        Window op = XGetSelectionOwner(xwin->display, AppX11->atoms.primary);
-        {
-            std::ostringstream oss;
-            oss << "Owners: CLIPBOARD=" << std::hex << oc << " PRIMARY=" << op << std::dec;
-            Application_DiagnosticMessage(oss.str().c_str());
+        if (UseWaylandClipboard("paste/show-avail")) {
+            Clipboard_Wayland::Paste(handle, data);
+            return data;
         }
-
-        if (oc == None && Clipboard_Wayland::IsAvailable()) {
-            std::ostringstream oss;
-            oss << "Wayland";
-
-            Application_DiagnosticMessage(oss.str().c_str());
-            if (Clipboard_Wayland::Paste(handle, data)) {
-                return data;
-            }
-        }
-
 
         Display* dpy = xwin->display;
         Window   win = xwin->window;
@@ -206,14 +201,19 @@ namespace NewAge {
         XEvent ev;
         auto t0 = std::chrono::steady_clock::now();
         for (;;) {
-            XNextEvent(xwin->display, &ev);
-            static_cast<CrystalApplication_X11*>(TheApplication)->DispatchEvent(ev);
+            if (XPending(xwin->display)) {
+                XNextEvent(xwin->display, &ev);
+                static_cast<CrystalApplication_X11*>(TheApplication)->DispatchEvent(ev);
+            } else {
+                usleep(1000);
+            }
 
             if (!xwin->clipboard_pending) break;
 
             // safety timeout (e.g., 5s)
             if (std::chrono::steady_clock::now() - t0 > std::chrono::seconds(5)) {
-                std::cerr << "Clipboard paste timed out\n";
+                xwin->clipboard_pending = false;
+                handleDataInterchangeError(data->m_handle, data, "X11 clipboard paste timed out.");
                 break;
             }
         }
@@ -225,6 +225,12 @@ namespace NewAge {
         data->m_handle = handle;
         CrystalWindow_X11 *xwin = ((CrystalWindow_X11 *)handle->crystal_window);
         data->selection_type = DataInterchange::E_CLIPBOARD;
+
+        data->provide_chosen = DataInterchange::provide_for_clipboard;
+        if (UseWaylandClipboard("copy")) {
+            Clipboard_Wayland::CopyPersist(handle, data);
+            return;
+        }
 
         xwin->current_clipboard_provide_data = data;
 
@@ -276,20 +282,13 @@ namespace NewAge {
 
         xwin->current_clipboard_provide_data = data;
 
-        {
-            std::ostringstream oss;
-            oss << mod_header() << "CrystalWindow_ClipboardCopyPersist()";
-            Application_DiagnosticMessage(oss.str().c_str());
+        if (UseWaylandClipboard("copy-persist")) {
+            Clipboard_Wayland::CopyPersist(handle, data);
+            return;
         }
 
-        // 1. Check for CLIPBOARD_MANAGER first
         Window manager = XGetSelectionOwner(xwin->display, AppX11->atoms.clipboard_manager);
         if (manager == None) {
-            if (Clipboard_Wayland::IsAvailable()) {
-                if (Clipboard_Wayland::CopyPersist(handle, data)) {
-                    return;
-                }
-            }
             handleDataInterchangeError(handle, data, "Clipboard persistence failed: no clipboard manager running (CLIPBOARD_MANAGER owner is None).");
             return;
         }
@@ -345,8 +344,9 @@ namespace NewAge {
 
     void CrystalWindow_ClipboardClear()
     {
-        if (Clipboard_Wayland::IsAvailable()) {
+        if (UseWaylandClipboard("clear")) {
             Clipboard_Wayland::Clear();
+            return;
         }
 
         Display *display = ((CrystalApplication_X11 *)TheApplication)->globalDisplay;
@@ -421,6 +421,10 @@ namespace NewAge {
 
 
     void DataInterchange_Select(DataInterchange* data, utf8_string_struct format) {
+        if (UseWaylandClipboard("select")) {
+            Clipboard_Wayland::Select(data, format);
+            return;
+        }
         auto* xwin = static_cast<CrystalWindow_X11*>(data->m_handle->crystal_window);
         xwin->current_clipboard_receive_data = data;
 
@@ -452,11 +456,6 @@ namespace NewAge {
         xwin->property_atom = property;
         xwin->expected_selection = selection; // optional: track which selection we asked for
 
-        if (XGetSelectionOwner(xwin->display, selection) == None && Clipboard_Wayland::IsAvailable()) {
-            if (Clipboard_Wayland::Select(data, format)) {
-                return;
-            }
-        }
         // Start by asking for TARGETS on CLIPBOARD with property=None
         xwin->clipboard_pending = true;
         xwin->retry_with_property = false;   // add this bool in your window state
@@ -471,14 +470,19 @@ namespace NewAge {
         XEvent ev;
         auto t0 = std::chrono::steady_clock::now();
         for (;;) {
-            XNextEvent(xwin->display, &ev);
-            static_cast<CrystalApplication_X11*>(TheApplication)->DispatchEvent(ev);
+            if (XPending(xwin->display)) {
+                XNextEvent(xwin->display, &ev);
+                static_cast<CrystalApplication_X11*>(TheApplication)->DispatchEvent(ev);
+            } else {
+                usleep(1000);
+            }
 
             if (!xwin->clipboard_pending) break;
 
             // safety timeout (e.g., 5s)
             if (std::chrono::steady_clock::now() - t0 > std::chrono::seconds(5)) {
-                std::cerr << "Clipboard paste timed out\n";
+                xwin->clipboard_pending = false;
+                handleDataInterchangeError(data->m_handle, data, "X11 clipboard paste timed out.");
                 break;
             }
         }

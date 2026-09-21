@@ -20,7 +20,6 @@ namespace NewAge {
         void CrystalWindow_ClipboardCopyPersist();
 
         // CrystalCatalyst integration helpers
-        static bool IsAvailable();
         static bool CopyPersist(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) data);
         static bool Paste(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) data);
         static bool Select(P_INSTANCE(DataInterchange) data, utf8_string_struct format);

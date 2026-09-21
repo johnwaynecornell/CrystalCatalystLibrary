@@ -318,11 +318,14 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
     }
 
     if (dataInterchange->provide_chosen) {
+        dataInterchange->selected_format = nullptr;
         dataInterchange->provide_chosen(dataInterchange, format);
     }
-    DataInterchange_SelectionReveal(dataInterchange, &format, &data_ptr, &size);
+    // Never pack stale data or change the requested native format after provision.
+    utf8_string_struct suppliedFormat;
+    DataInterchange_SelectionReveal(dataInterchange, &suppliedFormat, &data_ptr, &size);
 
-    if (!data_ptr || size == 0) {
+    if (!suppliedFormat.c_str || f != suppliedFormat.c_str || !data_ptr) {
         return nullptr;
     }
 
@@ -383,38 +386,25 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
             }
         }
     } else if (strcmp(format, "text/file-uri") == 0) {
-        // Parse URIs
-        std::string uri_list((char *) data_ptr, size);
+        // text/file-uri is the semantic format; its payload is UTF-8 local
+        // paths, one per line. CF_HDROP requires UTF-16 paths, not URI/text bytes.
+        std::string paths((char*)data_ptr, size);
+        std::istringstream lines(paths);
         std::vector<std::wstring> files;
-        size_t pos = 0;
-        size_t new_pos;
-
-        while ((new_pos = uri_list.find('\n', pos)) != std::string::npos) {
-            std::string uri = uri_list.substr(pos, new_pos - pos);
-            pos = new_pos + 1;
-            if (!uri.empty() && uri.back() == '\r') uri.pop_back();
-            if (uri.empty()) continue;
-
-            // Convert URI to wide string
-            int32_t len = MultiByteToWideChar(CP_UTF8, 0, uri.c_str(), (int)uri.length(), nullptr, 0);
-            if (len > 0) {
-                std::wstring ws(len, L'\0');
-                MultiByteToWideChar(CP_UTF8, 0, uri.c_str(), (int)uri.length(), &ws[0], len);
-                files.push_back(ws);
-            }
+        std::string path;
+        while (std::getline(lines, path)) {
+            if (!path.empty() && path.back() == '\r') path.pop_back();
+            if (path.empty()) continue;
+            if (path.find('\0') != std::string::npos) return nullptr;
+            int len = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
+                                         path.data(), (int)path.size(), nullptr, 0);
+            if (len <= 0) return nullptr;
+            std::wstring wide(len, L'\0');
+            if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
+                                    path.data(), (int)path.size(), wide.data(), len)) return nullptr;
+            files.push_back(std::move(wide));
         }
-        if (pos < uri_list.length()) {
-            std::string uri = uri_list.substr(pos);
-            if (!uri.empty() && uri.back() == '\r') uri.pop_back();
-            if (!uri.empty()) {
-                int32_t len = MultiByteToWideChar(CP_UTF8, 0, uri.c_str(), (int)uri.length(), nullptr, 0);
-                if (len > 0) {
-                    std::wstring ws(len, L'\0');
-                    MultiByteToWideChar(CP_UTF8, 0, uri.c_str(), (int)uri.length(), &ws[0], len);
-                    files.push_back(ws);
-                }
-            }
-        }
+        if (files.empty()) return nullptr;
 
         // Calculate size of the global memory block
         size_t total_size = sizeof(DROPFILES);
@@ -427,25 +417,27 @@ HGLOBAL DataInterchange_MakeHGLOBAl(P_INSTANCE(DataInterchange) dataInterchange,
         hGlobal = GlobalAlloc(GMEM_MOVEABLE, total_size);
         if (hGlobal) {
             DROPFILES *pDropFiles = (DROPFILES *) GlobalLock(hGlobal);
-            if (pDropFiles) {
-                pDropFiles->pFiles = sizeof(DROPFILES);
-                pDropFiles->pt.x = 0;
-                pDropFiles->pt.y = 0;
-                pDropFiles->fNC = TRUE;
-                pDropFiles->fWide = TRUE;
-
-                // Copy file paths to the global memory block
-                LPWSTR pwsz = (LPWSTR) ((LPBYTE) pDropFiles + sizeof(DROPFILES));
-                LPWSTR cur = pwsz;
-
-                for (const auto &file: files) {
-                    memcpy(cur, file.c_str(), (file.length() + 1) * sizeof(WCHAR));
-                    cur += file.length() + 1;
-                }
-                *cur = L'\0'; // Extra double null terminator
-
-                GlobalUnlock(hGlobal);
+            if (!pDropFiles) {
+                GlobalFree(hGlobal);
+                return nullptr;
             }
+            pDropFiles->pFiles = sizeof(DROPFILES);
+            pDropFiles->pt.x = 0;
+            pDropFiles->pt.y = 0;
+            pDropFiles->fNC = FALSE;
+            pDropFiles->fWide = TRUE;
+
+            // Copy file paths to the global memory block
+            LPWSTR pwsz = (LPWSTR) ((LPBYTE) pDropFiles + sizeof(DROPFILES));
+            LPWSTR cur = pwsz;
+
+            for (const auto &file: files) {
+                memcpy(cur, file.c_str(), (file.length() + 1) * sizeof(WCHAR));
+                cur += file.length() + 1;
+            }
+            *cur = L'\0'; // Extra double null terminator
+
+            GlobalUnlock(hGlobal);
         }
     }
 
@@ -741,6 +733,7 @@ HRESULT DataInterchange_ReadFormats(P_INSTANCE(DataInterchange) data, IDataObjec
 
 void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_struct format)
 {
+    Application_DiagnosticMessage("Clipboard backend: Windows (OLE) operation=select");
 
     FORMATETC fmt = { 0, nullptr, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
 
@@ -809,30 +802,30 @@ void DataInterchange_Select(P_INSTANCE(DataInterchange) data, utf8_string_struct
                 GlobalUnlock(stg.hGlobal);
             }
         } else if (f == "text/file-uri") {
-            HDROP hDrop = static_cast<HDROP>(GlobalLock(stg.hGlobal));
-            if (hDrop != nullptr) {
-                uint32_t fileCount = DragQueryFileW(hDrop, 0xFFFFFFFF, nullptr, 0);
-
-                std::string uri = "";
-                for (uint32_t i = 0; i < fileCount; i++) {
-                    UINT cch = DragQueryFileW(hDrop, i, nullptr, 0);
-                    if (cch > 0) {
-                        std::vector<WCHAR> filePath(cch + 1, 0);
-                        if (DragQueryFileW(hDrop, i, filePath.data(), cch + 1)) {
-                            int size_needed = WideCharToMultiByte(CP_UTF8, 0, filePath.data(), -1, NULL, 0, NULL, NULL);
-                            if (size_needed > 1) {
-                                std::string filePathStr(size_needed - 1, 0);
-                                WideCharToMultiByte(CP_UTF8, 0, filePath.data(), -1, &filePathStr[0], size_needed, NULL, NULL);
-                                uri += filePathStr + "\n";
-                            }
-                        }
-                    }
-                }
-                GlobalUnlock(stg.hGlobal);
-
-                DataInterchange_SelectionSet(data, "text/file-uri", (P_INSTANCE(void) ) uri.c_str(),
-                                              uri.length());
+            // DragQueryFile takes the HGLOBAL handle, not a GlobalLock pointer.
+            HDROP hDrop = reinterpret_cast<HDROP>(stg.hGlobal);
+            uint32_t fileCount = DragQueryFileW(hDrop, 0xFFFFFFFF, nullptr, 0);
+            std::string paths;
+            bool valid = fileCount > 0;
+            for (uint32_t i = 0; valid && i < fileCount; ++i) {
+                UINT cch = DragQueryFileW(hDrop, i, nullptr, 0);
+                std::vector<WCHAR> path(cch + 1, 0);
+                valid = cch && DragQueryFileW(hDrop, i, path.data(), cch + 1) == cch;
+                if (!valid) break;
+                int bytes = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS,
+                    path.data(), (int)cch, nullptr, 0, nullptr, nullptr);
+                if (bytes <= 0) { valid = false; break; }
+                std::string utf8(bytes, '\0');
+                valid = WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS,
+                    path.data(), (int)cch, utf8.data(), bytes, nullptr, nullptr) == bytes;
+                paths += utf8 + "\n";
             }
+            if (!valid) {
+                ReleaseStgMedium(&stg);
+                handleDataInterchangeError(data->m_handle, data, "Invalid CF_HDROP file list.");
+                return;
+            }
+            DataInterchange_SelectionSet(data, "text/file-uri", (void*)paths.data(), paths.size());
         }
         ReleaseStgMedium(&stg);
 

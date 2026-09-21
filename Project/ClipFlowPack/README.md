@@ -229,8 +229,10 @@ Linux X11:
   extension (SAVE_TARGETS protocol) to transfer ownership to the system clipboard daemon.
 
 Linux Wayland:
-  Wayland enforces strict surface-focus constraints. ClipFlow incorporates wl-copy/wl-paste
-  fallback integration when direct X11 manager routes are unavailable.
+  When WAYLAND_DISPLAY is set, all clipboard operations use wl-copy/wl-paste,
+  including in hybrid Wayland+XWayland sessions with an X11 clipboard manager.
+  Missing tools or failed commands report a native error; they never switch to X11.
+  Without WAYLAND_DISPLAY, all clipboard operations use X11.
 ```
 
 ### Process Lifetime Verification Rule
@@ -259,6 +261,9 @@ Hello World
 ### Diagnostics vs Errors
 - **Diagnostics**: Protocol traces, format negotiation logs, and selection conversion events routed via `Application.SetDiagnosticsCallback`. Controlled by `-diag`.
 - **Errors**: Missing files, syntax errors, unsupported endpoint combinations, and native interchange failures (`OnDataInterchangeError`). Always printed to standard error regardless of `-diag`.
+- **Backend**: Native dispatch emits `Clipboard backend: ... operation=...` under `-diag`. Windows persistent writes also report each successful `SetClipboardData` format number (`15` is `CF_HDROP`). Smoke obtains its backend report from a native `show avail` probe instead of inferring it from the environment.
+
+Windows file lists retain the `text/file-uri` semantic format and newline-separated UTF-8 local-path payload. Native persistence packs those paths into a movable `DROPFILES` block with UTF-16 paths and a double-NUL terminator, advertises `CF_HDROP`, and maps it back to `text/file-uri` on paste. Failure to provide, pack, or publish a format reports a native error.
 
 ---
 
@@ -300,3 +305,9 @@ dotnet run --project Project/ClipFlowPack/ClipFlow.Smoke/ClipFlow.Smoke.csproj
 dotnet run --project Project/ClipFlowPack/ClipFlow.Smoke/ClipFlow.Smoke.csproj -- --case text
 dotnet run --project Project/ClipFlowPack/ClipFlow.Smoke/ClipFlow.Smoke.csproj -- --case image --verbose
 ```
+
+### Native Persistence Regressions
+
+Build the `test_clipboard_persistence` CMake target and run its executable from the configured workspace context. On Linux it uses temporary fake `wl-copy`/`wl-paste` commands to exercise the real native dispatch without a compositor: hybrid routing with and without X11 owners/managers, empty text, file-list conversion, missing commands, and failed commands that emit partial output. On Windows it exercises the real `ClipboardCopyPersist` / `SetClipboardData` / OLE paste path and checks `CF_HDROP`, its `DROPFILES` layout, Unicode/multiple/UNC paths, and provider failures.
+
+The existing `test_data_interchange` executable tests X11 explicitly. Run it with `WAYLAND_DISPLAY` unset on an isolated X server with no clipboard manager initially (for example Xvfb); it creates simulated managers itself. This avoids replacing the desktop's clipboard-manager selection.

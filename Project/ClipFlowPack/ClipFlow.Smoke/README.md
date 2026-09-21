@@ -35,13 +35,13 @@ At startup, `ClipFlow.Smoke` inspects the host runtime environment and logs sess
 - **Operating System**: Linux (X11 / Wayland) or Windows (NT).
 - **Display Server**: `DISPLAY` and `WAYLAND_DISPLAY` environment variables.
 - **Wayland Utilities**: Availability of `wl-copy` and `wl-paste` binary fallbacks.
-- **Persistence Route**: The active platform strategy used for persistent data retention.
+- **Native Clipboard Route**: The backend reported by the native `-diag show avail` probe. An unavailable or older native library is reported as unreported, never guessed from environment variables.
 
 ---
 
 ## Canonical Smoke Cases
 
-The suite runs 14 end-to-end integration test scenarios:
+The suite runs 19 end-to-end integration test scenarios:
 
 1. **`text/string -> file`**: Verifies UTF-8 string copy (with Unicode, spaces, and multi-line content) into an output file.
 2. **`text/file -> console`**: Verifies copying text from a source file and pasting directly to console stdout.
@@ -57,6 +57,12 @@ The suite runs 14 end-to-end integration test scenarios:
 12. **`files/console invalid path error`**: Verifies invalid or missing paths piped to stdin fail cleanly with non-zero exit code and error diagnostics.
 13. **`files/directory expansion -> directory`**: Verifies recursive directory copy and merge behavior into destination directories.
 14. **`files/path exact-file -> console`**: Verifies copying an exact file via the `path` endpoint and pasting to console stdout produces the normalized absolute path.
+15. **`files advertisement and special chars roundtrip`**: Verifies exclusive file-format advertisement and special-character paths.
+16. **`files/path exact-directory -> console`**: Verifies a directory remains a single filesystem entry.
+17. **`files/path wildcard -> console`**: Verifies wildcard expansion includes matching files and directories.
+18. **`files/path wildcard no-match -> error`**: Verifies unmatched wildcards fail with a validation error.
+19. **`files/path exact-directory trailing slash -> console`**: Verifies trailing-separator normalization.
+
 
 ---
 

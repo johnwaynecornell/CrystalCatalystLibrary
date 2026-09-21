@@ -8,6 +8,11 @@
 #include <cstring>
 #include <stdexcept>
 #include <vector>
+#include <chrono>
+#include <cerrno>
+#include <csignal>
+#include <sys/wait.h>
+#include <unistd.h>
 
 #include "CrystalWindow_X11.h"
 
@@ -59,27 +64,89 @@ namespace NewAge {
         copyToClipboard();
     }
 
-    bool Clipboard_Wayland::IsAvailable() {
-        const char* wayland_display = getenv("WAYLAND_DISPLAY");
-        if (!wayland_display || wayland_display[0] == '\0') {
+    // Use files for the subprocess streams: no pipe deadlocks/SIGPIPE, no shell
+    // interpretation of MIME types, and no inherited smoke-runner output pipes.
+    static bool RunClipboardTool(const std::vector<std::string>& arguments,
+                                 const void* input, size_t size,
+                                 std::vector<uint8_t>& output, std::string& error) {
+        FILE* in = tmpfile();
+        FILE* out = tmpfile();
+        FILE* err = tmpfile();
+        auto closeFiles = [&]() {
+            if (in) fclose(in);
+            if (out) fclose(out);
+            if (err) fclose(err);
+        };
+        if (!in || !out || !err || (size && fwrite(input, 1, size, in) != size) ||
+            (in && fflush(in) != 0)) {
+            error = std::string("clipboard subprocess I/O: ") + strerror(errno);
+            closeFiles();
             return false;
         }
-        static int available = -1;
-        if (available == -1) {
-            FILE* pipe = popen("which wl-copy 2>/dev/null", "r");
-            if (pipe) {
-                char buf[64];
-                available = (fgets(buf, sizeof(buf), pipe) != nullptr) ? 1 : 0;
-                pclose(pipe);
-            } else {
-                available = 0;
-            }
+        rewind(in);
+        std::vector<char*> argv;
+        for (const auto& arg : arguments) argv.push_back(const_cast<char*>(arg.c_str()));
+        argv.push_back(nullptr);
+        pid_t pid = fork();
+        if (pid == 0) {
+            setpgid(0, 0);
+            if (dup2(fileno(in), STDIN_FILENO) < 0 ||
+                dup2(fileno(out), STDOUT_FILENO) < 0 ||
+                dup2(fileno(err), STDERR_FILENO) < 0) _exit(126);
+            close(fileno(in));
+            close(fileno(out));
+            close(fileno(err));
+            execvp(argv[0], argv.data());
+            _exit(127);
         }
-        return available == 1;
+        if (pid < 0) {
+            error = std::string("fork: ") + strerror(errno);
+            closeFiles();
+            return false;
+        }
+        setpgid(pid, pid);
+        int status = 0;
+        bool completed = false;
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+        while (true) {
+            pid_t result = waitpid(pid, &status, WNOHANG);
+            if (result == pid) { completed = true; break; }
+            if (result < 0 && errno != EINTR) break;
+            if (std::chrono::steady_clock::now() >= deadline) {
+                kill(-pid, SIGKILL);
+                while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
+                error = "clipboard subprocess timed out";
+                break;
+            }
+            usleep(1000);
+        }
+        char chunk[4096];
+        size_t n;
+        rewind(out);
+        output.clear();
+        while ((n = fread(chunk, 1, sizeof(chunk), out)) > 0)
+            output.insert(output.end(), chunk, chunk + n);
+        bool readOk = !ferror(out);
+        rewind(err);
+        while ((n = fread(chunk, 1, sizeof(chunk), err)) > 0) error.append(chunk, n);
+        closeFiles();
+        if (!completed || !WIFEXITED(status) || WEXITSTATUS(status) != 0 || !readOk) {
+            if (error.empty()) error = "clipboard subprocess failed (status " + std::to_string(status) + ")";
+            output.clear(); // A failed command's partial output is never clipboard data.
+            return false;
+        }
+        return true;
+    }
+
+    static bool ToolError(WindowHandle* handle, DataInterchange* data,
+                          const char* operation, const std::string& error) {
+        handleDataInterchangeError(handle, data,
+            std::string("Wayland clipboard ") + operation + " failed: " + error);
+        return false;
     }
 
     bool Clipboard_Wayland::CopyPersist(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) data) {
-        if (!IsAvailable() || !data) return false;
+        if (!data) return false;
 
         std::vector<std::string> formats;
         for (P_INSTANCE(DragDropData::Node) node = DataInterchange_FormatEnum(data); node != nullptr; node = DataInterchange_FormatEnumNext(node)) {
@@ -91,7 +158,7 @@ namespace NewAge {
             }
         }
 
-        if (formats.empty()) return false;
+        if (formats.empty()) return ToolError(handle, data, "copy", "no advertised formats");
 
         std::string target_format;
         for (const auto& fmt : formats) {
@@ -110,52 +177,51 @@ namespace NewAge {
         }
 
         if (data->provide_chosen) {
+            data->selected_format = nullptr;
             data->provide_chosen(data, (utf8_string_struct)target_format.c_str());
         }
+        if (!data->selected_format.c_str || target_format != data->selected_format.c_str)
+            return ToolError(handle, data, "copy", "provider did not supply the requested format");
 
         P_INSTANCE(void) d = nullptr;
         size_t sz = 0;
         DataInterchange_SelectionReveal(data, nullptr, &d, &sz);
-        if (!d || sz == 0) return false;
+        if (!d) return ToolError(handle, data, "copy", "provider supplied no data");
 
         std::string mime_type = target_format;
         if (target_format == "text/file-uri") {
             mime_type = "text/uri-list";
         }
 
-        std::string cmd = "wl-copy --type " + mime_type;
-        FILE* pipe = popen(cmd.c_str(), "w");
-        if (!pipe) return false;
-
+        std::string uri_list;
         if (target_format == "text/file-uri") {
-            std::string uri_list = LocalPathsToUriList((const char*)d, sz);
-            fwrite(uri_list.c_str(), 1, uri_list.size(), pipe);
-        } else {
-            fwrite(d, 1, sz, pipe);
+            uri_list = LocalPathsToUriList((const char*)d, sz);
+            d = (void*)uri_list.data();
+            sz = uri_list.size();
         }
-        int status = pclose(pipe);
-
-        return (status == 0);
+        std::vector<uint8_t> output;
+        std::string error;
+        if (!RunClipboardTool({"wl-copy", "--type", mime_type}, d, sz, output, error))
+            return ToolError(handle, data, "copy (wl-copy)", error);
+        return true;
     }
 
     bool Clipboard_Wayland::Paste(P_INSTANCE(WindowHandle) handle, P_INSTANCE(DataInterchange) data) {
-        if (!IsAvailable() || !data) return false;
-        FILE* pipe = popen("wl-paste --list-types 2>/dev/null", "r");
-        if (!pipe) return false;
-        char buf[256];
+        if (!data) return false;
+        std::vector<uint8_t> output;
+        std::string error;
+        if (!RunClipboardTool({"wl-paste", "--list-types"}, nullptr, 0, output, error))
+            return ToolError(handle, data, "paste (wl-paste --list-types)", error);
+        std::istringstream types(std::string(output.begin(), output.end()));
         std::vector<std::string> raw_types;
         bool has_uri_list = false;
-        while (fgets(buf, sizeof(buf), pipe) != nullptr) {
-            std::string line(buf);
-            while (!line.empty() && (line.back() == '\n' || line.back() == '\r')) line.pop_back();
+        std::string line;
+        while (std::getline(types, line)) {
+            if (!line.empty() && line.back() == '\r') line.pop_back();
             if (line.empty()) continue;
-            if (line == "text/uri-list") {
-                has_uri_list = true;
-            }
+            if (line == "text/uri-list") has_uri_list = true;
             raw_types.push_back(line);
         }
-        int status = pclose(pipe);
-        if (status != 0) return false;
 
         bool anyAdded = false;
         for (const auto& line : raw_types) {
@@ -185,7 +251,7 @@ namespace NewAge {
 
     bool Clipboard_Wayland::Select(P_INSTANCE(DataInterchange) data, utf8_string_struct format) {
         const char* fmt_str = (const char*)format;
-        if (!IsAvailable() || !data || !fmt_str || fmt_str[0] == '\0') return false;
+        if (!data || !fmt_str || fmt_str[0] == '\0') return false;
 
         std::vector<std::string> candidates;
         std::string req(fmt_str);
@@ -208,24 +274,19 @@ namespace NewAge {
         }
 
         std::vector<uint8_t> buffer;
+        std::string error;
+        bool success = false;
         for (const auto& mime : candidates) {
-            std::string cmd = "wl-paste --no-newline --type " + mime + " 2>/dev/null";
-            FILE* pipe = popen(cmd.c_str(), "r");
-            if (!pipe) continue;
-
-            buffer.clear();
-            char chunk[512];
-            size_t n;
-            while ((n = fread(chunk, 1, sizeof(chunk), pipe)) > 0) {
-                buffer.insert(buffer.end(), chunk, chunk + n);
-            }
-            int status = pclose(pipe);
-            if (status == 0 && !buffer.empty()) {
+            error.clear();
+            if (RunClipboardTool({"wl-paste", "--no-newline", "--type", mime},
+                                 nullptr, 0, buffer, error)) {
+                success = true;
                 break;
             }
+            if (error.find("timed out") != std::string::npos) break;
         }
 
-        if (!buffer.empty()) {
+        if (success) {
             if (strcmp(fmt_str, "text/file-uri") == 0) {
                 std::string local_paths = UriListToLocalPaths((const char*)buffer.data(), buffer.size());
                 DataInterchange_SelectionSet(data, format, (void*)local_paths.data(), local_paths.size());
@@ -237,17 +298,15 @@ namespace NewAge {
             }
             return true;
         }
-        return false;
+        return ToolError(data->m_handle, data, "select (wl-paste)", error);
     }
 
     bool Clipboard_Wayland::Clear() {
-        if (!IsAvailable()) return false;
-        FILE* pipe = popen("wl-copy --clear", "w");
-        if (pipe) {
-            pclose(pipe);
-            return true;
-        }
-        return false;
+        std::vector<uint8_t> output;
+        std::string error;
+        if (!RunClipboardTool({"wl-copy", "--clear"}, nullptr, 0, output, error))
+            return ToolError(nullptr, nullptr, "clear (wl-copy)", error);
+        return true;
     }
 
 }

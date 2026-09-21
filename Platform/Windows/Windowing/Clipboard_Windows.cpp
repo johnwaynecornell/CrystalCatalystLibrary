@@ -1,5 +1,6 @@
 #include <iostream>
 #include <sstream>
+#include <vector>
 #include "Clipboard_Windows.h"
 #include "SimpleDataObject.h"
 #include "CrystalWindow_Windows.h"
@@ -10,6 +11,7 @@ namespace NewAge {
 
 P_INSTANCE(DataInterchange)  CrystalWindow_ClipboardPaste(P_INSTANCE(WindowHandle) handle)
 {
+    Application_DiagnosticMessage("Clipboard backend: Windows (OLE) operation=paste/show-avail");
     P_INSTANCE(DataInterchange) data = DataInterchange_Create();
 	data->selection_type = DataInterchange::E_CLIPBOARD;
 	data->m_handle = handle;
@@ -105,41 +107,56 @@ void CrystalWindow_ClipboardCopyPersist(P_INSTANCE(WindowHandle) handle, P_INSTA
         hwnd = ((CrystalWindow_Windows*)handle->crystal_window)->hwnd;
     }
 
-    if (!OpenClipboard(hwnd)) {
-        handleDataInterchangeError(dataInterchange->m_handle, dataInterchange, "Failed to open clipboard.");
+    Application_DiagnosticMessage("Clipboard backend: Windows (SetClipboardData) operation=copy-persist");
+    // Materialize every advertised format before replacing the clipboard.
+    std::vector<std::pair<UINT, HGLOBAL>> prepared;
+    auto releasePrepared = [&]() {
+        for (auto& item : prepared) if (item.second) GlobalFree(item.second);
+    };
+    for (auto* node = dataInterchange->data_head.next; node; node = node->next) {
+        UINT format = 0;
+        HGLOBAL memory = DataInterchange_MakeHGLOBAl(dataInterchange, node->type, &format);
+        if (!memory || !format) {
+            if (memory) GlobalFree(memory);
+            releasePrepared();
+            handleDataInterchangeError(handle, dataInterchange,
+                "Windows clipboard persistence: failed to prepare format " + std::string(node->type.c_str));
+            return;
+        }
+        prepared.emplace_back(format, memory);
+    }
+    if (prepared.empty()) {
+        handleDataInterchangeError(handle, dataInterchange, "Windows clipboard persistence: no formats supplied.");
         return;
     }
-
-    EmptyClipboard();
-
-    for (DataInterchange::Node *node = dataInterchange->data_head.next; node != nullptr; node = node->next) {
-
-        UINT cfFormat = 0;
-        HGLOBAL hGlobal;
-
-        hGlobal = DataInterchange_MakeHGLOBAl(dataInterchange, node->type, &cfFormat);
-        if (hGlobal) {
-            HANDLE result = SetClipboardData(cfFormat, hGlobal);
-
-            if (!result) {
-                DWORD error = GetLastError();
-
-                std::ostringstream ss;
-                ss << "SetClipboardData failed for format "
-                   << cfFormat
-                   << ", error "
-                   << error;
-
-                handleDataInterchangeError(
-                    dataInterchange->m_handle,
-                    dataInterchange,
-                    ss.str());
-
-                GlobalFree(hGlobal);
-            }
-        } else {
-            handleDataInterchangeError(dataInterchange->m_handle, dataInterchange, "Failed to allocate global memory for format: " + std::string(node->type.c_str ? node->type.c_str : ""));
+    if (!OpenClipboard(hwnd)) {
+        DWORD error = GetLastError();
+        releasePrepared();
+        handleDataInterchangeError(handle, dataInterchange,
+            "Windows OpenClipboard failed, error " + std::to_string(error));
+        return;
+    }
+    if (!EmptyClipboard()) {
+        DWORD error = GetLastError();
+        releasePrepared();
+        CloseClipboard();
+        handleDataInterchangeError(handle, dataInterchange,
+            "Windows EmptyClipboard failed, error " + std::to_string(error));
+        return;
+    }
+    for (auto& item : prepared) {
+        if (!SetClipboardData(item.first, item.second)) {
+            DWORD error = GetLastError();
+            releasePrepared();
+            CloseClipboard();
+            handleDataInterchangeError(handle, dataInterchange,
+                "Windows SetClipboardData failed for format " + std::to_string(item.first) +
+                ", error " + std::to_string(error));
+            return;
         }
+        item.second = nullptr; // Ownership transferred to Windows.
+        std::string message = "Windows SetClipboardData format=" + std::to_string(item.first);
+        Application_DiagnosticMessage(message.c_str());
     }
 
     CloseClipboard();
@@ -147,6 +164,7 @@ void CrystalWindow_ClipboardCopyPersist(P_INSTANCE(WindowHandle) handle, P_INSTA
 
 void CrystalWindow_ClipboardClear()
 {
+    Application_DiagnosticMessage("Clipboard backend: Windows operation=clear");
     if (!OpenClipboard(nullptr)) {
         handleDataInterchangeError(nullptr, nullptr, "Failed to open clipboard.");
         return;

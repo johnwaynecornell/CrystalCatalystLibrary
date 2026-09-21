@@ -59,7 +59,7 @@ public class Program
             return 1;
         }
 
-        var env = SmokeEnvironment.Detect();
+        var env = SmokeEnvironment.Detect(resolvedExe, timeout);
 
         Console.WriteLine("ClipFlow executable smoke");
         Console.WriteLine("=========================");
@@ -73,7 +73,7 @@ public class Program
         Console.WriteLine($"  WAYLAND_DISPLAY: {env.WaylandDisplay ?? "(none)"}");
         Console.WriteLine($"  wl-copy: {(env.WlCopyAvailable ? "available" : "not found")}");
         Console.WriteLine($"  wl-paste: {(env.WlPasteAvailable ? "available" : "not found")}");
-        Console.WriteLine($"  Persistence route: {env.PersistenceRoute}");
+        Console.WriteLine($"  Native clipboard route: {env.PersistenceRoute}");
         Console.WriteLine($"  Diagnostics: {(diag ? "enabled" : "disabled")}");
         Console.WriteLine();
 
