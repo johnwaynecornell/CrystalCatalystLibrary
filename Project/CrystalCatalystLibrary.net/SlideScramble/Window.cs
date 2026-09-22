@@ -369,6 +369,43 @@ public class Window
 
     public void SetGridSize(int size) => SetGridSize(size, size);
 
+    private static void DrawDropdownArrow(SKCanvas canvas, float x, float y, float size, SKPaint paint)
+    {
+        using var path = new SKPath();
+        path.MoveTo(x - size, y - size * 0.5f);
+        path.LineTo(x + size, y - size * 0.5f);
+        path.LineTo(x, y + size * 0.7f);
+        path.Close();
+        canvas.DrawPath(path, paint);
+    }
+
+    private static void DrawStar(SKCanvas canvas, float cx, float cy, float outerRadius, float innerRadius, SKPaint fillPaint)
+    {
+        using var path = new SKPath();
+        double angleStep = Math.PI / 5.0;
+        double startAngle = -Math.PI / 2.0;
+
+        for (int i = 0; i < 10; i++)
+        {
+            double angle = startAngle + i * angleStep;
+            float r = (i % 2 == 0) ? outerRadius : innerRadius;
+            float x = cx + (float)(r * Math.Cos(angle));
+            float y = cy + (float)(r * Math.Sin(angle));
+            if (i == 0)
+                path.MoveTo(x, y);
+            else
+                path.LineTo(x, y);
+        }
+        path.Close();
+        canvas.DrawPath(path, fillPaint);
+    }
+
+    private static void DrawCloseCross(SKCanvas canvas, float cx, float cy, float size, SKPaint strokePaint)
+    {
+        canvas.DrawLine(cx - size, cy - size, cx + size, cy + size, strokePaint);
+        canvas.DrawLine(cx - size, cy + size, cx + size, cy - size, strokePaint);
+    }
+
     private static int CalculateSliderValue(float mouseX, float trackStartX, float trackEndX)
     {
         float t = (mouseX - trackStartX) / (trackEndX - trackStartX);
@@ -827,8 +864,10 @@ public class Window
             canvas.DrawRoundRect(gridBtnRRect, hudChipPaint);
             canvas.DrawRoundRect(gridBtnRRect, hudChipBorderPaint);
 
-            string gridInfo = $"Grid: {MyGrid.Width}x{MyGrid.Height} ▾";
+            string gridInfo = $"Grid: {MyGrid.Width}x{MyGrid.Height}";
+            hudBoldFont.MeasureText(gridInfo, out SKRect gridBounds, hudAccentPaint);
             canvas.DrawText(gridInfo, 28, 35, hudBoldFont, hudAccentPaint);
+            DrawDropdownArrow(canvas, 28 + gridBounds.Width + 8, 30, 4, hudAccentPaint);
             canvas.DrawText(fpsText, 132, 35, hudFont, hudMutedPaint);
 
             // Center HUD: Moves & Time
@@ -847,7 +886,7 @@ public class Window
                 GameMode.Ready => "READY",
                 GameMode.Scrambling => "SCRAMBLING...",
                 GameMode.InGame => "IN PLAY",
-                GameMode.Solved => "SOLVED! 🎉",
+                GameMode.Solved => "SOLVED!",
                 _ => ""
             };
 
@@ -860,7 +899,12 @@ public class Window
             };
 
             hudBoldFont.MeasureText(modeText, out SKRect modeBounds, statePaint);
-            canvas.DrawText(modeText, width - 36 - modeBounds.Width, 35, hudBoldFont, statePaint);
+            float modeTextX = width - 36 - modeBounds.Width;
+            canvas.DrawText(modeText, modeTextX, 35, hudBoldFont, statePaint);
+            if (State.Mode == GameMode.Solved)
+            {
+                DrawStar(canvas, modeTextX - 12, 30, 5.5f, 2.5f, bannerBorderPaint);
+            }
 
             // Victory Banner Overlay
             if (State.Mode == GameMode.Solved)
@@ -875,9 +919,12 @@ public class Window
                 canvas.DrawRoundRect(vRRect, bannerBgPaint);
                 canvas.DrawRoundRect(vRRect, bannerBorderPaint);
 
-                string winTitle = "★ PUZZLE SOLVED! ★";
+                string winTitle = "PUZZLE SOLVED!";
                 bannerTitleFont.MeasureText(winTitle, out SKRect wtBounds, bannerTitlePaint);
-                canvas.DrawText(winTitle, bx + (bannerW - wtBounds.Width) / 2f, by + 42, bannerTitleFont, bannerTitlePaint);
+                float titleX = bx + (bannerW - wtBounds.Width) / 2f;
+                canvas.DrawText(winTitle, titleX, by + 42, bannerTitleFont, bannerTitlePaint);
+                DrawStar(canvas, titleX - 22, by + 34, 9, 4f, bannerTitlePaint);
+                DrawStar(canvas, titleX + wtBounds.Width + 22, by + 34, 9, 4f, bannerTitlePaint);
 
                 string stats = $"Time: {State.FormatTime(time)}  •  Moves: {State.MoveCount}";
                 bannerTextFont.MeasureText(stats, out SKRect sBounds, bannerTextPaint);
@@ -908,8 +955,16 @@ public class Window
                 string title = "Grid Setup";
                 canvas.DrawText(title, panelX + 24, panelY + 36, panelTitleFont, hudTextPaint);
 
-                // Close button '✕'
-                canvas.DrawText("✕", panelX + panelWidth - 27, panelY + 33, hudBoldFont, hudMutedPaint);
+                // Close button icon
+                using var closeIconPaint = new SKPaint
+                {
+                    Color = new SKColor(148, 163, 184),
+                    Style = SKPaintStyle.Stroke,
+                    StrokeWidth = 2f,
+                    StrokeCap = SKStrokeCap.Round,
+                    IsAntialias = true
+                };
+                DrawCloseCross(canvas, panelX + panelWidth - 22, panelY + 24, 5.5f, closeIconPaint);
 
                 float trackStartX = panelX + 130;
                 float trackEndX = panelX + 270;
@@ -953,7 +1008,7 @@ public class Window
                 canvas.DrawText(rowValText, panelX + 310, row2Y + 5, hudBoldFont, hudAccentPaint);
 
                 // Dimension Summary Pill
-                string dimSummary = $"{MyGrid.Width} × {MyGrid.Height}";
+                string dimSummary = $"{MyGrid.Width} x {MyGrid.Height}";
                 hudBoldFont.MeasureText(dimSummary, out SKRect dimBounds, hudAccentPaint);
                 var badgeRect = new SKRect(panelX + (panelWidth - dimBounds.Width) / 2f - 16, panelY + 158, panelX + (panelWidth + dimBounds.Width) / 2f + 16, panelY + 184);
                 canvas.DrawRoundRect(new SKRoundRect(badgeRect, 6, 6), hudChipPaint);
