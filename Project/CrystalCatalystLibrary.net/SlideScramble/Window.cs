@@ -6,7 +6,7 @@ namespace SlideScramble;
 public class Window
 {
     public CrystalWindow wnd;
-    protected Grid MyGrid;
+    public Grid MyGrid { get; protected set; }
     
     public int ScrambleCount = 128;
     
@@ -42,12 +42,18 @@ public class Window
     {
         public float xx = 0;
         public float yy = 0;
-        public float size;
+        public float width;
+        public float height;
     }
     
     public TileView? tileView;
 
     public GameState State { get; } = new GameState();
+
+    // Grid setup UI state
+    public bool ShowGridSetup { get; set; } = false;
+    private enum ActiveSlider { None, Columns, Rows }
+    private ActiveSlider activeSlider = ActiveSlider.None;
 
     // Cached Skia rendering resources to avoid per-frame allocations
     private readonly SKPaint bgPaint = new SKPaint
@@ -143,15 +149,86 @@ public class Window
         Style = SKPaintStyle.Fill,
     };
 
+    private readonly SKPaint panelBgPaint = new SKPaint
+    {
+        Color = new SKColor(30, 41, 59, 250), // Slate 800
+        Style = SKPaintStyle.Fill,
+        IsAntialias = true,
+    };
+
+    private readonly SKPaint panelBorderPaint = new SKPaint
+    {
+        Color = new SKColor(71, 85, 105), // Slate 600
+        Style = SKPaintStyle.Stroke,
+        StrokeWidth = 2,
+        IsAntialias = true,
+    };
+
+    private readonly SKPaint modalBackdropPaint = new SKPaint
+    {
+        Color = new SKColor(0, 0, 0, 120),
+        Style = SKPaintStyle.Fill,
+    };
+
+    private readonly SKPaint sliderTrackPaint = new SKPaint
+    {
+        Color = new SKColor(51, 65, 85), // Slate 700
+        Style = SKPaintStyle.Stroke,
+        StrokeWidth = 4,
+        StrokeCap = SKStrokeCap.Round,
+        IsAntialias = true,
+    };
+
+    private readonly SKPaint sliderFillPaint = new SKPaint
+    {
+        Color = new SKColor(56, 189, 248), // Sky 400
+        Style = SKPaintStyle.Stroke,
+        StrokeWidth = 4,
+        StrokeCap = SKStrokeCap.Round,
+        IsAntialias = true,
+    };
+
+    private readonly SKPaint sliderThumbPaint = new SKPaint
+    {
+        Color = SKColors.White,
+        Style = SKPaintStyle.Fill,
+        IsAntialias = true,
+    };
+
+    private readonly SKPaint sliderThumbBorderPaint = new SKPaint
+    {
+        Color = new SKColor(56, 189, 248), // Sky 400
+        Style = SKPaintStyle.Stroke,
+        StrokeWidth = 2,
+        IsAntialias = true,
+    };
+
+    private readonly SKPaint hudChipPaint = new SKPaint
+    {
+        Color = new SKColor(51, 65, 85, 180),
+        Style = SKPaintStyle.Fill,
+        IsAntialias = true,
+    };
+
+    private readonly SKPaint hudChipBorderPaint = new SKPaint
+    {
+        Color = new SKColor(71, 85, 105),
+        Style = SKPaintStyle.Stroke,
+        StrokeWidth = 1.5f,
+        IsAntialias = true,
+    };
+
     private readonly SKFont hudFont = new SKFont(SKTypeface.FromFamilyName("Arial", SKFontStyle.Normal) ?? SKTypeface.Default, 14);
     private readonly SKFont hudBoldFont = new SKFont(SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold) ?? SKTypeface.Default, 15);
     private readonly SKFont bannerTitleFont = new SKFont(SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold) ?? SKTypeface.Default, 24);
     private readonly SKFont bannerTextFont = new SKFont(SKTypeface.FromFamilyName("Arial", SKFontStyle.Normal) ?? SKTypeface.Default, 14);
     private readonly SKFont footerFont = new SKFont(SKTypeface.FromFamilyName("Arial", SKFontStyle.Normal) ?? SKTypeface.Default, 12);
+    private readonly SKFont panelTitleFont = new SKFont(SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold) ?? SKTypeface.Default, 17);
 
     public Window()
     {
         MyGrid = new Grid(4, 4);
+        UpdateTileView(850, 700);
 
         wnd = CrystalWindow.Create(850, 700, "SlideScramble - CrystalCatalyst Showcase");
         wnd.ApplicationRetain();
@@ -190,16 +267,27 @@ public class Window
                         animationLockHoriz = null;
                         animationTileOffset = 0;
                     }
+                    return;
+                }
+
+                if (ShowGridSetup)
+                {
+                    ShowGridSetup = false;
+                    return;
                 }
 
                 return;
             }
 
             char c = (char)keycode;
-            if ((c == 's' || c == 'S') && State.Mode != GameMode.Scrambling && drag == null && Animations.Count == 0)
+            if ((c == 'g' || c == 'G'))
+            {
+                ShowGridSetup = !ShowGridSetup;
+            }
+            else if ((c == 's' || c == 'S') && State.Mode != GameMode.Scrambling && drag == null && Animations.Count == 0)
             {
                 State.StartScrambling();
-                ScrambleCount = MyGrid.Width * 3;
+                ScrambleCount = (MyGrid.Width + MyGrid.Height) * 2;
             }
             else if ((c == 'r' || c == 'R') && State.Mode != GameMode.Scrambling && drag == null && Animations.Count == 0)
             {
@@ -210,36 +298,113 @@ public class Window
             }
             else if (c == '1')
             {
-                SetGridSize(3);
+                SetGridSize(3, 3);
             }
             else if (c == '2')
             {
-                SetGridSize(4);
+                SetGridSize(4, 4);
             }
             else if (c == '3')
             {
-                SetGridSize(6);
+                SetGridSize(6, 6);
             }
             else if (c == '4')
             {
-                SetGridSize(8);
+                SetGridSize(8, 8);
             }
         };
     }
 
-    public void SetGridSize(int size)
+    public void UpdateTileView(int width = 0, int height = 0)
     {
+        if (width <= 0 || height <= 0)
+        {
+            if (wnd != null)
+            {
+                wnd.GetSize(out width, out height);
+            }
+            else
+            {
+                width = 850;
+                height = 700;
+            }
+        }
+
+        if (tileView == null)
+        {
+            tileView = new TileView();
+        }
+
+        float topHeaderHeight = 56f;
+        float footerHeight = 36f;
+        float availableWidth = Math.Max(100f, width - 40f);
+        float availableHeight = Math.Max(100f, height - topHeaderHeight - footerHeight - 20f);
+
+        float tileSize = Math.Min(
+            availableWidth / MyGrid.Width,
+            availableHeight / MyGrid.Height);
+
+        float boardWidth = tileSize * MyGrid.Width;
+        float boardHeight = tileSize * MyGrid.Height;
+
+        tileView.width = boardWidth;
+        tileView.height = boardHeight;
+        tileView.xx = (width - boardWidth) / 2f;
+        tileView.yy = topHeaderHeight + (availableHeight - boardHeight) / 2f;
+    }
+
+    public void SetGridSize(int width, int height)
+    {
+        width = Math.Clamp(width, 2, 9);
+        height = Math.Clamp(height, 2, 9);
         if (State.Mode != GameMode.Scrambling && drag == null && Animations.Count == 0)
         {
-            MyGrid = new Grid(size, size);
+            MyGrid = new Grid(width, height);
             State.Reset();
             animationLockHoriz = null;
             animationTileOffset = 0;
+            UpdateTileView();
         }
+    }
+
+    public void SetGridSize(int size) => SetGridSize(size, size);
+
+    private static int CalculateSliderValue(float mouseX, float trackStartX, float trackEndX)
+    {
+        float t = (mouseX - trackStartX) / (trackEndX - trackStartX);
+        int val = (int)Math.Round(2 + t * 7);
+        return Math.Clamp(val, 2, 9);
     }
 
     private void OnMouseMove(CrystalWindow windowHandle, int x, int y)
     {
+        if (activeSlider != ActiveSlider.None)
+        {
+            windowHandle.GetSize(out int width, out int height);
+            float panelWidth = 360f;
+            float panelX = (width - panelWidth) / 2f;
+            float trackStartX = panelX + 130;
+            float trackEndX = panelX + 270;
+
+            if (activeSlider == ActiveSlider.Columns)
+            {
+                int newCols = CalculateSliderValue(x, trackStartX, trackEndX);
+                if (newCols != MyGrid.Width)
+                {
+                    SetGridSize(newCols, MyGrid.Height);
+                }
+            }
+            else if (activeSlider == ActiveSlider.Rows)
+            {
+                int newRows = CalculateSliderValue(x, trackStartX, trackEndX);
+                if (newRows != MyGrid.Height)
+                {
+                    SetGridSize(MyGrid.Width, newRows);
+                }
+            }
+            return;
+        }
+
         if (drag != null && tileView != null)
         {
             int xd = x - drag.startX;
@@ -249,25 +414,27 @@ public class Window
             {
                 if (Math.Abs(xd) < Math.Abs(yd))
                 {
+                    // Vertical drag -> column move
                     animationLockHoriz = true;
-                    int rawOrdinal = (int)((x - tileView.xx) * MyGrid.Width / tileView.size);
+                    int rawOrdinal = (int)((x - tileView.xx) * MyGrid.Width / tileView.width);
                     animationOrdinal = Math.Clamp(rawOrdinal, 0, MyGrid.Width - 1);
                 }
                 else
                 {
+                    // Horizontal drag -> row move
                     animationLockHoriz = false;
-                    int rawOrdinal = (int)((y - tileView.yy) * MyGrid.Height / tileView.size);
+                    int rawOrdinal = (int)((y - tileView.yy) * MyGrid.Height / tileView.height);
                     animationOrdinal = Math.Clamp(rawOrdinal, 0, MyGrid.Height - 1);
                 }
             }
                 
             if (animationLockHoriz == false)
             {
-                animationTileOffset = -xd * MyGrid.Width / tileView.size;
+                animationTileOffset = -xd * MyGrid.Width / tileView.width;
             }
             else if (animationLockHoriz == true)
             {
-                animationTileOffset = -yd * MyGrid.Height / tileView.size;
+                animationTileOffset = -yd * MyGrid.Height / tileView.height;
             }
         }
     }
@@ -322,6 +489,12 @@ public class Window
     {
         if (button == (int)CrystalMouseButton.Left)
         {
+            if (activeSlider != ActiveSlider.None)
+            {
+                activeSlider = ActiveSlider.None;
+                return;
+            }
+
             if (drag != null && tileView != null)
             {
                 drag = null;
@@ -346,11 +519,78 @@ public class Window
 
     private void OnMouseDown(CrystalWindow windowHandle, int button, int x, int y)
     {
-        if (State.Mode != GameMode.Scrambling && tileView != null && button == (int)CrystalMouseButton.Left && Animations.Count == 0 && drag == null)
+        if (button != (int)CrystalMouseButton.Left) return;
+
+        windowHandle.GetSize(out int width, out int height);
+
+        // Check HUD Grid button hotspot
+        var hudGridButtonRect = new SKRect(20, 10, 125, 50);
+        if (hudGridButtonRect.Contains(x, y))
+        {
+            ShowGridSetup = !ShowGridSetup;
+            return;
+        }
+
+        // Handle Setup Overlay interactions
+        if (ShowGridSetup)
+        {
+            float panelWidth = 360f;
+            float panelHeight = 220f;
+            float panelX = (width - panelWidth) / 2f;
+            float panelY = (height - panelHeight) / 2f;
+
+            var panelRect = new SKRect(panelX, panelY, panelX + panelWidth, panelY + panelHeight);
+            var closeRect = new SKRect(panelX + panelWidth - 36, panelY + 10, panelX + panelWidth - 8, panelY + 38);
+
+            float trackStartX = panelX + 130;
+            float trackEndX = panelX + 270;
+            var colsHitRect = new SKRect(panelX + 20, panelY + 55, panelX + panelWidth - 20, panelY + 95);
+            var rowsHitRect = new SKRect(panelX + 20, panelY + 105, panelX + panelWidth - 20, panelY + 145);
+
+            if (closeRect.Contains(x, y))
+            {
+                ShowGridSetup = false;
+                return;
+            }
+            else if (colsHitRect.Contains(x, y))
+            {
+                activeSlider = ActiveSlider.Columns;
+                int newCols = CalculateSliderValue(x, trackStartX, trackEndX);
+                if (newCols != MyGrid.Width)
+                {
+                    SetGridSize(newCols, MyGrid.Height);
+                }
+                return;
+            }
+            else if (rowsHitRect.Contains(x, y))
+            {
+                activeSlider = ActiveSlider.Rows;
+                int newRows = CalculateSliderValue(x, trackStartX, trackEndX);
+                if (newRows != MyGrid.Height)
+                {
+                    SetGridSize(MyGrid.Width, newRows);
+                }
+                return;
+            }
+            else if (panelRect.Contains(x, y))
+            {
+                // Click inside panel consumed
+                return;
+            }
+            else
+            {
+                // Click outside panel closes it
+                ShowGridSetup = false;
+                return;
+            }
+        }
+
+        // Board dragging hit test
+        if (State.Mode != GameMode.Scrambling && tileView != null && Animations.Count == 0 && drag == null)
         {
             // Check if mouse is inside the board bounds
-            if (x >= tileView.xx && x <= tileView.xx + tileView.size &&
-                y >= tileView.yy && y <= tileView.yy + tileView.size)
+            if (x >= tileView.xx && x <= tileView.xx + tileView.width &&
+                y >= tileView.yy && y <= tileView.yy + tileView.height)
             {
                 drag = new Drag()
                 {
@@ -457,19 +697,9 @@ public class Window
                 pixelBacking.Dispose();
             }
             pixelBacking = CrystalSkia.net.FixedPixDataRenderer.CreateFixed(width, height, (canvas, info) => { });
-
-            tileView = new TileView();
-            
-            float topHeaderHeight = 56f;
-            float footerHeight = 36f;
-            float availableWidth = Math.Max(100f, width - 40f);
-            float availableHeight = Math.Max(100f, height - topHeaderHeight - footerHeight - 20f);
-            float boardSize = Math.Min(availableWidth, availableHeight);
-
-            tileView.size = boardSize;
-            tileView.xx = (width - boardSize) / 2f;
-            tileView.yy = topHeaderHeight + (availableHeight - boardSize) / 2f;
         }
+
+        UpdateTileView(width, height);
 
         if (tileView == null) return;
         
@@ -479,10 +709,13 @@ public class Window
             canvas.DrawRect(new SKRect(0, 0, width, height), bgPaint);
 
             // Draw Board Container Background
-            var boardRect = new SKRect(tileView.xx - 8, tileView.yy - 8, tileView.xx + tileView.size + 8, tileView.yy + tileView.size + 8);
+            var boardRect = new SKRect(tileView.xx - 8, tileView.yy - 8, tileView.xx + tileView.width + 8, tileView.yy + tileView.height + 8);
             var boardRRect = new SKRoundRect(boardRect, 12, 12);
             canvas.DrawRoundRect(boardRRect, boardBgPaint);
             canvas.DrawRoundRect(boardRRect, boardBorderPaint);
+
+            float tileW = tileView.width / MyGrid.Width;
+            float tileH = tileView.height / MyGrid.Height;
 
             // Draw Static Grid Tiles
             for (int y = 0; y < MyGrid.Height; y++)
@@ -495,10 +728,10 @@ public class Window
                     
                     SKImage image = MyGrid.Tiles[y, x].Image;
 
-                    float _x = tileView.xx + (tileView.size / MyGrid.Width) * x;
-                    float _y = tileView.yy + (tileView.size / MyGrid.Height) * y;
+                    float _x = tileView.xx + tileW * x;
+                    float _y = tileView.yy + tileH * y;
 
-                    var dest = new SKRect(_x, _y, _x + tileView.size / MyGrid.Width, _y + tileView.size / MyGrid.Height);
+                    var dest = new SKRect(_x, _y, _x + tileW, _y + tileH);
                     var src = new SKRect(0, 0, image.Width, image.Height);
                     
                     canvas.DrawImage(image, src, dest, paint: tilePaint);
@@ -511,10 +744,11 @@ public class Window
                 bool horiz = animationLockHoriz.Value;
                 if (!horiz)
                 {
+                    // Active row moving horizontally
                     int y = animationOrdinal;
-                    float rowTop = tileView.yy + (tileView.size / MyGrid.Height) * y;
-                    float rowHeight = tileView.size / MyGrid.Height;
-                    var clipRect = new SKRect(tileView.xx, rowTop, tileView.xx + tileView.size, rowTop + rowHeight);
+                    float rowTop = tileView.yy + tileH * y;
+                    float rowHeight = tileH;
+                    var clipRect = new SKRect(tileView.xx, rowTop, tileView.xx + tileView.width, rowTop + rowHeight);
 
                     canvas.Save();
                     canvas.ClipRect(clipRect);
@@ -527,29 +761,30 @@ public class Window
                         SKImage image = MyGrid.Tiles[y, x].Image;
 
                         float coord = x - offset;
-                        float _x = tileView.xx + (tileView.size / MyGrid.Width) * coord;
+                        float _x = tileView.xx + tileW * coord;
                         float _y = rowTop;
 
                         var src = new SKRect(0, 0, image.Width, image.Height);
 
-                        var dest = new SKRect(_x, _y, _x + tileView.size / MyGrid.Width, _y + rowHeight);
+                        var dest = new SKRect(_x, _y, _x + tileW, _y + rowHeight);
                         canvas.DrawImage(image, src, dest, paint: tilePaint);
 
-                        float _xWrapped = _x + tileView.size;
-                        var destWrapped = new SKRect(_xWrapped, _y, _xWrapped + tileView.size / MyGrid.Width, _y + rowHeight);
+                        float _xWrapped = _x + tileView.width;
+                        var destWrapped = new SKRect(_xWrapped, _y, _xWrapped + tileW, _y + rowHeight);
                         canvas.DrawImage(image, src, destWrapped, paint: tilePaint);
                     }
                     
-                    canvas.DrawRoundRect(new SKRoundRect(new SKRect(tileView.xx, rowTop, tileView.xx + tileView.size, rowTop + rowHeight), 6, 6), activeLinePaint);
+                    canvas.DrawRoundRect(new SKRoundRect(new SKRect(tileView.xx, rowTop, tileView.xx + tileView.width, rowTop + rowHeight), 6, 6), activeLinePaint);
                     
                     canvas.Restore();
                 }
                 else
                 {
+                    // Active column moving vertically
                     int x = animationOrdinal;
-                    float colLeft = tileView.xx + (tileView.size / MyGrid.Width) * x;
-                    float colWidth = tileView.size / MyGrid.Width;
-                    var clipRect = new SKRect(colLeft, tileView.yy, colLeft + colWidth, tileView.yy + tileView.size);
+                    float colLeft = tileView.xx + tileW * x;
+                    float colWidth = tileW;
+                    var clipRect = new SKRect(colLeft, tileView.yy, colLeft + colWidth, tileView.yy + tileView.height);
 
                     canvas.Save();
                     canvas.ClipRect(clipRect);
@@ -563,19 +798,19 @@ public class Window
 
                         float coord = y - offset;
                         float _x = colLeft;
-                        float _y = tileView.yy + (tileView.size / MyGrid.Height) * coord;
+                        float _y = tileView.yy + tileH * coord;
 
                         var src = new SKRect(0, 0, image.Width, image.Height);
 
-                        var dest = new SKRect(_x, _y, _x + colWidth, _y + tileView.size / MyGrid.Height);
+                        var dest = new SKRect(_x, _y, _x + colWidth, _y + tileH);
                         canvas.DrawImage(image, src, dest, paint: tilePaint);
 
-                        float _yWrapped = _y + tileView.size;
-                        var destWrapped = new SKRect(_x, _yWrapped, _x + colWidth, _yWrapped + tileView.size / MyGrid.Height);
+                        float _yWrapped = _y + tileView.height;
+                        var destWrapped = new SKRect(_x, _yWrapped, _x + colWidth, _yWrapped + tileH);
                         canvas.DrawImage(image, src, destWrapped, paint: tilePaint);
                     }
                     
-                    canvas.DrawRoundRect(new SKRoundRect(new SKRect(colLeft, tileView.yy, colLeft + colWidth, tileView.yy + tileView.size), 6, 6), activeLinePaint);
+                    canvas.DrawRoundRect(new SKRoundRect(new SKRect(colLeft, tileView.yy, colLeft + colWidth, tileView.yy + tileView.height), 6, 6), activeLinePaint);
 
                     canvas.Restore();
                 }
@@ -586,10 +821,15 @@ public class Window
             var hudRRect = new SKRoundRect(hudRect, 8, 8);
             canvas.DrawRoundRect(hudRRect, hudBarPaint);
 
-            // Left HUD: Grid & FPS
-            string gridInfo = $"Grid: {MyGrid.Width}x{MyGrid.Height}";
-            canvas.DrawText(gridInfo, 30, 35, hudBoldFont, hudTextPaint);
-            canvas.DrawText(fpsText, 120, 35, hudFont, hudMutedPaint);
+            // Left HUD: Clickable Grid Button & FPS
+            var gridBtnRect = new SKRect(22, 14, 120, 46);
+            var gridBtnRRect = new SKRoundRect(gridBtnRect, 6, 6);
+            canvas.DrawRoundRect(gridBtnRRect, hudChipPaint);
+            canvas.DrawRoundRect(gridBtnRRect, hudChipBorderPaint);
+
+            string gridInfo = $"Grid: {MyGrid.Width}x{MyGrid.Height} ▾";
+            canvas.DrawText(gridInfo, 28, 35, hudBoldFont, hudAccentPaint);
+            canvas.DrawText(fpsText, 132, 35, hudFont, hudMutedPaint);
 
             // Center HUD: Moves & Time
             string movesText = $"Moves: {State.MoveCount}";
@@ -628,7 +868,7 @@ public class Window
                 float bannerW = Math.Min(500f, width - 60f);
                 float bannerH = 120f;
                 float bx = (width - bannerW) / 2f;
-                float by = tileView.yy + (tileView.size - bannerH) / 2f;
+                float by = tileView.yy + (tileView.height - bannerH) / 2f;
 
                 var vRect = new SKRect(bx, by, bx + bannerW, by + bannerH);
                 var vRRect = new SKRoundRect(vRect, 16, 16);
@@ -643,13 +883,90 @@ public class Window
                 bannerTextFont.MeasureText(stats, out SKRect sBounds, bannerTextPaint);
                 canvas.DrawText(stats, bx + (bannerW - sBounds.Width) / 2f, by + 74, bannerTextFont, bannerTextPaint);
 
-                string prompt = "Press [S] to scramble or [1-4] to change difficulty";
+                string prompt = "Press [S] to scramble or [G] to change grid size";
                 footerFont.MeasureText(prompt, out SKRect pBounds, hudAccentPaint);
                 canvas.DrawText(prompt, bx + (bannerW - pBounds.Width) / 2f, by + 100, footerFont, hudAccentPaint);
             }
 
+            // Grid Setup Overlay Panel
+            if (ShowGridSetup)
+            {
+                // Semi-transparent backdrop scrim
+                canvas.DrawRect(new SKRect(0, 0, width, height), modalBackdropPaint);
+
+                float panelWidth = 360f;
+                float panelHeight = 220f;
+                float panelX = (width - panelWidth) / 2f;
+                float panelY = (height - panelHeight) / 2f;
+
+                var panelRect = new SKRect(panelX, panelY, panelX + panelWidth, panelY + panelHeight);
+                var panelRRect = new SKRoundRect(panelRect, 14, 14);
+                canvas.DrawRoundRect(panelRRect, panelBgPaint);
+                canvas.DrawRoundRect(panelRRect, panelBorderPaint);
+
+                // Header Title
+                string title = "Grid Setup";
+                canvas.DrawText(title, panelX + 24, panelY + 36, panelTitleFont, hudTextPaint);
+
+                // Close button '✕'
+                canvas.DrawText("✕", panelX + panelWidth - 27, panelY + 33, hudBoldFont, hudMutedPaint);
+
+                float trackStartX = panelX + 130;
+                float trackEndX = panelX + 270;
+
+                // Row 1: Columns slider
+                float row1Y = panelY + 80;
+                canvas.DrawText("Columns", panelX + 24, row1Y + 5, hudBoldFont, hudTextPaint);
+                canvas.DrawText("2", panelX + 112, row1Y + 5, hudFont, hudMutedPaint);
+                canvas.DrawLine(trackStartX, row1Y, trackEndX, row1Y, sliderTrackPaint);
+                
+                float colT = (MyGrid.Width - 2) / 7f;
+                float colThumbX = trackStartX + colT * (trackEndX - trackStartX);
+                if (colT > 0.001f)
+                {
+                    canvas.DrawLine(trackStartX, row1Y, colThumbX, row1Y, sliderFillPaint);
+                }
+                canvas.DrawCircle(colThumbX, row1Y, 8, sliderThumbPaint);
+                canvas.DrawCircle(colThumbX, row1Y, 8, sliderThumbBorderPaint);
+                
+                canvas.DrawText("9", panelX + 280, row1Y + 5, hudFont, hudMutedPaint);
+                string colValText = $"{MyGrid.Width}";
+                canvas.DrawText(colValText, panelX + 310, row1Y + 5, hudBoldFont, hudAccentPaint);
+
+                // Row 2: Rows slider
+                float row2Y = panelY + 130;
+                canvas.DrawText("Rows", panelX + 24, row2Y + 5, hudBoldFont, hudTextPaint);
+                canvas.DrawText("2", panelX + 112, row2Y + 5, hudFont, hudMutedPaint);
+                canvas.DrawLine(trackStartX, row2Y, trackEndX, row2Y, sliderTrackPaint);
+
+                float rowT = (MyGrid.Height - 2) / 7f;
+                float rowThumbX = trackStartX + rowT * (trackEndX - trackStartX);
+                if (rowT > 0.001f)
+                {
+                    canvas.DrawLine(trackStartX, row2Y, rowThumbX, row2Y, sliderFillPaint);
+                }
+                canvas.DrawCircle(rowThumbX, row2Y, 8, sliderThumbPaint);
+                canvas.DrawCircle(rowThumbX, row2Y, 8, sliderThumbBorderPaint);
+
+                canvas.DrawText("9", panelX + 280, row2Y + 5, hudFont, hudMutedPaint);
+                string rowValText = $"{MyGrid.Height}";
+                canvas.DrawText(rowValText, panelX + 310, row2Y + 5, hudBoldFont, hudAccentPaint);
+
+                // Dimension Summary Pill
+                string dimSummary = $"{MyGrid.Width} × {MyGrid.Height}";
+                hudBoldFont.MeasureText(dimSummary, out SKRect dimBounds, hudAccentPaint);
+                var badgeRect = new SKRect(panelX + (panelWidth - dimBounds.Width) / 2f - 16, panelY + 158, panelX + (panelWidth + dimBounds.Width) / 2f + 16, panelY + 184);
+                canvas.DrawRoundRect(new SKRoundRect(badgeRect, 6, 6), hudChipPaint);
+                canvas.DrawRoundRect(new SKRoundRect(badgeRect, 6, 6), hudChipBorderPaint);
+                canvas.DrawText(dimSummary, panelX + (panelWidth - dimBounds.Width) / 2f, panelY + 177, hudBoldFont, hudAccentPaint);
+
+                string hint = "[G] or [Esc] to Close";
+                footerFont.MeasureText(hint, out SKRect hintBounds, hudMutedPaint);
+                canvas.DrawText(hint, panelX + (panelWidth - hintBounds.Width) / 2f, panelY + 204, footerFont, hudMutedPaint);
+            }
+
             // Bottom Footer Shortcuts
-            string footerText = "[S] Scramble  •  [R] Reset  •  [1] 3x3  [2] 4x4  [3] 6x6  [4] 8x8  •  [Esc] Cancel Drag";
+            string footerText = "[S] Scramble  •  [R] Reset  •  [G] Grid Setup  •  [1-4] Presets  •  [Esc] Cancel";
             footerFont.MeasureText(footerText, out SKRect footerBounds, hudMutedPaint);
             canvas.DrawText(footerText, (width - footerBounds.Width) / 2f, height - 12, footerFont, hudMutedPaint);
         });
