@@ -34,6 +34,32 @@ public class AudioEngine : IDisposable
     /// </summary>
     public bool IsAvailable => _isInitialized && !_disposed;
 
+    /// <summary>
+    /// Gets or sets the master volume/gain for all OpenAL playback (0.0 to 1.0+).
+    /// </summary>
+    public float MasterVolume
+    {
+        get
+        {
+            if (!IsAvailable || AL == null) return 0f;
+            AL.GetListenerProperty(ListenerFloat.Gain, out float gain);
+            return gain;
+        }
+        set
+        {
+            if (!IsAvailable || AL == null) return;
+            AL.SetListenerProperty(ListenerFloat.Gain, Math.Max(0f, value));
+        }
+    }
+
+    /// <summary>
+    /// Sets the master volume/gain for all OpenAL playback.
+    /// </summary>
+    public void SetVolume(float volume)
+    {
+        MasterVolume = volume;
+    }
+
     public AudioEngine()
     {
         try
@@ -160,6 +186,83 @@ public class AudioEngine : IDisposable
         {
             // Ignored to avoid throwing during UI rendering/events
         }
+    }
+
+    /// <summary>
+    /// Creates a new <see cref="AudioStreamer"/> for real-time continuous audio streaming using this engine's OpenAL instance.
+    /// </summary>
+    /// <param name="bufferCount">Number of ring buffers in queue (default 4).</param>
+    /// <param name="bufferSize">Size of each buffer in samples (default 4096).</param>
+    /// <param name="sampleRate">Audio sample rate (default 44100 Hz).</param>
+    /// <returns>A new <see cref="AudioStreamer"/> instance, or null if audio is unavailable.</returns>
+    public AudioStreamer? CreateStreamer(int bufferCount = 4, int bufferSize = 4096, int sampleRate = SoundSynthesizer.DefaultSampleRate)
+    {
+        if (!IsAvailable || AL == null) return null;
+        return new AudioStreamer(AL, sampleRate, bufferCount, bufferSize);
+    }
+
+    /// <summary>
+    /// Creates and immediately starts an <see cref="AudioStreamer"/> using the provided sample provider delegate.
+    /// </summary>
+    /// <param name="sampleProvider">Managed sample generator delegate: (buffer, offset, count) => samplesWritten.</param>
+    /// <param name="bufferCount">Number of ring buffers in queue (default 4).</param>
+    /// <param name="bufferSize">Size of each buffer in samples (default 4096).</param>
+    /// <param name="sampleRate">Audio sample rate (default 44100 Hz).</param>
+    /// <returns>The running <see cref="AudioStreamer"/> instance, or null if audio is unavailable.</returns>
+    public AudioStreamer? StartStream(Func<short[], int, int, int> sampleProvider, int bufferCount = 4, int bufferSize = 4096, int sampleRate = SoundSynthesizer.DefaultSampleRate)
+    {
+        ArgumentNullException.ThrowIfNull(sampleProvider);
+        var streamer = CreateStreamer(bufferCount, bufferSize, sampleRate);
+        streamer?.Start(sampleProvider);
+        return streamer;
+    }
+
+    /// <summary>
+    /// Creates and immediately starts an <see cref="AudioStreamer"/> using the provided normalized float sample generator delegate.
+    /// </summary>
+    /// <param name="floatProvider">Normalized float sample provider delegate: (buffer, offset, count) => samplesWritten.</param>
+    /// <param name="bufferCount">Number of ring buffers in queue (default 4).</param>
+    /// <param name="bufferSize">Size of each buffer in samples (default 4096).</param>
+    /// <param name="sampleRate">Audio sample rate (default 44100 Hz).</param>
+    /// <returns>The running <see cref="AudioStreamer"/> instance, or null if audio is unavailable.</returns>
+    public AudioStreamer? StartStream(Func<float[], int, int, int> floatProvider, int bufferCount = 4, int bufferSize = 4096, int sampleRate = SoundSynthesizer.DefaultSampleRate)
+    {
+        ArgumentNullException.ThrowIfNull(floatProvider);
+        var streamer = CreateStreamer(bufferCount, bufferSize, sampleRate);
+        streamer?.Start(floatProvider);
+        return streamer;
+    }
+
+    /// <summary>
+    /// Creates and immediately starts an <see cref="AudioStreamer"/> using the provided normalized double sample generator delegate.
+    /// </summary>
+    /// <param name="doubleProvider">Normalized double sample provider delegate: (buffer, offset, count) => samplesWritten.</param>
+    /// <param name="bufferCount">Number of ring buffers in queue (default 4).</param>
+    /// <param name="bufferSize">Size of each buffer in samples (default 4096).</param>
+    /// <param name="sampleRate">Audio sample rate (default 44100 Hz).</param>
+    /// <returns>The running <see cref="AudioStreamer"/> instance, or null if audio is unavailable.</returns>
+    public AudioStreamer? StartStream(Func<double[], int, int, int> doubleProvider, int bufferCount = 4, int bufferSize = 4096, int sampleRate = SoundSynthesizer.DefaultSampleRate)
+    {
+        ArgumentNullException.ThrowIfNull(doubleProvider);
+        var streamer = CreateStreamer(bufferCount, bufferSize, sampleRate);
+        streamer?.Start(doubleProvider);
+        return streamer;
+    }
+
+    /// <summary>
+    /// Creates and immediately starts an <see cref="AudioStreamer"/> using the provided raw PCM byte generator delegate.
+    /// </summary>
+    /// <param name="byteProvider">Raw PCM byte provider delegate: (buffer, offset, count) => bytesWritten.</param>
+    /// <param name="bufferCount">Number of ring buffers in queue (default 4).</param>
+    /// <param name="bufferSize">Size of each buffer in samples (default 4096).</param>
+    /// <param name="sampleRate">Audio sample rate (default 44100 Hz).</param>
+    /// <returns>The running <see cref="AudioStreamer"/> instance, or null if audio is unavailable.</returns>
+    public AudioStreamer? StartStream(Func<byte[], int, int, int> byteProvider, int bufferCount = 4, int bufferSize = 4096, int sampleRate = SoundSynthesizer.DefaultSampleRate)
+    {
+        ArgumentNullException.ThrowIfNull(byteProvider);
+        var streamer = CreateStreamer(bufferCount, bufferSize, sampleRate);
+        streamer?.Start(byteProvider);
+        return streamer;
     }
 
     /// <summary>

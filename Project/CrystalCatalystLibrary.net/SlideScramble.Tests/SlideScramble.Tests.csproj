@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\AudioStreamingDemo\AudioStreamingDemo.csproj" />
     <ProjectReference Include="..\CrystalOpenAL\CrystalOpenAL.csproj" />
     <ProjectReference Include="..\SlideScramble\SlideScramble.csproj" />
   </ItemGroup>
