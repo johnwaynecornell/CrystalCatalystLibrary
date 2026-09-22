@@ -7,6 +7,7 @@ This solution contains the .NET bindings and integration libraries for CrystalCa
 - **CrystalCatalystLibrary.net**: The primary .NET binding for the native CrystalCatalyst library. It provides the base `PixData` and windowing abstractions.
 - **CrystalSkia.net**: Integration with SkiaSharp. Provides adapters for `PixData` to `SKBitmap` and `SKImage`, and high-level conversion utilities via `SkiaConvert`.
 - **CrystalOpenGL**: OpenGL integration library. Provides helpers for OpenGL context management, texture creation from `PixData`, and Silk.NET bridges.
+- **CrystalOpenAL**: OpenAL audio integration library. Provides pointerless dynamic IL bridges (`ALBridges`), managed `Array` and `GCHandle` pinning for PCM audio data, procedural sound synthesis (`SoundSynthesizer`), and lightweight 3D audio playback (`AudioEngine`).
 
 ## Examples and Tests
 

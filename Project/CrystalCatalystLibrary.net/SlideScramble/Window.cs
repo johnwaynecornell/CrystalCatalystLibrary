@@ -1,4 +1,5 @@
 using CrystalCatalystLibrary.net;
+using CrystalOpenAL;
 using SkiaSharp;
 
 namespace SlideScramble;
@@ -49,6 +50,7 @@ public class Window
     public TileView? tileView;
 
     public GameState State { get; } = new GameState();
+    public AudioEngine Audio { get; } = new AudioEngine();
 
     // Grid setup UI state
     public bool ShowGridSetup { get; set; } = false;
@@ -237,6 +239,7 @@ public class Window
         wnd.OnIdle = OnIdle;
         wnd.OnClose = (w) =>
         {
+            Audio.Dispose();
             if (pixelBacking)
             {
                 pixelBacking.Dispose();
@@ -504,7 +507,10 @@ public class Window
                         MyGrid.MoveColumn(ordinal, delta);
                     }
                     State.RecordMove(wnd.uptimeSeconds());
-                    State.CheckSolved(MyGrid, wnd.uptimeSeconds());
+                    if (State.CheckSolved(MyGrid, wnd.uptimeSeconds()))
+                    {
+                        Audio.PlayVictoryChime();
+                    }
                 }
                 return false;
             }
@@ -652,6 +658,7 @@ public class Window
             if (ScrambleCount <= 0 && State.Mode == GameMode.Scrambling)
             {
                 State.FinishScrambling(wnd.uptimeSeconds());
+                Audio.PlayGameStartChime();
             }
             
             if (State.Mode == GameMode.Scrambling)
