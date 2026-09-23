@@ -266,6 +266,86 @@ public class AudioEngine : IDisposable
     }
 
     /// <summary>
+    /// Creates a new <see cref="AudioCapture"/> instance for recording live microphone/line-in audio input.
+    /// </summary>
+    /// <param name="sampleRate">Audio sample rate (default 44100 Hz).</param>
+    /// <param name="bufferSize">Size of the capture ring buffer in samples (default 8192).</param>
+    /// <param name="deviceName">Optional specific capture device name, or null for default device.</param>
+    /// <returns>A new <see cref="AudioCapture"/> instance, or null if audio capture hardware is unavailable.</returns>
+    public AudioCapture? CreateCapture(int sampleRate = SoundSynthesizer.DefaultSampleRate, int bufferSize = 8192, string? deviceName = null)
+    {
+        try
+        {
+            var capture = new AudioCapture(sampleRate, bufferSize, deviceName);
+            return capture.IsAvailable ? capture : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Creates and immediately starts an <see cref="AudioCapture"/> instance delivering normalized samples into the specified <see cref="AudioCyclicBuffer"/>.
+    /// </summary>
+    /// <param name="cyclicBuffer">Target cyclic buffer for captured audio samples.</param>
+    /// <param name="sampleRate">Audio sample rate (default 44100 Hz).</param>
+    /// <param name="bufferSize">Size of the capture ring buffer in samples (default 8192).</param>
+    /// <param name="deviceName">Optional specific capture device name, or null for default device.</param>
+    /// <returns>The running <see cref="AudioCapture"/> instance, or null if capture failed to start.</returns>
+    public AudioCapture? StartCapture(AudioCyclicBuffer cyclicBuffer, int sampleRate = SoundSynthesizer.DefaultSampleRate, int bufferSize = 8192, string? deviceName = null)
+    {
+        ArgumentNullException.ThrowIfNull(cyclicBuffer);
+        var capture = CreateCapture(sampleRate, bufferSize, deviceName);
+        if (capture != null && capture.Start(cyclicBuffer))
+        {
+            return capture;
+        }
+        capture?.Dispose();
+        return null;
+    }
+
+    /// <summary>
+    /// Creates and immediately starts an <see cref="AudioCapture"/> instance delivering normalized double samples via callback.
+    /// </summary>
+    /// <param name="sampleCallback">Callback receiving normalized double samples (-1.0 to 1.0) and sample count.</param>
+    /// <param name="sampleRate">Audio sample rate (default 44100 Hz).</param>
+    /// <param name="bufferSize">Size of the capture ring buffer in samples (default 8192).</param>
+    /// <param name="deviceName">Optional specific capture device name, or null for default device.</param>
+    /// <returns>The running <see cref="AudioCapture"/> instance, or null if capture failed to start.</returns>
+    public AudioCapture? StartCapture(Action<double[], int> sampleCallback, int sampleRate = SoundSynthesizer.DefaultSampleRate, int bufferSize = 8192, string? deviceName = null)
+    {
+        ArgumentNullException.ThrowIfNull(sampleCallback);
+        var capture = CreateCapture(sampleRate, bufferSize, deviceName);
+        if (capture != null && capture.Start(sampleCallback))
+        {
+            return capture;
+        }
+        capture?.Dispose();
+        return null;
+    }
+
+    /// <summary>
+    /// Creates and immediately starts an <see cref="AudioCapture"/> instance delivering raw 16-bit PCM samples via callback.
+    /// </summary>
+    /// <param name="pcmCallback">Callback receiving raw 16-bit PCM samples and sample count.</param>
+    /// <param name="sampleRate">Audio sample rate (default 44100 Hz).</param>
+    /// <param name="bufferSize">Size of the capture ring buffer in samples (default 8192).</param>
+    /// <param name="deviceName">Optional specific capture device name, or null for default device.</param>
+    /// <returns>The running <see cref="AudioCapture"/> instance, or null if capture failed to start.</returns>
+    public AudioCapture? StartCapture(Action<short[], int> pcmCallback, int sampleRate = SoundSynthesizer.DefaultSampleRate, int bufferSize = 8192, string? deviceName = null)
+    {
+        ArgumentNullException.ThrowIfNull(pcmCallback);
+        var capture = CreateCapture(sampleRate, bufferSize, deviceName);
+        if (capture != null && capture.Start(pcmCallback))
+        {
+            return capture;
+        }
+        capture?.Dispose();
+        return null;
+    }
+
+    /// <summary>
     /// Plays a custom synthesized bell chime at a specified fundamental frequency and duration.
     /// </summary>
     public void PlayCustomChime(double frequency, double durationSeconds = 1.2, double decayRate = 3.2)
