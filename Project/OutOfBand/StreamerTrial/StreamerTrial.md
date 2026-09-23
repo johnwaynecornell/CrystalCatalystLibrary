@@ -5,6 +5,7 @@
 It serves as an interactive reference application demonstrating continuous low-latency audio streaming, live microphone/line-in capture analysis, thread-safe lock-free circular buffering, edge-synchronized waveform triggering, and vector-rendered CRT phosphor visualization.
 
 ---
+![CrystalCatalyst Oscilloscope](CrystalCatalyst_Oscilloscope.png)
 
 ## Key Features
 
