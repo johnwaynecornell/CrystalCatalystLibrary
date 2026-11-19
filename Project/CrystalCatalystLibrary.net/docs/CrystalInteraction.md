@@ -117,3 +117,82 @@ popupHost.Show(control, new RectangleF(0, 0, 800f, 600f));
 The popup draws a semi-transparent backdrop and a border around the content. Register it
 with `CrystalInteraction` so pointer and keyboard events reach it, or route events
 manually when the popup is visible.
+
+### OpenGL PixData presenter
+
+`GLPixDataPresenter` (in `CrystalOpenGL`) displays a CPU-side `PixData` buffer through an
+OpenGL texture rendered as a full-screen quad. It is a reusable presentation component
+that separates Skia drawing from framebuffer presentation.
+
+**Architecture:**
+
+Skia determines the pixels. `PixData` owns the CPU image. OpenGL presents that image.
+The presenter owns its GPU resources (texture, shaders, VAO/VBO) but does not take
+ownership of `PixData` — the caller retains ownership and lifetime.
+
+**Usage:**
+
+```csharp
+// 1. Create a GL context on the window
+wnd.GLInitVersioned(3, 3);
+var gl = GL.GetApi(wnd.GLGetProcAddress);
+
+// 2. Create the presenter
+var presenter = new GLPixDataPresenter(gl);
+presenter.SetViewport(width, height);
+
+// 3. Each frame: draw to PixData with Skia, then present
+PixData pixelBacking = FixedPixDataRenderer.CreateFixed(width, height, (canvas, info) =>
+{
+    // Draw game content with Skia
+});
+
+wnd.GLMakeCurrent();
+presenter.Present(ref pixelBacking);
+wnd.GLPresent();
+
+// 4. On resize
+presenter.SetViewport(newWidth, newHeight);
+
+// 5. On shutdown
+wnd.GLMakeCurrent();
+presenter.Dispose();
+```
+
+**Pixel format support:**
+
+The presenter uses `GLTextureHelper.WritePixels` for uploads, which supports all formats
+mapped by `GLPixFormatMap`: `rgba:int8`, `bgra:int8`, `rgb:int8`, `bgr:int8`,
+`rgba:float32`, `rgb:float32`, and their int16 variants. Unsupported formats are
+automatically converted via fallback. SlideScramble's default `bgra:int8` format is
+directly uploadable without conversion.
+
+**Filtering:**
+
+Set `presenter.Filter = TextureFilter.Nearest` for pixel-accurate presentation (default)
+or `TextureFilter.Linear` for smooth scaling.
+
+**Diagnostics:**
+
+Enable `presenter.CollectDiagnostics = true` to collect per-frame timing data:
+`TextureUploadMs` (CPU-side upload time), `DrawSubmissionMs` (CPU-side draw time),
+and texture/viewport dimensions. These are CPU timings, not GPU completion times.
+
+**Fallback:**
+
+If GL context creation fails, fall back to `windowHandle.PresentPix(ref pixelBacking)`.
+The presenter catches shader compilation errors and texture upload failures, setting
+`LastError` for inspection.
+
+**Relationship to OpenGLCrystalTest_Texture:**
+
+The presenter follows the same GL context creation, shader compilation, and texture
+management patterns established by `OpenGLCrystalTest_Texture`, but is designed as a
+reusable component rather than a self-contained demo.
+
+**Platform notes:**
+
+- Requires OpenGL 3.3+ core profile.
+- The GL context must be current on the calling thread.
+- A non-GL window cannot be converted to a GL window after creation; call
+  `GLInitVersioned` before the first draw.

@@ -1,12 +1,26 @@
 using CrystalCatalystLibrary.net;
 using CrystalOpenAL;
+using CrystalOpenGL;
 using CrystalSkia.net;
+using Silk.NET.OpenGL;
 using SkiaSharp;
 
 namespace SlideScramble;
 
 public class Window
 {
+    /// <summary>
+    /// Set to true to use OpenGL texture presentation instead of the legacy PresentPix path.
+    /// When enabled, the window is created with an OpenGL context and the Skia-rendered
+    /// PixData is uploaded to a GL texture each frame.
+    /// </summary>
+    public const bool UseOpenGLPresentation = true;
+
+    /// <summary>
+    /// Set to true to show frame diagnostics (FPS, upload time, draw time) on the HUD.
+    /// </summary>
+    public const bool ShowDiagnostics = false;
+
     public CrystalWindow wnd;
     public Grid MyGrid { get; protected set; }
     
@@ -69,6 +83,12 @@ public class Window
     private readonly CrystalPopupHost popupHost = new();
     private CrystalSelectionControl? sessionSelectionControl;
     private bool showSessionPopup;
+
+    // OpenGL presentation
+    private GL? _gl;
+    private GLPixDataPresenter? _glPresenter;
+    private bool _glAvailable = false;
+    private string? _glError;
 
     private class MediaLayout
     {
@@ -431,11 +451,51 @@ public class Window
 
         wnd = CrystalWindow.Create(850, 700, "SlideScramble - CrystalCatalyst Showcase");
         wnd.ApplicationRetain();
+
+        // Initialize OpenGL context if using GL presentation
+        if (UseOpenGLPresentation)
+        {
+            try
+            {
+                bool success = wnd.GLInitVersioned(3, 3);
+                if (success)
+                {
+                    wnd.GLGetVersion(out int major, out int minor);
+                    _gl = GL.GetApi(wnd.GLGetProcAddress);
+                    _glAvailable = true;
+                    Console.WriteLine($"[GL] OpenGL {major}.{minor} context created successfully.");
+                }
+                else
+                {
+                    _glError = "GLInitVersioned(3,3) failed";
+                    Console.WriteLine($"[GL] Warning: {_glError} — falling back to legacy presentation.");
+                }
+            }
+            catch (Exception ex)
+            {
+                _glError = ex.Message;
+                Console.WriteLine($"[GL] Warning: {_glError} — falling back to legacy presentation.");
+            }
+        }
         
         wnd.OnDraw = OnDraw;
         wnd.OnIdle = OnIdle;
+        wnd.OnResize = OnResize;
         wnd.OnClose = (w) =>
         {
+            // Clean up GL resources while context is still available
+            if (_glAvailable && _glPresenter != null)
+            {
+                try
+                {
+                    w.GLMakeCurrent();
+                    _glPresenter.Dispose();
+                }
+                catch { /* Ignore cleanup errors */ }
+            }
+            _glPresenter = null;
+            _gl = null;
+
             Audio.Dispose();
             editorFont.Dispose();
             foreach (var typeface in editorFontResolver.TypefaceCache.Values) typeface.Dispose();
@@ -1053,6 +1113,14 @@ public class Window
         windowHandle.QueueRedraw();
     }
 
+    private void OnResize(CrystalWindow windowHandle, int width, int height)
+    {
+        if (_glAvailable && _glPresenter != null)
+        {
+            _glPresenter.SetViewport(width, height);
+        }
+    }
+
     private void OnDraw(CrystalWindow windowHandle)
     {
         windowHandle.GetSize(out int width, out int height);
@@ -1074,6 +1142,25 @@ public class Window
         }
 
         fpsText = $"{sample_count / total_delta:0.0} FPS";
+
+        // Initialize GL presenter on first draw
+        if (_glAvailable && _glPresenter == null && _gl != null)
+        {
+            try
+            {
+                wnd.GLMakeCurrent();
+                _glPresenter = new GLPixDataPresenter(_gl);
+                _glPresenter.SetViewport(width, height);
+                _glPresenter.CollectDiagnostics = true;
+                Console.WriteLine("[GL] Presenter initialized successfully.");
+            }
+            catch (Exception ex)
+            {
+                _glError = ex.Message;
+                _glAvailable = false;
+                Console.WriteLine($"[GL] Warning: Presenter init failed ({_glError}) — falling back to legacy.");
+            }
+        }
 
         if (!pixelBacking || pixelBacking.width != width || pixelBacking.height != height)
         {
@@ -1241,6 +1328,18 @@ public class Window
             DrawDropdownArrow(canvas, 28 + gridBounds.Width + 8, 30, 4, hudAccentPaint);
             if (width >= 650) canvas.DrawText(fpsText, 132, 35, hudFont, hudMutedPaint);
 
+            // Diagnostics overlay
+            if (ShowDiagnostics)
+            {
+                if (_glAvailable && _glPresenter != null)
+                {
+                    var diag = _glPresenter.LastFrameDiagnostics;
+                    string diagText =
+                        $"GL: {diag.TextureUploadMs:F1}ms upload + {diag.DrawSubmissionMs:F1}ms draw | {diag.TextureWidth}x{diag.TextureHeight} -> {diag.ViewportWidth}x{diag.ViewportHeight}";
+                    canvas.DrawText(diagText, 16, height - 30, hudFont, hudMutedPaint);
+                }
+            }
+
             // Center HUD: Moves & Time
             string movesText = $"Moves: {State.MoveCount}";
             string timeText = $"Time: {State.FormatTime(time)}";
@@ -1263,7 +1362,6 @@ public class Window
                 GameMode.Solved => "SOLVED!",
                 _ => ""
             };
-
             SKPaint statePaint = State.Mode switch
             {
                 GameMode.Solved => bannerBorderPaint,
@@ -1412,8 +1510,18 @@ public class Window
             canvas.DrawText(footerText, -footerBounds.Width / 2f, 0, footerFont, hudMutedPaint);
             canvas.Restore();
         });
-        
-        windowHandle.PresentPix(ref pixelBacking);
+
+        // Present via OpenGL or legacy path
+        if (_glAvailable && _glPresenter != null)
+        {
+            wnd.GLMakeCurrent();
+            _glPresenter.Present(ref pixelBacking);
+            wnd.GLPresent();
+        }
+        else
+        {
+            windowHandle.PresentPix(ref pixelBacking);
+        }
     }
 
     public void Show(bool visible = true)

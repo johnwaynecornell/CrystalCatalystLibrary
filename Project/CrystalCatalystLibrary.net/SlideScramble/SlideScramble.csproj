@@ -23,5 +23,6 @@
     <ProjectReference Include="..\CrystalCatalystLibrary.net\CrystalCatalystLibrary.net.csproj" />
     <ProjectReference Include="..\CrystalOpenAL\CrystalOpenAL.csproj" />
     <ProjectReference Include="..\CrystalSkia.net\CrystalSkia.net.csproj" />
+    <ProjectReference Include="..\CrystalOpenGL\CrystalOpenGL.csproj" />
   </ItemGroup>
 </Project>
