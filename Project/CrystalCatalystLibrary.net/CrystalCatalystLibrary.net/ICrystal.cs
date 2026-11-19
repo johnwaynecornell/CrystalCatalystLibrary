@@ -1,5 +1,4 @@
 using System.Drawing;
-using SkiaSharp;
 
 namespace CrystalCatalystLibrary.net;
 
@@ -8,7 +7,6 @@ public interface ICrystal
 {
     RectangleF Bounds { get; }
     void OnIdle(double timeSeconds);
-    void OnDraw(SKCanvas canvas);
     void SetFocus(bool focused);
     void PointerDown(PointF position, CrystalMouseButton button);
     void PointerMove(PointF position);

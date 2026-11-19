@@ -1,5 +1,6 @@
 using System.Drawing;
 using CrystalCatalystLibrary.net;
+using CrystalSkia.net;
 using SkiaSharp;
 using Xunit;
 
@@ -46,7 +47,7 @@ public class InteractionTests
         using var canvas = new SKCanvas(bitmap);
         canvas.Clear(SKColors.Red);
         int saveCount = canvas.SaveCount;
-        ((ICrystal)editor).OnDraw(canvas);
+        ((ICrystalSkia)editor).OnDraw(canvas);
         Assert.Equal(saveCount, canvas.SaveCount);
         Assert.Equal(SKColors.Red, bitmap.GetPixel(99, 55));
         Assert.Equal(SKColors.Red, bitmap.GetPixel(200, 55));

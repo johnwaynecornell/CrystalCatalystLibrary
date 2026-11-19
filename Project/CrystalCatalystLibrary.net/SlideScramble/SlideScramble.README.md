@@ -94,15 +94,18 @@ cannot contain paths or reserved filename characters. Errors are displayed in th
 Loading validates the file before replacing the current board. Playback does not add
 game moves or record itself.
 
-Version 1 uses zero-based coordinates, with rows ordered top to bottom and columns left
-to right. Each initial cell is the tile's home `[x,y]` coordinate. A move's `index` is
-the row or column selected at `dragStart`; positive `delta` follows the grid's logical
-rotation convention (tiles move left for rows and up for columns).
+New recordings use version 2, with one-based coordinates matching the tile labels:
+columns run left to right and rows top to bottom. Each initial cell is the tile's home
+`[x,y]` coordinate. A move's `dragStart` is also `[x,y]`, and `index` is the one-based
+row or column selected there. `delta` is unchanged: positive values follow the grid's
+logical rotation convention (tiles move left for rows and up for columns).
+Version 1 recordings use zero-based coordinates and indices and remain readable; saving
+one again writes version 2. Older versions of the application cannot read version 2.
 
 ```json
-{"format":"SlideScramble","version":1,"width":2,"height":2,
- "initialCells":[[[0,0],[1,0]],[[0,1],[1,1]]],
- "moves":[{"axis":"Row","index":1,"dragStart":[0,1],"delta":1}]}
+{"format":"SlideScramble","version":2,"width":2,"height":2,
+ "initialCells":[[[1,1],[2,1]],[[1,2],[2,2]]],
+ "moves":[{"axis":"Row","index":2,"dragStart":[1,2],"delta":1}]}
 ```
 
 `Grid` owns the rotations; `SessionRecording` validates and serializes the starting

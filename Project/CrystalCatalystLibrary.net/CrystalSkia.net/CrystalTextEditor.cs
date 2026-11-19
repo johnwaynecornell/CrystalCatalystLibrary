@@ -1,12 +1,13 @@
 using System.Drawing;
 using System.Globalization;
 using System.Text;
+using CrystalSkia.net;
 using SkiaSharp;
 
 namespace CrystalCatalystLibrary.net;
 
 /// <summary>Single-line editing model. Indices are UTF-16 offsets at text-element boundaries.</summary>
-public sealed class CrystalTextEditor : ICrystal
+public sealed class CrystalTextEditor : ICrystalSkia
 {
     private string text = "";
     private int caret;

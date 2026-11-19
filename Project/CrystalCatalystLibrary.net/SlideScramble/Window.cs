@@ -1,5 +1,6 @@
 using CrystalCatalystLibrary.net;
 using CrystalOpenAL;
+using CrystalSkia.net;
 using SkiaSharp;
 
 namespace SlideScramble;
@@ -137,7 +138,7 @@ public class Window
         canvas.DrawText(sessionMessage, 12, layout.Height - 4, footerFont, hudMutedPaint);
         canvas.Restore();
         canvas.Restore();
-        filenameEditor.OnDraw(canvas);
+        if ((ICrystal)filenameEditor is ICrystalSkia drawable) drawable.OnDraw(canvas);
     }
 
     private string SessionPath()

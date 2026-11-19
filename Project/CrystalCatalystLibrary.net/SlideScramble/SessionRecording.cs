@@ -17,7 +17,7 @@ public sealed record RecordedMove(RecordedMoveAxis Axis, int StartX, int StartY,
 public sealed class SessionRecording
 {
     public const string Format = "SlideScramble";
-    public const int Version = 1;
+    public const int Version = 2;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -54,12 +54,12 @@ public sealed class SessionRecording
         for (int y = 0; y < Height; y++)
         {
             rows[y] = new int[Width][];
-            for (int x = 0; x < Width; x++) rows[y][x] = new[] { initialCells[y, x] % Width, initialCells[y, x] / Width };
+            for (int x = 0; x < Width; x++) rows[y][x] = new[] { initialCells[y, x] % Width + 1, initialCells[y, x] / Width + 1 };
         }
         return JsonSerializer.Serialize(new RecordingData
         {
             Format = Format, Version = Version, Width = Width, Height = Height, InitialCells = rows,
-            Moves = moves.Select(m => new MoveData { Axis = m.Axis, Index = m.Index, DragStart = new[] { m.StartX, m.StartY }, Delta = m.Delta }).ToArray()
+            Moves = moves.Select(m => new MoveData { Axis = m.Axis, Index = m.Index + 1, DragStart = new[] { m.StartX + 1, m.StartY + 1 }, Delta = m.Delta }).ToArray()
         }, JsonOptions);
     }
 
@@ -69,10 +69,11 @@ public sealed class SessionRecording
         try
         {
             var data = JsonSerializer.Deserialize<RecordingData>(json, JsonOptions) ?? throw new JsonException("Recording is null.");
-            if (data.Format != Format || data.Version != Version || data.Width <= 0 || data.Height <= 0 || data.Width > 256 || data.Height > 256 ||
+            if (data.Format != Format || (data.Version != 1 && data.Version != Version) || data.Width <= 0 || data.Height <= 0 || data.Width > 256 || data.Height > 256 ||
                 data.InitialCells == null || data.InitialCells.Length != data.Height || data.Moves == null)
                 throw new JsonException("Recording must contain a nonempty board and moves.");
             int width = data.Width;
+            int offset = data.Version == 1 ? 0 : 1;
             var cells = new int[data.Height, width];
             for (int y = 0; y < cells.GetLength(0); y++)
             {
@@ -80,16 +81,19 @@ public sealed class SessionRecording
                 for (int x = 0; x < width; x++)
                 {
                     var pair = data.InitialCells[y][x];
-                    if (pair == null || pair.Length != 2 || pair[0] < 0 || pair[0] >= width || pair[1] < 0 || pair[1] >= data.Height)
+                    if (pair == null || pair.Length != 2 || pair[0] < offset || pair[0] >= width + offset || pair[1] < offset || pair[1] >= data.Height + offset)
                         throw new JsonException("Invalid tile coordinates.");
-                    cells[y, x] = checked(pair[1] * width + pair[0]);
+                    cells[y, x] = (pair[1] - offset) * width + pair[0] - offset;
                 }
             }
             var recordedMoves = data.Moves.Select(m =>
             {
                 if (m?.DragStart == null || m.DragStart.Length != 2) throw new JsonException("Invalid drag start.");
-                var move = new RecordedMove(m.Axis, m.DragStart[0], m.DragStart[1], m.Delta);
-                if (m.Index != move.Index) throw new JsonException("Move index does not match drag start.");
+                if (m.DragStart[0] < offset || m.DragStart[0] >= width + offset ||
+                    m.DragStart[1] < offset || m.DragStart[1] >= data.Height + offset)
+                    throw new JsonException("Invalid drag start.");
+                var move = new RecordedMove(m.Axis, m.DragStart[0] - offset, m.DragStart[1] - offset, m.Delta);
+                if (m.Index != move.Index + offset) throw new JsonException("Move index does not match drag start.");
                 return move;
             });
             return new SessionRecording(cells, recordedMoves);
