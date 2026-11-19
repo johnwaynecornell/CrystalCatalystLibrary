@@ -168,14 +168,13 @@ public sealed class CrystalScrollBar : ICrystalSkia
     {
         if (button != CrystalMouseButton.Left || !Visible) return;
 
-        float localX = position.X - Bounds.X;
-        float localY = position.Y - Bounds.Y;
+        // Position is already local to this scroll bar's bounds (per ICrystal contract).
 
         // Check if click is on the thumb
-        if (IsPointOnThumb(localX, localY))
+        if (IsPointOnThumb(position.X, position.Y))
         {
             dragging = true;
-            dragStartPosition = GetPositionAlongTrack(localX, localY);
+            dragStartPosition = GetPositionAlongTrack(position.X, position.Y);
             dragStartOffset = scrollOffset;
             return;
         }
@@ -185,16 +184,13 @@ public sealed class CrystalScrollBar : ICrystalSkia
         float thumbLength = Math.Max(ThumbMinSize, trackLength * viewportRatio);
         float available = trackLength - thumbLength;
 
-        float clickPosition = GetPositionAlongTrack(localX, localY);
+        float clickPosition = GetPositionAlongTrack(position.X, position.Y);
         float newOffset = (clickPosition - thumbLength / 2) / available;
         Offset = newOffset;
     }
 
     public void PointerMove(PointF position)
     {
-        float localX = position.X - Bounds.X;
-        float localY = position.Y - Bounds.Y;
-
         if (dragging)
         {
             float trackLength = Orientation == ScrollBarOrientation.Vertical ? Bounds.Height : Bounds.Width;
@@ -203,7 +199,7 @@ public sealed class CrystalScrollBar : ICrystalSkia
 
             if (available <= 0) return;
 
-            float currentPosition = GetPositionAlongTrack(localX, localY);
+            float currentPosition = GetPositionAlongTrack(position.X, position.Y);
             float delta = currentPosition - dragStartPosition;
             float newOffset = dragStartOffset + delta / available;
             Offset = newOffset;
@@ -211,7 +207,7 @@ public sealed class CrystalScrollBar : ICrystalSkia
         else
         {
             bool wasHovered = hovered;
-            hovered = IsPointOnThumb(localX, localY) || Bounds.Contains(localX + Bounds.X, localY + Bounds.Y);
+            hovered = IsPointOnThumb(position.X, position.Y) || Bounds.Contains(position.X, position.Y);
             if (hovered != wasHovered)
             {
                 Changed?.Invoke();

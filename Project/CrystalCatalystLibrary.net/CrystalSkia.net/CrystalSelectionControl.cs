@@ -330,7 +330,8 @@ public sealed class CrystalSelectionControl : ICrystalSkia
         // Check scroll bar first
         if (scrollBar.Bounds.Contains(localX, localY))
         {
-            scrollBar.PointerDown(position, button);
+            PointF scrollLocal = new(localX - scrollBar.Bounds.X, localY - scrollBar.Bounds.Y);
+            scrollBar.PointerDown(scrollLocal, button);
             return;
         }
 
@@ -396,7 +397,8 @@ public sealed class CrystalSelectionControl : ICrystalSkia
         // Forward to scroll bar if within its bounds
         if (scrollBar.Bounds.Contains(localX, localY))
         {
-            scrollBar.PointerMove(position);
+            PointF scrollLocal = new(localX - scrollBar.Bounds.X, localY - scrollBar.Bounds.Y);
+            scrollBar.PointerMove(scrollLocal);
             return;
         }
 
