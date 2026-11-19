@@ -120,36 +120,12 @@ public class Grid
 
     public void MoveColumn(int x, int delta)
     {
-        int height = Tiles.GetLength(0);
-        Tile[] work = new Tile[height];
-
-        for (int y = 0; y < height; y++)
-        {
-            work[y] = Tiles[y, x];
-        }
-
-        for (int y = 0; y < height; y++)
-        {
-            int targetIndex = WrapIndex(y + delta, height);
-            Tiles[y, x] = work[targetIndex];
-        }
+        LogicalMoves.MoveColumn(Tiles, x, delta);
     }
 
     public void MoveRow(int y, int delta)
     {
-        int width = Tiles.GetLength(1);
-        Tile[] work = new Tile[width];
-
-        for (int x = 0; x < width; x++)
-        {
-            work[x] = Tiles[y, x];
-        }
-
-        for (int x = 0; x < width; x++)
-        {
-            int targetIndex = WrapIndex(x + delta, width);
-            Tiles[y, x] = work[targetIndex];
-        }
+        LogicalMoves.MoveRow(Tiles, y, delta);
     }
 
     public void MoveX(int x, int delta) => MoveColumn(x, delta);

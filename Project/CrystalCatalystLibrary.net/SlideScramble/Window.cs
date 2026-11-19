@@ -22,6 +22,8 @@ public class Window
     {
         public int startX;
         public int startY;
+        public int cellX;
+        public int cellY;
     }
     
     private Drag? drag = null;
@@ -51,6 +53,184 @@ public class Window
 
     public GameState State { get; } = new GameState();
     public AudioEngine Audio { get; } = new AudioEngine();
+    private readonly CrystalInteraction interaction = new CrystalInteraction();
+    private readonly CrystalTextEditor filenameEditor;
+    private string filenameBeforeEdit = "session";
+    private string sessionMessage = "";
+    private SessionRecordingController sessions;
+    private SessionRecording? savedSession;
+    private double lastPlaybackTick;
+    private (int X, int Y)? moveHighlight;
+    private static readonly string[] mediaLabels = { "Rec", "Save", "Load", "|<", "<", ">", "Play", "Stop" };
+    private bool showMedia;
+
+    private class MediaLayout
+    {
+        public float X, Y, Width, Height, Scale;
+        public int Columns;
+
+        public SKRect Button(int index)
+        {
+            float buttonWidth = (Width - 24) / Columns;
+            float left = 12 + index % Columns * buttonWidth;
+            float top = 68 + index / Columns * 30;
+            return new SKRect(X + left * Scale, Y + top * Scale,
+                X + (left + buttonWidth - 3) * Scale, Y + (top + 25) * Scale);
+        }
+    }
+
+    private MediaLayout GetMediaLayout(int width, int height)
+    {
+        float w = Math.Max(1, width), h = Math.Max(1, height);
+        float top = Math.Min(58, h / 3), bottom = Math.Max(top + 1, h - Math.Min(36, h / 3));
+        float left = Math.Clamp(tileView!.xx - 8, 0, w);
+        float right = Math.Clamp(tileView.xx + tileView.width + 8, 0, w);
+        float boardTop = Math.Clamp(tileView.yy - 8, top, bottom);
+        float boardBottom = Math.Clamp(tileView.yy + tileView.height + 8, top, bottom);
+        SKRect[] gutters = {
+            new SKRect(0, top, left, bottom), new SKRect(right, top, w, bottom),
+            new SKRect(0, top, w, boardTop), new SKRect(0, boardBottom, w, bottom)
+        };
+        SKRect gutter = gutters.OrderByDescending(r => r.Width * r.Height).First();
+        float panelWidth = Math.Min(320, Math.Max(40, w - 16));
+        if (gutter.Width >= 160) panelWidth = Math.Min(panelWidth, gutter.Width - 8);
+        int columns = Math.Clamp((int)((panelWidth - 24) / 65), 1, mediaLabels.Length);
+        float panelHeight = 68 + (float)Math.Ceiling((double)mediaLabels.Length / columns) * 30 + 34;
+        float scale = Math.Min(1, Math.Min(w / panelWidth, Math.Max(1, bottom - top) / panelHeight));
+        float x = Math.Clamp(gutter.MidX - panelWidth * scale / 2, 0, Math.Max(0, w - panelWidth * scale));
+        float y = Math.Clamp(gutter.MidY - panelHeight * scale / 2, top, Math.Max(top, bottom - panelHeight * scale));
+        return new MediaLayout { X = x, Y = y, Width = panelWidth, Height = panelHeight, Scale = scale, Columns = columns };
+    }
+
+    private void UpdateMediaEditorBounds(MediaLayout layout)
+    {
+        editorFont.Size = hudFont.Size * layout.Scale;
+        filenameEditor.Bounds = new System.Drawing.RectangleF(layout.X + 12 * layout.Scale, layout.Y + 34 * layout.Scale,
+            Math.Max(1, layout.Width - 24) * layout.Scale, 24 * layout.Scale);
+    }
+
+    private void DrawMedia(SKCanvas canvas, MediaLayout layout)
+    {
+        canvas.Save();
+        canvas.Translate(layout.X, layout.Y);
+        canvas.Scale(layout.Scale);
+        var panel = new SKRoundRect(new SKRect(0, 0, layout.Width, layout.Height), 8, 8);
+        canvas.DrawRoundRect(panel, hudBarPaint);
+        canvas.DrawRoundRect(panel, hudChipBorderPaint);
+        canvas.DrawText("Session  [R] close", 12, 23, hudBoldFont, hudTextPaint);
+        for (int i = 0; i < mediaLabels.Length; i++)
+        {
+            var screenRect = layout.Button(i);
+            var buttonRect = new SKRect((screenRect.Left - layout.X) / layout.Scale, (screenRect.Top - layout.Y) / layout.Scale,
+                (screenRect.Right - layout.X) / layout.Scale, (screenRect.Bottom - layout.Y) / layout.Scale);
+            canvas.DrawRoundRect(new SKRoundRect(buttonRect, 4, 4), hudChipPaint);
+            string label = i == 0 && sessions.Mode == RecordingControllerMode.Recording ? "Stop Rec" :
+                i == 6 && sessions.IsAutoplaying ? "Pause" : mediaLabels[i];
+            canvas.Save();
+            canvas.ClipRect(buttonRect);
+            canvas.DrawText(label, buttonRect.MidX - footerFont.MeasureText(label) / 2, buttonRect.Top + 17, footerFont, hudTextPaint);
+            canvas.Restore();
+        }
+        canvas.Save();
+        canvas.ClipRect(new SKRect(8, layout.Height - 30, layout.Width - 8, layout.Height));
+        canvas.DrawText($"{sessions.Mode}  {sessions.Position}/{sessions.MoveCount}", 12, layout.Height - 18, footerFont, hudMutedPaint);
+        canvas.DrawText(sessionMessage, 12, layout.Height - 4, footerFont, hudMutedPaint);
+        canvas.Restore();
+        canvas.Restore();
+        filenameEditor.OnDraw(canvas);
+    }
+
+    private string SessionPath()
+    {
+        string name = filenameEditor.Text.Trim();
+        if (name.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) name = name[..^5];
+        if (name.Length == 0 || name.Length > 100 || name == "." || name == ".." ||
+            name.Any(c => char.IsControl(c) || "<>:\"/\\|?*".Contains(c)) || name.EndsWith('.'))
+            throw new ArgumentException("Enter a valid filename without a path.");
+        return Path.Combine(AppContext.BaseDirectory, "sessions", name + ".json");
+    }
+
+    private void MediaAction(int index)
+    {
+        State.TakeBackSolved(wnd.uptimeSeconds());
+
+        if (drag != null || Animations.Count != 0 || State.Mode == GameMode.Scrambling)
+        {
+            sessionMessage = "Finish the current move first";
+            return;
+        }
+        try
+        {
+            switch (index)
+            {
+                case 0:
+                    if (sessions.Mode == RecordingControllerMode.Recording)
+                    {
+                        savedSession = sessions.StopRecording();
+                        sessionMessage = "Recording stopped";
+                    }
+                    else if (sessions.Mode == RecordingControllerMode.Idle)
+                    {
+                        sessions.StartRecording();
+                        sessionMessage = "Recording";
+                    }
+                    break;
+                case 1:
+                    if (sessions.Mode == RecordingControllerMode.Recording) throw new InvalidOperationException("Stop recording before saving.");
+                    var toSave = savedSession ?? sessions.Playback ?? throw new InvalidOperationException("No session to save.");
+                    string savePath = SessionPath();
+                    Directory.CreateDirectory(Path.GetDirectoryName(savePath)!);
+                    File.WriteAllText(savePath, toSave.ToJson());
+                    sessionMessage = "Session saved";
+                    break;
+                case 2:
+                    if (sessions.Mode == RecordingControllerMode.Recording) throw new InvalidOperationException("Stop recording before loading.");
+                    string path = SessionPath();
+                    if (new FileInfo(path).Length > 4_000_000) throw new InvalidOperationException("Session file is too large.");
+                    var loaded = SessionRecording.FromJson(File.ReadAllText(path));
+                    if (loaded.Width < 2 || loaded.Height < 2 || loaded.Width > 9 || loaded.Height > 9)
+                        throw new InvalidOperationException("Board dimensions must be between 2 and 9.");
+                    var newGrid = new Grid(loaded.Width, loaded.Height);
+                    var newController = new SessionRecordingController(newGrid);
+                    newController.LoadPlayback(loaded);
+                    MyGrid = newGrid;
+                    sessions = newController;
+                    savedSession = loaded;
+                    moveHighlight = null;
+                    State.Reset();
+                    UpdateTileView();
+                    sessionMessage = "Session loaded";
+                    break;
+                case 3:
+                    if (sessions.Mode == RecordingControllerMode.Idle) sessions.ResumePlayback();
+                    sessions.ResetPlayback();
+                    moveHighlight = null;
+                    break;
+                case 4:
+                    if (sessions.Mode == RecordingControllerMode.Idle) sessions.ResumePlayback();
+                    QueuePlaybackAnimation(false);
+                    break;
+                case 5:
+                    if (sessions.Mode == RecordingControllerMode.Idle) sessions.ResumePlayback();
+                    sessions.SetAutoplay(false);
+                    QueuePlaybackAnimation(true);
+                    break;
+                case 6:
+                    if (sessions.Mode == RecordingControllerMode.Idle) sessions.ResumePlayback();
+                    sessions.SetAutoplay(!sessions.IsAutoplaying);
+                    lastPlaybackTick = wnd.uptimeSeconds();
+                    break;
+                case 7:
+                    if (sessions.Mode == RecordingControllerMode.Playback) sessions.StopPlayback();
+                    moveHighlight = null;
+                    break;
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException or NotSupportedException)
+        {
+            sessionMessage = ex.Message;
+        }
+    }
 
     // Grid setup UI state
     public bool ShowGridSetup { get; set; } = false;
@@ -220,7 +400,17 @@ public class Window
         IsAntialias = true,
     };
 
-    private readonly SKFont hudFont = new SKFont(SKTypeface.FromFamilyName("Arial", SKFontStyle.Normal) ?? SKTypeface.Default, 14);
+    private readonly CrystalSkia.net.CrystalFontFileFallback fontFallback = new CrystalSkia.net.CrystalFontFileFallback(new[]
+    {
+        Path.Combine(AppContext.BaseDirectory, "DejaVuSans.ttf"),
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+        @"C:\Windows\Fonts\arial.ttf",
+        "/System/Library/Fonts/Supplemental/Arial.ttf"
+    });
+    private readonly SKFont hudFont;
+    private readonly SKFont editorFont;
+    private readonly CrystalSkia.net.AnsiSkiaRenderer editorFontResolver = new();
     private readonly SKFont hudBoldFont = new SKFont(SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold) ?? SKTypeface.Default, 15);
     private readonly SKFont bannerTitleFont = new SKFont(SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold) ?? SKTypeface.Default, 24);
     private readonly SKFont bannerTextFont = new SKFont(SKTypeface.FromFamilyName("Arial", SKFontStyle.Normal) ?? SKTypeface.Default, 14);
@@ -229,7 +419,18 @@ public class Window
 
     public Window()
     {
+        hudFont = new SKFont(fontFallback.FindTypeface("SlideScramble 0123456789") ?? SKTypeface.Default, 14);
+        editorFont = new SKFont(hudFont.Typeface, hudFont.Size);
+        editorFontResolver.FontFileFallback = fontFallback;
+        filenameEditor = new CrystalTextEditor(new System.Drawing.RectangleF(24, 58, 300, 24), editorFont);
+        filenameEditor.TypefaceForGlyph = editorFontResolver.TypefaceForGlyph;
+        filenameEditor.TextColor = System.Drawing.Color.FromArgb(hudTextPaint.Color.Alpha, hudTextPaint.Color.Red, hudTextPaint.Color.Green, hudTextPaint.Color.Blue);
+        filenameEditor.BackgroundColor = System.Drawing.Color.FromArgb(hudChipPaint.Color.Alpha, hudChipPaint.Color.Red, hudChipPaint.Color.Green, hudChipPaint.Color.Blue);
+        filenameEditor.AccentColor = System.Drawing.Color.FromArgb(hudAccentPaint.Color.Alpha, hudAccentPaint.Color.Red, hudAccentPaint.Color.Green, hudAccentPaint.Color.Blue);
+        filenameEditor.Text = "session";
+        interaction.Add(filenameEditor);
         MyGrid = new Grid(4, 4);
+        sessions = new SessionRecordingController(MyGrid);
         UpdateTileView(850, 700);
 
         wnd = CrystalWindow.Create(850, 700, "SlideScramble - CrystalCatalyst Showcase");
@@ -240,6 +441,10 @@ public class Window
         wnd.OnClose = (w) =>
         {
             Audio.Dispose();
+            editorFont.Dispose();
+            foreach (var typeface in editorFontResolver.TypefaceCache.Values) typeface.Dispose();
+            hudFont.Dispose();
+            fontFallback.Dispose();
             if (pixelBacking)
             {
                 pixelBacking.Dispose();
@@ -253,6 +458,19 @@ public class Window
 
         wnd.OnKeyDown = (handle, keycode) =>
         {
+            if (filenameEditor.IsFocused)
+            {
+                if (keycode == (int)KeyCode.Escape || keycode == (int)KeyCode.Enter)
+                {
+                    if (keycode == (int)KeyCode.Escape) filenameEditor.Text = filenameBeforeEdit;
+                    interaction.SetFocus(null);
+                }
+                else if (keycode >= 32 && keycode <= 126)
+                    interaction.TextInput(((char)keycode).ToString());
+                else
+                    interaction.KeyDown((KeyCode)keycode);
+                return;
+            }
             if (keycode == (int)KeyCode.Escape)
             {
                 if (drag != null)
@@ -269,6 +487,7 @@ public class Window
                     {
                         animationLockHoriz = null;
                         animationTileOffset = 0;
+                        moveHighlight = null;
                     }
                     return;
                 }
@@ -276,6 +495,12 @@ public class Window
                 if (ShowGridSetup)
                 {
                     ShowGridSetup = false;
+                    return;
+                }
+
+                if (showMedia)
+                {
+                    showMedia = false;
                     return;
                 }
 
@@ -287,12 +512,16 @@ public class Window
             {
                 ShowGridSetup = !ShowGridSetup;
             }
-            else if ((c == 's' || c == 'S') && State.Mode != GameMode.Scrambling && drag == null && Animations.Count == 0)
+            else if ((c == 's' || c == 'S') && sessions.Mode == RecordingControllerMode.Idle && State.Mode != GameMode.Scrambling && drag == null && Animations.Count == 0)
             {
                 State.StartScrambling();
                 ScrambleCount = (MyGrid.Width + MyGrid.Height) * 2;
             }
-            else if ((c == 'r' || c == 'R') && State.Mode != GameMode.Scrambling && drag == null && Animations.Count == 0)
+            else if (c == 'r' || c == 'R')
+            {
+                showMedia = !showMedia;
+            }
+            else if ((c == 'x' || c == 'X') && sessions.Mode == RecordingControllerMode.Idle && State.Mode != GameMode.Scrambling && drag == null && Animations.Count == 0)
             {
                 MyGrid.Reset();
                 State.Reset();
@@ -338,10 +567,10 @@ public class Window
             tileView = new TileView();
         }
 
-        float topHeaderHeight = 56f;
+        float topHeaderHeight = 62f;
         float footerHeight = 36f;
-        float availableWidth = Math.Max(100f, width - 40f);
-        float availableHeight = Math.Max(100f, height - topHeaderHeight - footerHeight - 20f);
+        float availableWidth = Math.Max(1f, width - 40f);
+        float availableHeight = Math.Max(1f, height - topHeaderHeight - footerHeight - 20f);
 
         float tileSize = Math.Min(
             availableWidth / MyGrid.Width,
@@ -360,9 +589,10 @@ public class Window
     {
         width = Math.Clamp(width, 2, 9);
         height = Math.Clamp(height, 2, 9);
-        if (State.Mode != GameMode.Scrambling && drag == null && Animations.Count == 0)
+        if (sessions.Mode == RecordingControllerMode.Idle && State.Mode != GameMode.Scrambling && drag == null && Animations.Count == 0)
         {
             MyGrid = new Grid(width, height);
+            sessions = new SessionRecordingController(MyGrid);
             State.Reset();
             animationLockHoriz = null;
             animationTileOffset = 0;
@@ -418,6 +648,7 @@ public class Window
 
     private void OnMouseMove(CrystalWindow windowHandle, int x, int y)
     {
+        interaction.PointerMove(x, y);
         if (activeSlider != ActiveSlider.None)
         {
             windowHandle.GetSize(out int width, out int height);
@@ -456,14 +687,14 @@ public class Window
                 {
                     // Vertical drag -> column move
                     animationLockHoriz = true;
-                    int rawOrdinal = (int)((x - tileView.xx) * MyGrid.Width / tileView.width);
+                    int rawOrdinal = drag.cellX;
                     animationOrdinal = Math.Clamp(rawOrdinal, 0, MyGrid.Width - 1);
                 }
                 else
                 {
                     // Horizontal drag -> row move
                     animationLockHoriz = false;
-                    int rawOrdinal = (int)((y - tileView.yy) * MyGrid.Height / tileView.height);
+                    int rawOrdinal = drag.cellY;
                     animationOrdinal = Math.Clamp(rawOrdinal, 0, MyGrid.Height - 1);
                 }
             }
@@ -479,7 +710,7 @@ public class Window
         }
     }
 
-    private void QueueSnapAnimation(bool horizontal, int ordinal, float startOffset, float targetOffset, int delta)
+    private void QueueSnapAnimation(bool horizontal, int ordinal, float startOffset, float targetOffset, int delta, int cellX = 0, int cellY = 0)
     {
         Animation anim = new Animation();
         double start = -1;
@@ -496,18 +727,20 @@ public class Window
             {
                 animationLockHoriz = null;
                 animationTileOffset = 0;
+                moveHighlight = null;
                 if (delta != 0)
                 {
+                    bool committed;
                     if (!horizontal)
                     {
-                        MyGrid.MoveRow(ordinal, delta);
+                        committed = sessions.MoveRow(ordinal, delta, cellX, cellY);
                     }
                     else
                     {
-                        MyGrid.MoveColumn(ordinal, delta);
+                        committed = sessions.MoveColumn(ordinal, delta, cellX, cellY);
                     }
-                    State.RecordMove(wnd.uptimeSeconds());
-                    if (State.CheckSolved(MyGrid, wnd.uptimeSeconds()))
+                    if (committed) State.RecordMove(wnd.uptimeSeconds());
+                    if (committed && State.CheckSolved(MyGrid, wnd.uptimeSeconds()))
                     {
                         Audio.PlayVictoryChime();
                     }
@@ -528,8 +761,57 @@ public class Window
         Animations.Enqueue(anim);
     }
 
+    private void QueuePlaybackAnimation(bool forward)
+    {
+        if (sessions.Mode != RecordingControllerMode.Playback)
+            throw new InvalidOperationException("Not in playback.");
+        if (!forward) sessions.SetAutoplay(false);
+        var playback = sessions.Playback!;
+        int index = forward ? sessions.Position : sessions.Position - 1;
+        if (index < 0 || index >= playback.Moves.Count)
+        {
+            if (forward) sessions.SetAutoplay(false);
+            return;
+        }
+
+        State.TakeBackSolved(wnd.uptimeSeconds());
+        var controller = sessions;
+        var move = playback.Moves[index];
+        bool column = move.Axis == RecordedMoveAxis.Column;
+        int length = column ? MyGrid.Height : MyGrid.Width;
+        int delta = move.Delta % length;
+        if (!forward) delta = -delta;
+        moveHighlight = forward ? (move.StartX, move.StartY) : column
+            ? (move.StartX, (move.StartY + delta + length) % length)
+            : ((move.StartX + delta + length) % length, move.StartY);
+        animationLockHoriz = column;
+        animationOrdinal = move.Index;
+        animationTileOffset = 0;
+        double start = -1;
+        double duration = Math.Max(0.1, Math.Min(0.35, Math.Abs(delta) * 0.12));
+        Animations.Enqueue(new Animation { animation = (window, animation) =>
+        {
+            double time = wnd.uptimeSeconds();
+            if (start < 0) start = time;
+            float t = Math.Clamp((float)((time - start) / duration), 0f, 1f);
+            if (t >= 1f)
+            {
+                if (forward) controller.Step();
+                else controller.StepBack();
+                animationLockHoriz = null;
+                animationTileOffset = 0;
+                moveHighlight = null;
+                lastPlaybackTick = time;
+                return false;
+            }
+            animationTileOffset = delta * (t * t * (3f - 2f * t));
+            return true;
+        }});
+    }
+
     private void OnMouseUp(CrystalWindow windowHandle, int button, int x, int y)
     {
+        interaction.PointerUp(x, y, (CrystalMouseButton)button);
         if (button == (int)CrystalMouseButton.Left)
         {
             if (activeSlider != ActiveSlider.None)
@@ -540,6 +822,8 @@ public class Window
 
             if (drag != null && tileView != null)
             {
+                int cellX = drag.cellX;
+                int cellY = drag.cellY;
                 drag = null;
 
                 if (animationLockHoriz != null)
@@ -549,12 +833,13 @@ public class Window
                     float currentOffset = animationTileOffset;
                     int delta = (int)Math.Round(currentOffset);
 
-                    QueueSnapAnimation(horizontal, ordinal, currentOffset, delta, delta);
+                    QueueSnapAnimation(horizontal, ordinal, currentOffset, delta, delta, cellX, cellY);
                 }
                 else
                 {
                     animationLockHoriz = null;
                     animationTileOffset = 0;
+                    moveHighlight = null;
                 }
             }
         }
@@ -565,6 +850,26 @@ public class Window
         if (button != (int)CrystalMouseButton.Left) return;
 
         windowHandle.GetSize(out int width, out int height);
+        UpdateTileView(width, height);
+        var media = GetMediaLayout(width, height);
+        UpdateMediaEditorBounds(media);
+        if (!ShowGridSetup && showMedia && filenameEditor.Bounds.Contains(x, y))
+        {
+            if (!filenameEditor.IsFocused) filenameBeforeEdit = filenameEditor.Text;
+            interaction.PointerDown(x, y, CrystalMouseButton.Left);
+            return;
+        }
+        interaction.SetFocus(null);
+        if (!ShowGridSetup && showMedia)
+        {
+            for (int i = 0; i < mediaLabels.Length; i++)
+            {
+                if (!media.Button(i).Contains(x, y)) continue;
+                MediaAction(i);
+                return;
+            }
+            if (new SKRect(media.X, media.Y, media.X + media.Width * media.Scale, media.Y + media.Height * media.Scale).Contains(x, y)) return;
+        }
 
         // Check HUD Grid button hotspot
         var hudGridButtonRect = new SKRect(20, 10, 125, 50);
@@ -629,23 +934,32 @@ public class Window
         }
 
         // Board dragging hit test
-        if (State.Mode != GameMode.Scrambling && tileView != null && Animations.Count == 0 && drag == null)
+        if (sessions.Mode != RecordingControllerMode.Playback && State.Mode != GameMode.Scrambling && tileView != null && Animations.Count == 0 && drag == null)
         {
             // Check if mouse is inside the board bounds
-            if (x >= tileView.xx && x <= tileView.xx + tileView.width &&
-                y >= tileView.yy && y <= tileView.yy + tileView.height)
+            if (x >= tileView.xx && x < tileView.xx + tileView.width &&
+                y >= tileView.yy && y < tileView.yy + tileView.height)
             {
                 drag = new Drag()
                 {
                     startX = x,
                     startY = y,
+                    cellX = (int)((x - tileView.xx) * MyGrid.Width / tileView.width),
+                    cellY = (int)((y - tileView.yy) * MyGrid.Height / tileView.height),
                 };
+                moveHighlight = (drag.cellX, drag.cellY);
             }
         }
     }
 
     private void OnIdle(CrystalWindow windowHandle)
     {
+        interaction.OnIdle(windowHandle.uptimeSeconds());
+        if (sessions.IsAutoplaying && Animations.Count == 0 && drag == null && wnd.uptimeSeconds() - lastPlaybackTick >= 0.4)
+        {
+            QueuePlaybackAnimation(true);
+            lastPlaybackTick = wnd.uptimeSeconds();
+        }
         if (Animations.TryPeek(out Animation? animation))
         {
             if (animation?.animation != null && !animation.animation(this, animation))
@@ -744,6 +1058,8 @@ public class Window
         }
 
         UpdateTileView(width, height);
+        var media = GetMediaLayout(width, height);
+        UpdateMediaEditorBounds(media);
 
         if (tileView == null) return;
         
@@ -860,6 +1176,27 @@ public class Window
                 }
             }
 
+            if (moveHighlight is { } highlighted)
+            {
+                float x = tileView.xx + tileW * highlighted.X;
+                float y = tileView.yy + tileH * highlighted.Y;
+                float wrapX = 0, wrapY = 0;
+                if (animationLockHoriz is { } column)
+                {
+                    int length = column ? MyGrid.Height : MyGrid.Width;
+                    float offset = animationTileOffset % length;
+                    if (offset < 0) offset += length;
+                    if (column) { y -= tileH * offset; wrapY = tileView.height; }
+                    else { x -= tileW * offset; wrapX = tileView.width; }
+                }
+                canvas.Save();
+                canvas.ClipRect(new SKRect(tileView.xx, tileView.yy, tileView.xx + tileView.width, tileView.yy + tileView.height));
+                canvas.DrawRoundRect(new SKRoundRect(new SKRect(x + 3, y + 3, x + tileW - 3, y + tileH - 3), 6, 6), activeLinePaint);
+                if (wrapX != 0 || wrapY != 0)
+                    canvas.DrawRoundRect(new SKRoundRect(new SKRect(x + wrapX + 3, y + wrapY + 3, x + wrapX + tileW - 3, y + wrapY + tileH - 3), 6, 6), activeLinePaint);
+                canvas.Restore();
+            }
+
             // Draw Top HUD Bar
             var hudRect = new SKRect(16, 10, width - 16, 50);
             var hudRRect = new SKRoundRect(hudRect, 8, 8);
@@ -875,7 +1212,7 @@ public class Window
             hudBoldFont.MeasureText(gridInfo, out SKRect gridBounds, hudAccentPaint);
             canvas.DrawText(gridInfo, 28, 35, hudBoldFont, hudAccentPaint);
             DrawDropdownArrow(canvas, 28 + gridBounds.Width + 8, 30, 4, hudAccentPaint);
-            canvas.DrawText(fpsText, 132, 35, hudFont, hudMutedPaint);
+            if (width >= 650) canvas.DrawText(fpsText, 132, 35, hudFont, hudMutedPaint);
 
             // Center HUD: Moves & Time
             string movesText = $"Moves: {State.MoveCount}";
@@ -884,8 +1221,11 @@ public class Window
             hudBoldFont.MeasureText(timeText, out SKRect timeBounds, hudAccentPaint);
             
             float centerAreaStart = width / 2f - (movesBounds.Width + timeBounds.Width + 30) / 2f;
-            canvas.DrawText(movesText, centerAreaStart, 35, hudBoldFont, hudTextPaint);
-            canvas.DrawText(timeText, centerAreaStart + movesBounds.Width + 24, 35, hudBoldFont, hudAccentPaint);
+            if (width >= 500)
+            {
+                canvas.DrawText(movesText, centerAreaStart, 35, hudBoldFont, hudTextPaint);
+                canvas.DrawText(timeText, centerAreaStart + movesBounds.Width + 24, 35, hudBoldFont, hudAccentPaint);
+            }
 
             // Right HUD: Game Mode
             string modeText = State.Mode switch
@@ -907,8 +1247,8 @@ public class Window
 
             hudBoldFont.MeasureText(modeText, out SKRect modeBounds, statePaint);
             float modeTextX = width - 36 - modeBounds.Width;
-            canvas.DrawText(modeText, modeTextX, 35, hudBoldFont, statePaint);
-            if (State.Mode == GameMode.Solved)
+            if (width >= 650) canvas.DrawText(modeText, modeTextX, 35, hudBoldFont, statePaint);
+            if (width >= 650 && State.Mode == GameMode.Solved)
             {
                 DrawStar(canvas, modeTextX - 12, 30, 5.5f, 2.5f, bannerBorderPaint);
             }
@@ -941,6 +1281,8 @@ public class Window
                 footerFont.MeasureText(prompt, out SKRect pBounds, hudAccentPaint);
                 canvas.DrawText(prompt, bx + (bannerW - pBounds.Width) / 2f, by + 100, footerFont, hudAccentPaint);
             }
+
+            if (showMedia) DrawMedia(canvas, media);
 
             // Grid Setup Overlay Panel
             if (ShowGridSetup)
@@ -1028,9 +1370,14 @@ public class Window
             }
 
             // Bottom Footer Shortcuts
-            string footerText = "[S] Scramble  •  [R] Reset  •  [G] Grid Setup  •  [1-4] Presets  •  [Esc] Cancel";
+            string footerText = "[S] Scramble   [X] Reset   [G] Grid   [1-4] Size   [R] Session   [Esc] Cancel";
             footerFont.MeasureText(footerText, out SKRect footerBounds, hudMutedPaint);
-            canvas.DrawText(footerText, (width - footerBounds.Width) / 2f, height - 12, footerFont, hudMutedPaint);
+            canvas.Save();
+            float footerScale = Math.Min(1, Math.Max(1, width - 16) / Math.Max(1, footerBounds.Width));
+            canvas.Translate(width / 2f, height - 12);
+            canvas.Scale(footerScale);
+            canvas.DrawText(footerText, -footerBounds.Width / 2f, 0, footerFont, hudMutedPaint);
+            canvas.Restore();
         });
         
         windowHandle.PresentPix(ref pixelBacking);

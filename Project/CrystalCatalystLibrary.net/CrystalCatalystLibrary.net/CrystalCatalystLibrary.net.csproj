@@ -10,6 +10,7 @@
     </PropertyGroup>
     <ItemGroup>
         <Reference Include="$(MyReferencePath)\JWCEssentials.net.dll"/>
+        <PackageReference Include="SkiaSharp" Version="[3.119.2,4.0.0)" />
     </ItemGroup>
 
     <Target Name="PostBuild" AfterTargets="PostBuildEvent">

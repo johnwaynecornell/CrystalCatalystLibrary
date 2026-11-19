@@ -62,7 +62,8 @@ The current HUD exposes the main game operations directly.
 
 ```text
 S       Scramble
-R       Reset
+R       Toggle session panel
+X       Reset
 G       Grid Setup
 1-4     Grid presets
 Esc     Cancel
@@ -71,6 +72,49 @@ Esc     Cancel
 Rows and columns are manipulated directly with the pointer.
 
 The Grid Setup interface allows the board dimensions to be selected independently.
+
+## Session recording and playback
+
+Press **R** to show or hide the translucent session panel in the largest available gutter.
+It may overlap the board when space is limited. Click the filename field to edit it;
+Enter accepts and Escape restores the previous name. While it has focus, game shortcuts
+are suppressed. Click **Rec** to capture the current arrangement, play normally, then
+click **Stop Rec**. The recording is immediately available for inspection at its final
+move; **Save** writes it to a file. **Load** opens the named session; **|<**, **<**,
+and **>** reset, step backward, and step forward. **Play/Pause** advances automatically;
+steps animate and highlight the original drag-start cell until the transition finishes.
+During manual play, the drag-start cell is highlighted through the release or cancel snap.
+**Stop** leaves inspection and
+preserves the session for resuming. Recording,
+loading, and playback wait until the current drag, snap, or scramble finishes. Reset,
+scramble, and grid changes are unavailable while recording or inspecting.
+
+Files are stored as `.json` in the `sessions` directory next to the executable. Names
+cannot contain paths or reserved filename characters. Errors are displayed in the footer.
+Loading validates the file before replacing the current board. Playback does not add
+game moves or record itself.
+
+Version 1 uses zero-based coordinates, with rows ordered top to bottom and columns left
+to right. Each initial cell is the tile's home `[x,y]` coordinate. A move's `index` is
+the row or column selected at `dragStart`; positive `delta` follows the grid's logical
+rotation convention (tiles move left for rows and up for columns).
+
+```json
+{"format":"SlideScramble","version":1,"width":2,"height":2,
+ "initialCells":[[[0,0],[1,0]],[[0,1],[1,1]]],
+ "moves":[{"axis":"Row","index":1,"dragStart":[0,1],"delta":1}]}
+```
+
+`Grid` owns the rotations; `SessionRecording` validates and serializes the starting
+arrangement and moves; `SessionRecordingController` manages recording and inspection.
+`ICrystal`, `CrystalInteraction`, and `CrystalTextEditor` provide renderer-independent
+input and editing models, while the window draws them with Skia.
+
+The window binding currently exposes named keys, not committed Unicode text or IME
+events. The reusable editor accepts Unicode text from hosts with such an input source,
+but this window's filename entry is limited to printable ASCII key events and does not
+support IME, clipboard, or complex text shaping. Long filenames are clipped. Font files
+are tried in platform-specific order, with the Skia default as fallback.
 
 ## Scrambling
 

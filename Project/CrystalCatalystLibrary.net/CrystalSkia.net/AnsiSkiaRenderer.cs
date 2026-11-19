@@ -24,6 +24,13 @@ public class AnsiSkiaRenderer
 
     public Dictionary<String, SKTypeface> TypefaceCache = new();
 
+    /// <summary>Optional ordered font-file fallback. The caller owns its lifetime.</summary>
+    public CrystalFontFileFallback? FontFileFallback { get; set; }
+
+    /// <summary>Resolves text through configured font files, then installed font families.</summary>
+    public SKTypeface TypefaceForGlyph(string glyph) =>
+        FontFileFallback?.FindTypeface(glyph) ?? GetTypeface(FontFamilyForGlyph(glyph));
+
     public SKTypeface GetTypeface(string family)
     {
         if (!TypefaceCache.TryGetValue(family, out var typeface))
@@ -36,8 +43,8 @@ public class AnsiSkiaRenderer
     
     public bool HasFontFamilyAndGlyph(String family, String glyph)
     {
-        using (SKTypeface typeface = GetTypeface(family))
         {
+            SKTypeface typeface = GetTypeface(family);
             // If the names do not match, the exact font family wasn't found
             // and SkiaSharp used a fallback instead.
             bool isAvailable = typeface.FamilyName.Equals(family, StringComparison.OrdinalIgnoreCase);
@@ -230,7 +237,7 @@ public class AnsiSkiaRenderer
             float lineWidth = 0;
             foreach (var sc in line)
             {
-                var typeface = GetTypeface(FontFamilyForGlyph(sc.Glyph));
+                var typeface = TypefaceForGlyph(sc.Glyph);
                 var font = GetFont(typeface, FontSize, sc.Bold, sc.Italic);
                 
                 lineWidth += font.MeasureText(sc.Glyph.ToString());
@@ -255,7 +262,7 @@ public class AnsiSkiaRenderer
             float curX = x;
             foreach (var sc in line)
             {
-                var typeface = GetTypeface(FontFamilyForGlyph(sc.Glyph));
+                var typeface = TypefaceForGlyph(sc.Glyph);
                 var font = GetFont(typeface, FontSize, sc.Bold, sc.Italic);
                 
                 if (sc.Blink && !blinkState) { }
