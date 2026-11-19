@@ -5,7 +5,7 @@ namespace CrystalCatalystLibrary.net;
 /// <summary>A rectangular interaction target. Pointer coordinates passed to it are local to Bounds.</summary>
 public interface ICrystal
 {
-    RectangleF Bounds { get; }
+    RectangleF Bounds { get; set; }
     void OnIdle(double timeSeconds);
     void SetFocus(bool focused);
     void PointerDown(PointF position, CrystalMouseButton button);

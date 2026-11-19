@@ -65,6 +65,11 @@ public class Window
     private static readonly string[] mediaLabels = { "Rec", "Save", "Load", "|<", "<", ">", "Play", "Stop" };
     private bool showMedia;
 
+    // Popup selection integration
+    private readonly CrystalPopupHost popupHost = new();
+    private CrystalSelectionControl? sessionSelectionControl;
+    private bool showSessionPopup;
+
     private class MediaLayout
     {
         public float X, Y, Width, Height, Scale;
@@ -186,21 +191,7 @@ public class Window
                     break;
                 case 2:
                     if (sessions.Mode == RecordingControllerMode.Recording) throw new InvalidOperationException("Stop recording before loading.");
-                    string path = SessionPath();
-                    if (new FileInfo(path).Length > 4_000_000) throw new InvalidOperationException("Session file is too large.");
-                    var loaded = SessionRecording.FromJson(File.ReadAllText(path));
-                    if (loaded.Width < 2 || loaded.Height < 2 || loaded.Width > 9 || loaded.Height > 9)
-                        throw new InvalidOperationException("Board dimensions must be between 2 and 9.");
-                    var newGrid = new Grid(loaded.Width, loaded.Height);
-                    var newController = new SessionRecordingController(newGrid);
-                    newController.LoadPlayback(loaded);
-                    MyGrid = newGrid;
-                    sessions = newController;
-                    savedSession = loaded;
-                    moveHighlight = null;
-                    State.Reset();
-                    UpdateTileView();
-                    sessionMessage = "Session loaded";
+                    ShowSessionSelectionPopup();
                     break;
                 case 3:
                     if (sessions.Mode == RecordingControllerMode.Idle) sessions.ResumePlayback();
@@ -430,9 +421,13 @@ public class Window
         filenameEditor.AccentColor = System.Drawing.Color.FromArgb(hudAccentPaint.Color.Alpha, hudAccentPaint.Color.Red, hudAccentPaint.Color.Green, hudAccentPaint.Color.Blue);
         filenameEditor.Text = "session";
         interaction.Add(filenameEditor);
+        interaction.Add(popupHost);
         MyGrid = new Grid(4, 4);
         sessions = new SessionRecordingController(MyGrid);
         UpdateTileView(850, 700);
+
+        // Wire popup closed event
+        popupHost.Closed += OnPopupClosed;
 
         wnd = CrystalWindow.Create(850, 700, "SlideScramble - CrystalCatalyst Showcase");
         wnd.ApplicationRetain();
@@ -459,6 +454,20 @@ public class Window
 
         wnd.OnKeyDown = (handle, keycode) =>
         {
+            // Route to popup when visible
+            if (showSessionPopup && popupHost.IsVisible)
+            {
+                // Printable characters must become TextInput, not KeyDown
+                if (keycode >= 32 && keycode <= 126)
+                {
+                    popupHost.TextInput(((char)keycode).ToString());
+                }
+                else
+                {
+                    popupHost.KeyDown((KeyCode)keycode, false, false);
+                }
+                return;
+            }
             if (filenameEditor.IsFocused)
             {
                 if (keycode == (int)KeyCode.Escape || keycode == (int)KeyCode.Enter)
@@ -649,6 +658,11 @@ public class Window
 
     private void OnMouseMove(CrystalWindow windowHandle, int x, int y)
     {
+        if (showSessionPopup && popupHost.IsVisible)
+        {
+            popupHost.PointerMove(new System.Drawing.PointF(x, y));
+            return;
+        }
         interaction.PointerMove(x, y);
         if (activeSlider != ActiveSlider.None)
         {
@@ -812,6 +826,11 @@ public class Window
 
     private void OnMouseUp(CrystalWindow windowHandle, int button, int x, int y)
     {
+        if (showSessionPopup && popupHost.IsVisible)
+        {
+            popupHost.PointerUp(new System.Drawing.PointF(x, y), (CrystalMouseButton)button);
+            return;
+        }
         interaction.PointerUp(x, y, (CrystalMouseButton)button);
         if (button == (int)CrystalMouseButton.Left)
         {
@@ -849,6 +868,13 @@ public class Window
     private void OnMouseDown(CrystalWindow windowHandle, int button, int x, int y)
     {
         if (button != (int)CrystalMouseButton.Left) return;
+
+        // Route to popup when visible
+        if (showSessionPopup && popupHost.IsVisible)
+        {
+            popupHost.PointerDown(new System.Drawing.PointF(x, y), CrystalMouseButton.Left);
+            return;
+        }
 
         windowHandle.GetSize(out int width, out int height);
         UpdateTileView(width, height);
@@ -1285,6 +1311,12 @@ public class Window
 
             if (showMedia) DrawMedia(canvas, media);
 
+            // Session Selection Popup
+            if (showSessionPopup && popupHost.IsVisible)
+            {
+                ((ICrystalSkia)popupHost).OnDraw(canvas);
+            }
+
             // Grid Setup Overlay Panel
             if (ShowGridSetup)
             {
@@ -1387,5 +1419,106 @@ public class Window
     public void Show(bool visible = true)
     {
         wnd.Show(visible);
+    }
+
+    private void ShowSessionSelectionPopup()
+    {
+        // Gather session filenames from the sessions directory
+        string sessionsDir = Path.Combine(AppContext.BaseDirectory, "sessions");
+        var filenames = Directory.Exists(sessionsDir)
+            ? Directory.GetFiles(sessionsDir, "*.json")
+                .Select(f => Path.GetFileNameWithoutExtension(f)!)
+                .OrderBy(n => n)
+                .ToList()
+            : new List<string>();
+
+        // Create the selection control
+        float popupWidth = 360f;
+        float popupHeight = CrystalSelectionControl.CalculateHeight(filenames.Count, 2, popupWidth);
+        var control = new CrystalSelectionControl(
+            new System.Drawing.RectangleF(0, 0, popupWidth, popupHeight),
+            filenames,
+            filenameEditor.Text,
+            new[] { "Load", "Cancel" },
+            editorFont);
+
+        control.ButtonActivated += OnSessionButtonActivated;
+        sessionSelectionControl = control;
+
+        // Show the popup
+        wnd.GetSize(out int width, out int height);
+        popupHost.Show(control, new System.Drawing.RectangleF(0, 0, width, height));
+        showSessionPopup = true;
+    }
+
+    private void OnSessionButtonActivated(SelectionButtonEventArgs e)
+    {
+        if (e.ButtonLabel == "Cancel")
+        {
+            popupHost.Cancel();
+        }
+        else if (e.ButtonLabel == "Load")
+        {
+            string name = e.CurrentText.Trim();
+            if (string.IsNullOrEmpty(name))
+            {
+                popupHost.Accept(name, e.SelectedIndex);
+                return;
+            }
+
+            try
+            {
+                string sessionsDir = Path.Combine(AppContext.BaseDirectory, "sessions");
+                string path = Path.Combine(sessionsDir, name + ".json");
+                if (!File.Exists(path))
+                {
+                    popupHost.Accept(name, e.SelectedIndex);
+                    return;
+                }
+
+                if (new FileInfo(path).Length > 4_000_000)
+                    throw new InvalidOperationException("Session file is too large.");
+
+                var loaded = SessionRecording.FromJson(File.ReadAllText(path));
+                if (loaded.Width < 2 || loaded.Height < 2 || loaded.Width > 9 || loaded.Height > 9)
+                    throw new InvalidOperationException("Board dimensions must be between 2 and 9.");
+
+                var newGrid = new Grid(loaded.Width, loaded.Height);
+                var newController = new SessionRecordingController(newGrid);
+                newController.LoadPlayback(loaded);
+                MyGrid = newGrid;
+                sessions = newController;
+                savedSession = loaded;
+                moveHighlight = null;
+                State.Reset();
+                UpdateTileView();
+                filenameEditor.Text = name;
+                sessionMessage = "Session loaded";
+                popupHost.Accept(name, e.SelectedIndex);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException or NotSupportedException)
+            {
+                popupHost.Accept(e.CurrentText, e.SelectedIndex);
+            }
+        }
+    }
+
+    private void OnPopupClosed(PopupResult result)
+    {
+        showSessionPopup = false;
+        sessionSelectionControl = null;
+
+        if (result.Type == PopupResultType.Accepted && result.ResultText != null)
+        {
+            string name = result.ResultText.Trim();
+            if (!string.IsNullOrEmpty(name))
+            {
+                filenameEditor.Text = name;
+            }
+        }
+        else if (result.Type == PopupResultType.Cancelled)
+        {
+            // Just close — no action needed
+        }
     }
 }

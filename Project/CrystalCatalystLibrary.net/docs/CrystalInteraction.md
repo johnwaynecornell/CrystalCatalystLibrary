@@ -33,3 +33,87 @@ clipboard shortcuts, undo, and IME composition are not implemented. The current
 `CrystalWindow` binding exposes named key callbacks but no committed Unicode text
 callback; applications need a separate platform text-input source to call `TextInput`.
 Do not treat named key codes as committed characters.
+
+### Selection control
+
+`CrystalSelectionControl` (in `CrystalSkia.net`) composes a `CrystalTextEditor` with a
+scrollable string list and an ordered row of action buttons. It implements `ICrystalSkia`
+so it can be registered with `CrystalInteraction` like any other target.
+
+Construct it with bounds, an enumerable of strings, an initial text value, an ordered
+collection of button labels, and an `SKFont`. The editor sits at the top; clicking a list
+item copies that item's string into the editor without closing the control. The current
+editor text is exposed as `ResultText`; `SelectedIndex` returns the matching list position
+or -1 when the edited text no longer identifies a selection.
+
+Keyboard navigation uses Up/Down for single-step movement, PageUp/PageDown for page
+jumps, and Home/End for first/last. All navigation updates the editor text and keeps the
+selected item visible by adjusting the scroll offset automatically.
+
+Button activations raise `ButtonActivated` with a `SelectionButtonEventArgs` carrying the
+button label, current text, and selected index. The control does not impose accept/cancel
+semantics — the caller decides what each button means.
+
+`CalculateHeight(itemCount, buttonCount, width)` is a static helper that returns the
+minimum height required for a given configuration.
+
+**Example — loading a session file:**
+
+```csharp
+var items = Directory.GetFiles(sessionsDir, "*.json")
+    .Select(Path.GetFileNameWithoutExtension).ToList();
+float height = CrystalSelectionControl.CalculateHeight(items.Count, 2, 360f);
+var control = new CrystalSelectionControl(
+    new RectangleF(0, 0, 360f, height), items, "session",
+    new[] { "Load", "Cancel" }, font);
+control.ButtonActivated += e =>
+{
+    if (e.ButtonLabel == "Cancel") popupHost.Cancel();
+    else if (e.ButtonLabel == "Load")
+        popupHost.Accept(e.CurrentText, e.SelectedIndex);
+};
+```
+
+### Generic popup host
+
+`CrystalPopupHost` (in `CrystalSkia.net`) displays any `ICrystalSkia` content as an in-window
+modal overlay. It owns the popup lifecycle, routes localized pointer and keyboard input,
+coordinates focus, and returns a `PopupResult` when closed.
+
+Call `Show(content, windowBounds)` to display the popup centered within the window. The
+popup handles Escape to cancel and forwards all other keys to the content. When the caller
+wants to close the popup, it calls `Accept(resultText, selectedIndex)`, `Cancel()`, or
+`Close()`. A `Closed` event fires with the result.
+
+`PopupResult.Type` distinguishes `Accepted`, `Cancelled`, and `Closed`. Accepting an empty
+string produces `PopupResultType.Accepted` with an empty `ResultText`, which is
+distinguishable from `PopupResultType.Cancelled`.
+
+After closing, the popup releases the content reference and removes focus. The host is
+independent of `CrystalSelectionControl` — any `ICrystalSkia` target can be displayed.
+
+**Example — showing a selection popup:**
+
+```csharp
+var popupHost = new CrystalPopupHost();
+popupHost.Closed += result =>
+{
+    if (result.Type == PopupResultType.Accepted)
+        LoadSession(result.ResultText);
+};
+
+var control = new CrystalSelectionControl(
+    new RectangleF(0, 0, 360f, 200f), filenames, "",
+    new[] { "Load", "Cancel" }, font);
+control.ButtonActivated += e =>
+{
+    if (e.ButtonLabel == "Cancel") popupHost.Cancel();
+    else popupHost.Accept(e.CurrentText, e.SelectedIndex);
+};
+
+popupHost.Show(control, new RectangleF(0, 0, 800f, 600f));
+```
+
+The popup draws a semi-transparent backdrop and a border around the content. Register it
+with `CrystalInteraction` so pointer and keyboard events reach it, or route events
+manually when the popup is visible.
