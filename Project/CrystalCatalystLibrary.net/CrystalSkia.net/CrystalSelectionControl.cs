@@ -327,36 +327,64 @@ public sealed class CrystalSelectionControl : ICrystalSkia
         float localX = position.X;
         float localY = position.Y;
 
+        // Compute layout dynamically to stay in sync even before the first OnDraw
+        float x = Padding;
+        float y = Padding;
+        float contentWidth = Bounds.Width - Padding * 2 - ScrollBarWidth;
+        RectangleF editorBounds = new RectangleF(Padding, Padding, contentWidth, EditorHeight);
+
+        // Compute scroll bar bounds dynamically
+        RectangleF scrollBarBounds = new RectangleF(
+            Bounds.Width - Padding - ScrollBarWidth, Padding, ScrollBarWidth, Bounds.Height - Padding * 2);
+
         // Check scroll bar first
-        if (scrollBar.Bounds.Contains(localX, localY))
+        if (scrollBarBounds.Contains(localX, localY))
         {
-            PointF scrollLocal = new(localX - scrollBar.Bounds.X, localY - scrollBar.Bounds.Y);
+            PointF scrollLocal = new(localX - scrollBarBounds.X, localY - scrollBarBounds.Y);
             scrollBar.PointerDown(scrollLocal, button);
             return;
         }
 
-        // Check editor first
-        if (editor.Bounds.Contains(localX, localY))
+        // Check editor
+        if (editorBounds.Contains(localX, localY))
         {
-            editor.PointerDown(position, button);
+            PointF editorLocal = new(localX - editorBounds.X, localY - editorBounds.Y);
+            editor.PointerDown(editorLocal, button);
             return;
         }
 
-        float x = Padding;
-        float y = Padding;
-        float contentWidth = Bounds.Width - Padding * 2 - ScrollBarWidth;
-
         y += EditorHeight + SectionGap;
 
-        // Check list items
+        // Compute button position first — buttons are drawn on top, so check them first
         int visibleCount = Math.Min(items.Count, MaxVisibleItems(Bounds.Width));
         float listHeight = visibleCount * ItemHeight;
+        float buttonsY = y + listHeight + SectionGap;
+
+        // Check buttons (drawn on top of list area)
+        if (buttonLabels.Count > 0)
+        {
+            float buttonWidth = (contentWidth - (buttonLabels.Count - 1) * ButtonGap) / buttonLabels.Count;
+            for (int i = 0; i < buttonLabels.Count; i++)
+            {
+                float btnX = x + i * (buttonWidth + ButtonGap);
+                float btnY = buttonsY;
+                var btnRect = new SKRect(btnX, btnY, btnX + buttonWidth, btnY + ButtonHeight);
+                if (btnRect.Contains(localX, localY))
+                {
+                    ButtonActivated?.Invoke(new SelectionButtonEventArgs(buttonLabels[i], editor.Text, selectedIndex));
+                    return;
+                }
+            }
+        }
+
+        // Check list items (clipped to list area)
         float scrollPixels = GetScrollOffsetPixels();
+        float listBottom = y + listHeight;
 
         for (int i = 0; i < items.Count; i++)
         {
             float itemY = y + i * ItemHeight - scrollPixels;
-            if (itemY + ItemHeight < y || itemY > y + listHeight)
+            if (itemY + ItemHeight < y || itemY > listBottom)
                 continue;
 
             var itemRect = new SKRect(x + 2, itemY + 2, x + contentWidth - 2, itemY + ItemHeight - 2);
@@ -368,25 +396,6 @@ public sealed class CrystalSelectionControl : ICrystalSkia
                 return;
             }
         }
-
-        y += listHeight + SectionGap;
-
-        // Check buttons
-        if (buttonLabels.Count > 0)
-        {
-            float buttonWidth = (contentWidth - (buttonLabels.Count - 1) * ButtonGap) / buttonLabels.Count;
-            for (int i = 0; i < buttonLabels.Count; i++)
-            {
-                float btnX = x + i * (buttonWidth + ButtonGap);
-                float btnY = y;
-                var btnRect = new SKRect(btnX, btnY, btnX + buttonWidth, btnY + ButtonHeight);
-                if (btnRect.Contains(localX, localY))
-                {
-                    ButtonActivated?.Invoke(new SelectionButtonEventArgs(buttonLabels[i], editor.Text, selectedIndex));
-                    return;
-                }
-            }
-        }
     }
 
     public void PointerMove(PointF position)
@@ -394,30 +403,56 @@ public sealed class CrystalSelectionControl : ICrystalSkia
         float localX = position.X;
         float localY = position.Y;
 
+        // Compute layout dynamically to stay in sync even before the first OnDraw
+        float x = Padding;
+        float y = Padding;
+        float contentWidth = Bounds.Width - Padding * 2 - ScrollBarWidth;
+        RectangleF editorBounds = new RectangleF(Padding, Padding, contentWidth, EditorHeight);
+
+        // Compute scroll bar bounds dynamically
+        RectangleF scrollBarBounds = new RectangleF(
+            Bounds.Width - Padding - ScrollBarWidth, Padding, ScrollBarWidth, Bounds.Height - Padding * 2);
+
         // Forward to scroll bar if within its bounds
-        if (scrollBar.Bounds.Contains(localX, localY))
+        if (scrollBarBounds.Contains(localX, localY))
         {
-            PointF scrollLocal = new(localX - scrollBar.Bounds.X, localY - scrollBar.Bounds.Y);
+            PointF scrollLocal = new(localX - scrollBarBounds.X, localY - scrollBarBounds.Y);
             scrollBar.PointerMove(scrollLocal);
             return;
         }
 
         // Forward to editor if focused and within bounds
-        if (editor.IsFocused && editor.Bounds.Contains(localX, localY))
+        if (editor.IsFocused && editorBounds.Contains(localX, localY))
         {
-            editor.PointerMove(position);
+            PointF editorLocal = new(localX - editorBounds.X, localY - editorBounds.Y);
+            editor.PointerMove(editorLocal);
             return;
         }
 
-        float x = Padding;
-        float y = Padding;
-        float contentWidth = Bounds.Width - Padding * 2 - ScrollBarWidth;
-
         y += EditorHeight + SectionGap;
 
-        // Update hovered item
+        // Update hovered button first — buttons are drawn on top
         int visibleCount = Math.Min(items.Count, MaxVisibleItems(Bounds.Width));
         float listHeight = visibleCount * ItemHeight;
+        float buttonsY = y + listHeight + SectionGap;
+        hoveredButton = -1;
+        if (buttonLabels.Count > 0)
+        {
+            float buttonWidth = (contentWidth - (buttonLabels.Count - 1) * ButtonGap) / buttonLabels.Count;
+            for (int i = 0; i < buttonLabels.Count; i++)
+            {
+                float btnX = x + i * (buttonWidth + ButtonGap);
+                float btnY = buttonsY;
+                var btnRect = new SKRect(btnX, btnY, btnX + buttonWidth, btnY + ButtonHeight);
+                if (btnRect.Contains(localX, localY))
+                {
+                    hoveredButton = i;
+                    return;
+                }
+            }
+        }
+
+        // Update hovered item (clipped to list area)
         float scrollPixels = GetScrollOffsetPixels();
         hoveredIndex = -1;
 
@@ -434,40 +469,33 @@ public sealed class CrystalSelectionControl : ICrystalSkia
                 return;
             }
         }
-
-        y += listHeight + SectionGap;
-
-        // Update hovered button
-        hoveredButton = -1;
-        if (buttonLabels.Count > 0)
-        {
-            float buttonWidth = (contentWidth - (buttonLabels.Count - 1) * ButtonGap) / buttonLabels.Count;
-            for (int i = 0; i < buttonLabels.Count; i++)
-            {
-                float btnX = x + i * (buttonWidth + ButtonGap);
-                float btnY = y;
-                var btnRect = new SKRect(btnX, btnY, btnX + buttonWidth, btnY + ButtonHeight);
-                if (btnRect.Contains(localX, localY))
-                {
-                    hoveredButton = i;
-                    return;
-                }
-            }
-        }
     }
 
     public void PointerUp(PointF position, CrystalMouseButton button)
     {
+        float localX = position.X;
+        float localY = position.Y;
+
+        // Compute scroll bar bounds dynamically
+        RectangleF scrollBarBounds = new RectangleF(
+            Bounds.Width - Padding - ScrollBarWidth, Padding, ScrollBarWidth, Bounds.Height - Padding * 2);
+
         // Forward to scroll bar if within its bounds
-        if (scrollBar.Bounds.Contains(position.X, position.Y))
+        if (scrollBarBounds.Contains(localX, localY))
         {
-            scrollBar.PointerUp(position, button);
+            PointF scrollLocal = new(localX - scrollBarBounds.X, localY - scrollBarBounds.Y);
+            scrollBar.PointerUp(scrollLocal, button);
             return;
         }
 
-        if (editor.IsFocused && editor.Bounds.Contains(position.X, position.Y))
+        // Compute editor bounds dynamically to stay in sync even before the first OnDraw
+        float contentWidth = Bounds.Width - Padding * 2 - ScrollBarWidth;
+        RectangleF editorBounds = new RectangleF(Padding, Padding, contentWidth, EditorHeight);
+
+        if (editor.IsFocused && editorBounds.Contains(localX, localY))
         {
-            editor.PointerUp(position, button);
+            PointF editorLocal = new(localX - editorBounds.X, localY - editorBounds.Y);
+            editor.PointerUp(editorLocal, button);
         }
     }
 
