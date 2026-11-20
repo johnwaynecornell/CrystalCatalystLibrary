@@ -1343,14 +1343,39 @@ public class Window
             // Center HUD: Moves & Time
             string movesText = $"Moves: {State.MoveCount}";
             string timeText = $"Time: {State.FormatTime(time)}";
+            string? recordingText = null;
+            if (sessions.Mode == RecordingControllerMode.Playback)
+            {
+                recordingText = $"Move {sessions.Position} of {sessions.MoveCount}";
+            }
+            
+            if (sessions.Mode == RecordingControllerMode.Recording)
+            {
+                recordingText = $"Move {sessions.MoveCount}";
+            }
+            
             hudBoldFont.MeasureText(movesText, out SKRect movesBounds, hudTextPaint);
             hudBoldFont.MeasureText(timeText, out SKRect timeBounds, hudAccentPaint);
-            
-            float centerAreaStart = width / 2f - (movesBounds.Width + timeBounds.Width + 30) / 2f;
+            SKRect? recordingBounds = null;
+            if (recordingText != null)
+            {
+                hudBoldFont.MeasureText(recordingText, out SKRect rb, hudMutedPaint);
+                recordingBounds = rb;
+            }
+
+            float centerTotalWidth = movesBounds.Width + timeBounds.Width + 30;
+            if (recordingBounds.HasValue) centerTotalWidth += recordingBounds.Value.Width + 24;
+            float centerAreaStart = width / 2f - centerTotalWidth / 2f;
             if (width >= 500)
             {
                 canvas.DrawText(movesText, centerAreaStart, 35, hudBoldFont, hudTextPaint);
-                canvas.DrawText(timeText, centerAreaStart + movesBounds.Width + 24, 35, hudBoldFont, hudAccentPaint);
+                float timeX = centerAreaStart + movesBounds.Width + 24;
+                canvas.DrawText(timeText, timeX, 35, hudBoldFont, hudAccentPaint);
+                if (recordingText != null && recordingBounds.HasValue)
+                {
+                    float recX = timeX + timeBounds.Width + 24;
+                    canvas.DrawText(recordingText, recX, 35, hudBoldFont, hudMutedPaint);
+                }
             }
 
             // Right HUD: Game Mode
