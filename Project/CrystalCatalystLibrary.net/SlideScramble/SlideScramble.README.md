@@ -118,6 +118,14 @@ to activate the focused action.
 Only one selector can be open at a time. Stop recording and finish any board motion or
 grid setup before opening it; existing playback pauses while the selector is open.
 
+The preview and game HUD show **Goal** as the first move count at which the recorded
+sequence reaches the solved board. `0` means the starting board is already solved.
+If the recording does not establish a solution, the preview shows `?` and the HUD omits
+the goal; this does not mean the puzzle is unsolvable.
+The goal is a benchmark, not necessarily an optimal solution, and stays fixed during
+manual moves. Reset, grid changes and scrambling clear it. Playback separately shows
+recorded moves remaining, even when the sequence does not solve the board.
+
 ## Session recording and playback
 
 Press **R** to show or hide the translucent session panel in the largest available gutter.

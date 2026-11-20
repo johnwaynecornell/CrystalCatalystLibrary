@@ -43,9 +43,10 @@ public class ChallengeCatalogTests
     public void MissingFileIsEmpty() => Assert.Empty(ChallengeCatalog.Load(Path.Combine(AppContext.BaseDirectory, Guid.NewGuid().ToString(), "challenges.json")).Names);
 
     [Fact]
-    public void BundledSwapIsAvailableWithoutMoves()
+    public void NamedSwapIsAvailableWithoutMoves()
     {
-        var catalog = ChallengeCatalog.LoadBundled();
+        const string json = "{\"Two-tile swap\":{\"format\":\"SlideScramble\",\"version\":2,\"width\":4,\"height\":4,\"initialCells\":[[[1,1],[2,1],[3,1],[4,1]],[[1,2],[2,2],[3,2],[4,2]],[[1,3],[2,3],[3,3],[4,4]],[[1,4],[2,4],[3,4],[4,3]]],\"moves\":[]}}";
+        var catalog = ChallengeCatalog.FromJson(json);
         Assert.True(catalog.TryGet("Two-tile swap", out var recording));
         Assert.Empty(recording!.Moves);
         Assert.Equal(new[,] { { 0, 1, 2, 3 }, { 4, 5, 6, 7 }, { 8, 9, 10, 15 }, { 12, 13, 14, 11 } }, recording.InitialCells);

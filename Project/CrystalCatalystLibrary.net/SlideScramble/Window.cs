@@ -74,10 +74,14 @@ public class Window
     private string sessionMessage = "";
     private SessionRecordingController sessions;
     private SessionRecording? savedSession;
+    private int? goal;
     private double lastPlaybackTick;
     private (int X, int Y)? moveHighlight;
     private static readonly string[] mediaLabels = { "Rec", "Save", "Load", "|<", "<", ">", "Play", "Stop" };
     private bool showMedia;
+
+    internal static string FormatMovesText(int moves, int? goal) =>
+        goal.HasValue ? $"Moves: {moves}  Goal: {goal.Value}" : $"Moves: {moves}";
 
     // Popup selection integration
     private readonly CrystalPopupHost popupHost = new();
@@ -210,10 +214,12 @@ public class Window
         }
 
         var reversed = source.Reverse();
+        int? reversedGoal = reversed.GetVerifiedGoal();
         var grid = CreateRecordingGrid(reversed, out var controller);
         MyGrid = grid;
         sessions = controller;
         savedSession = reversed;
+        goal = reversedGoal;
         State.Reset();
         animationLockHoriz = null;
         animationTileOffset = 0;
@@ -261,21 +267,21 @@ public class Window
                     ShowSessionSelectionPopup();
                     break;
                 case 3:
-                    if (sessions.Mode == RecordingControllerMode.Idle) sessions.ResumePlayback();
+                    ResumePlaybackIfStopped();
                     sessions.ResetPlayback();
                     moveHighlight = null;
                     break;
                 case 4:
-                    if (sessions.Mode == RecordingControllerMode.Idle) sessions.ResumePlayback();
+                    ResumePlaybackIfStopped();
                     QueuePlaybackAnimation(false);
                     break;
                 case 5:
-                    if (sessions.Mode == RecordingControllerMode.Idle) sessions.ResumePlayback();
+                    ResumePlaybackIfStopped();
                     sessions.SetAutoplay(false);
                     QueuePlaybackAnimation(true);
                     break;
                 case 6:
-                    if (sessions.Mode == RecordingControllerMode.Idle) sessions.ResumePlayback();
+                    ResumePlaybackIfStopped();
                     sessions.SetAutoplay(!sessions.IsAutoplaying);
                     lastPlaybackTick = wnd.uptimeSeconds();
                     break;
@@ -289,6 +295,13 @@ public class Window
         {
             sessionMessage = ex.Message;
         }
+    }
+
+    private void ResumePlaybackIfStopped()
+    {
+        if (sessions.Mode != RecordingControllerMode.Idle) return;
+        sessions.ResumePlayback();
+        goal = sessions.Playback!.GetVerifiedGoal();
     }
 
     // Grid setup UI state
@@ -645,6 +658,7 @@ public class Window
             }
             else if ((c == 's' || c == 'S') && sessions.Mode == RecordingControllerMode.Idle && State.Mode != GameMode.Scrambling && drag == null && Animations.Count == 0)
             {
+                goal = null;
                 State.StartScrambling();
                 ScrambleCount = (MyGrid.Width + MyGrid.Height) * 2;
             }
@@ -660,6 +674,7 @@ public class Window
             {
                 MyGrid.Reset();
                 State.Reset();
+                goal = null;
                 animationLockHoriz = null;
                 animationTileOffset = 0;
             }
@@ -729,6 +744,7 @@ public class Window
             MyGrid = new Grid(width, height);
             sessions = new SessionRecordingController(MyGrid);
             State.Reset();
+            goal = null;
             animationLockHoriz = null;
             animationTileOffset = 0;
             UpdateTileView();
@@ -1412,12 +1428,12 @@ public class Window
             }
 
             // Center HUD: Moves & Time
-            string movesText = $"Moves: {State.MoveCount}";
+            string movesText = FormatMovesText(State.MoveCount, goal);
             string timeText = $"Time: {State.FormatTime(time)}";
             string? recordingText = null;
             if (sessions.Mode == RecordingControllerMode.Playback)
             {
-                recordingText = $"Move {sessions.Position} of {sessions.MoveCount}";
+                recordingText = $"Remaining: {sessions.MoveCount - sessions.Position}";
             }
             
             if (sessions.Mode == RecordingControllerMode.Recording)
@@ -1439,6 +1455,11 @@ public class Window
             float centerAreaStart = width / 2f - centerTotalWidth / 2f;
             if (width >= 500)
             {
+                canvas.Save();
+                float hudScale = Math.Min(1, Math.Max(1, width - 260f) / centerTotalWidth);
+                canvas.Translate(width / 2f, 35);
+                canvas.Scale(hudScale);
+                canvas.Translate(-width / 2f, -35);
                 canvas.DrawText(movesText, centerAreaStart, 35, hudBoldFont, hudTextPaint);
                 float timeX = centerAreaStart + movesBounds.Width + 24;
                 canvas.DrawText(timeText, timeX, 35, hudBoldFont, hudAccentPaint);
@@ -1447,6 +1468,17 @@ public class Window
                     float recX = timeX + timeBounds.Width + 24;
                     canvas.DrawText(recordingText, recX, 35, hudBoldFont, hudMutedPaint);
                 }
+                canvas.Restore();
+            }
+            else
+            {
+                string compactStats = recordingText == null ? movesText : $"{movesText}  {recordingText}";
+                float compactWidth = hudFont.MeasureText(compactStats);
+                canvas.Save();
+                canvas.Translate(width / 2f, 56);
+                canvas.Scale(Math.Min(1, Math.Max(1, width - 16f) / Math.Max(1, compactWidth)));
+                canvas.DrawText(compactStats, -compactWidth / 2, 0, hudFont, hudTextPaint);
+                canvas.Restore();
             }
 
             // Right HUD: Game Mode
@@ -1736,7 +1768,7 @@ public class Window
                 previewGrid = CreateRecordingGrid(recording, out _);
                 control.SetButtonEnabled(0, true);
                 control.SetButtonEnabled(1, recording.Moves.Count > 0);
-                selectionMessage = "Starting board";
+                selectionMessage = $"Starting board  Goal: {recording.GetVerifiedGoal()?.ToString() ?? "?"}";
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException or NotSupportedException)
             {
@@ -1755,12 +1787,14 @@ public class Window
             var recording = ResolveSelection(e.CurrentText);
             if (e.ButtonLabel == "Moves" && recording.Moves.Count == 0)
                 throw new InvalidOperationException("This entry has no recorded moves.");
+            int? selectedGoal = recording.GetVerifiedGoal();
             var grid = CreateRecordingGrid(recording, out var controller);
             if (e.ButtonLabel == "Load") controller = new SessionRecordingController(grid);
             MyGrid = grid;
             sessions = controller;
             savedSession = e.ButtonLabel == "Moves" ? recording : null;
             State.Reset();
+            goal = selectedGoal;
             animationLockHoriz = null;
             animationTileOffset = 0;
             moveHighlight = null;
@@ -1826,8 +1860,12 @@ public class Window
                 }
         }
         canvas.Save();
-        canvas.ClipRect(new SKRect(8, previewArea.Bottom + 2, Math.Max(8, popupHost.Bounds.Right), previewArea.Bottom + 22));
-        canvas.DrawText(selectionMessage, popupHost.Bounds.Left + 4, previewArea.Bottom + 16, footerFont, hudTextPaint);
+        float messageX = popupHost.Bounds.Left + 4;
+        float messageWidth = Math.Max(1, popupHost.Bounds.Width - 8);
+        canvas.ClipRect(new SKRect(messageX, previewArea.Bottom + 2, messageX + messageWidth, previewArea.Bottom + 22));
+        canvas.Translate(messageX, previewArea.Bottom + 16);
+        canvas.Scale(Math.Min(1, messageWidth / Math.Max(1, footerFont.MeasureText(selectionMessage))), 1);
+        canvas.DrawText(selectionMessage, 0, 0, footerFont, hudTextPaint);
         canvas.Restore();
     }
 }

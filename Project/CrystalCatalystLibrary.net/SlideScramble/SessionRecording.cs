@@ -48,6 +48,21 @@ public sealed class SessionRecording
         }
     }
 
+    /// <summary>Returns the number of moves at the first solved position, or null if never solved.</summary>
+    public int? GetVerifiedGoal()
+    {
+        var session = new SlideScrambleSession(initialCells);
+        if (session.IsSolved) return 0;
+        for (int i = 0; i < moves.Length; i++)
+        {
+            var move = moves[i];
+            if (move.Axis == RecordedMoveAxis.Row) session.MoveRow(move.Index, move.Delta, 0);
+            else session.MoveColumn(move.Index, move.Delta, 0);
+            if (session.IsSolved) return i + 1;
+        }
+        return null;
+    }
+
     /// <summary>Returns a recording that retraces this recording from its final board.</summary>
     public SessionRecording Reverse()
     {
