@@ -12,6 +12,29 @@ public class SelectionControlHintTests
         new(new RectangleF(0, 0, 300, CrystalSelectionControl.CalculateHeight(items.Length, 2, 300)),
             items, text, new[] { "OK", "Cancel" }, new SKFont(SKTypeface.Default, 14));
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void ClosedPopupDoesNotBlockUnderlyingEditor(int closeMethod)
+    {
+        var interaction = new CrystalInteraction();
+        var editor = new CrystalTextEditor(new RectangleF(100, 100, 150, 30), new SKFont(SKTypeface.Default, 14));
+        var host = new CrystalPopupHost();
+        interaction.Add(editor);
+        interaction.Add(host);
+        host.Show(Create(new[] { "session" }), new RectangleF(0, 0, 400, 300));
+        host.SetLayout(new RectangleF(0, 0, 400, 300), new RectangleF(80, 80, 250, 150));
+        if (closeMethod == 0) host.Accept();
+        else if (closeMethod == 1) host.Cancel();
+        else host.Close();
+
+        interaction.PointerDown(110, 110, CrystalMouseButton.Left);
+        interaction.TextInput("x");
+        Assert.True(editor.IsFocused);
+        Assert.Equal("x", editor.Text);
+    }
+
     [Fact]
     public void SelectionChanged_ReportsOnlyResolvedChangesAcrossInputPaths()
     {

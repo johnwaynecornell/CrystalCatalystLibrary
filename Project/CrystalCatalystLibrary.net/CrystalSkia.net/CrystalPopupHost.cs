@@ -122,6 +122,8 @@ public sealed class CrystalPopupHost : ICrystalSkia
     {
         if (!visible) return;
         visible = false;
+        Bounds = RectangleF.Empty;
+        captured = false;
         this.result = new PopupResult(PopupResultType.Accepted, resultText, selectedIndex);
         content?.SetFocus(false);
         content = null;
@@ -135,6 +137,8 @@ public sealed class CrystalPopupHost : ICrystalSkia
     {
         if (!visible) return;
         visible = false;
+        Bounds = RectangleF.Empty;
+        captured = false;
         this.result = new PopupResult(PopupResultType.Cancelled);
         content?.SetFocus(false);
         content = null;
@@ -148,6 +152,8 @@ public sealed class CrystalPopupHost : ICrystalSkia
     {
         if (!visible) return;
         visible = false;
+        Bounds = RectangleF.Empty;
+        captured = false;
         this.result = new PopupResult(PopupResultType.Closed);
         content?.SetFocus(false);
         content = null;
