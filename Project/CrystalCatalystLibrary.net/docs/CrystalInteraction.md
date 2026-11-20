@@ -49,10 +49,22 @@ or -1 when the edited text no longer identifies a selection.
 Keyboard navigation uses Up/Down for single-step movement, PageUp/PageDown for page
 jumps, and Home/End for first/last. All navigation updates the editor text and keeps the
 selected item visible by adjusting the scroll offset automatically.
+Tab cycles focus between the editor and enabled action buttons; Shift+Tab cycles in
+reverse. Enter activates the focused button.
 
 Button activations raise `ButtonActivated` with a `SelectionButtonEventArgs` carrying the
 button label, current text, and selected index. The control does not impose accept/cancel
 semantics — the caller decides what each button means.
+
+`SelectionHint` is an `Action<string, int>` event raised when the resolved selected index
+changes. Its arguments are the editor text and matching index, or -1 when unmatched.
+`SelectionChanged` also fires on a resolved index change. A host can handle `SelectionHint`
+to update its own preview, including clearing it when the text does not match an item. Populate an
+initial preview explicitly, and keep preview separate from actions that mutate application
+state. The host must also enforce any mutual exclusion between a modal selection, recording,
+playback, and other application operations; `CrystalPopupHost` does not enforce those rules.
+SlideScramble's challenge picker distinguishes loading a board for play from inspecting its
+recorded moves.
 
 `CalculateHeight(itemCount, buttonCount, width)` is a static helper that returns the
 minimum height required for a given configuration.

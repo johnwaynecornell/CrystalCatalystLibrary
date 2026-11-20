@@ -65,6 +65,7 @@ S       Scramble
 R       Toggle session panel
 X       Reset
 G       Grid Setup
+C       Challenges
 1-4     Grid presets
 Esc     Cancel
 ```
@@ -73,6 +74,50 @@ Rows and columns are manipulated directly with the pointer.
 
 The Grid Setup interface allows the board dimensions to be selected independently.
 
+## Challenge catalog
+
+`challenges.json` is a JSON object keyed by challenge names, with session recordings
+as values. The bundled file is
+copied to the build and publish output; `ChallengeCatalog.LoadBundled()` reads it from
+`AppContext.BaseDirectory`, not from the current working directory or `sessions`.
+To add a challenge, add a named recording to the source file and rebuild or republish, or edit
+the deployed app-base copy. For example, this complete catalog swaps the two bottom-right
+tiles of a 4×4 board:
+
+```json
+{
+  "Bottom-right swap": {
+    "format": "SlideScramble",
+    "version": 2,
+    "width": 4,
+    "height": 4,
+    "initialCells": [
+      [[1, 1], [2, 1], [3, 1], [4, 1]],
+      [[1, 2], [2, 2], [3, 2], [4, 2]],
+      [[1, 3], [2, 3], [3, 3], [4, 4]],
+      [[1, 4], [2, 4], [3, 4], [4, 3]]
+    ],
+    "moves": []
+  }
+}
+```
+
+Each board is a rectangular permutation of its home coordinates; version 2 coordinates
+are one-based. An empty `moves` array is valid: the initial arrangement alone describes
+the challenge and there are no recorded moves to replay. Nonempty moves use the session
+format below. Names must be nonblank and are case-sensitive. Invalid entries are skipped;
+a missing, unreadable, malformed, or non-object catalog produces an empty catalog. The recording parser accepts version 1 and
+2 and dimensions up to 256, but the current session-loading UI limits each dimension to
+2–9; use 2–9 for challenges intended for the game.
+
+Press **C** to open the challenge picker. Selecting a challenge previews it without
+changing the board. **Load** starts play from its initial arrangement, while **Moves**
+opens its recorded sequence for inspection. A zero-move challenge has no steps to inspect.
+Use **Tab** or **Shift+Tab** to move between the editor and enabled actions, and **Enter**
+to activate the focused action.
+Only one selector can be open at a time. Stop recording and finish any board motion or
+grid setup before opening it; existing playback pauses while the selector is open.
+
 ## Session recording and playback
 
 Press **R** to show or hide the translucent session panel in the largest available gutter.
@@ -80,7 +125,8 @@ It may overlap the board when space is limited. Click the filename field to edit
 Enter accepts and Escape restores the previous name. While it has focus, game shortcuts
 are suppressed. Click **Rec** to capture the current arrangement, play normally, then
 click **Stop Rec**. The recording is immediately available for inspection at its final
-move; **Save** writes it to a file. **Load** opens the named session; **|<**, **<**,
+move; **Save** writes it to a file. **Load** opens the session selector; its **Load**
+starts a playable board and **Moves** opens recorded steps. **|<**, **<**,
 and **>** reset, step backward, and step forward. **Play/Pause** advances automatically;
 steps animate and highlight the original drag-start cell until the transition finishes.
 During manual play, the drag-start cell is highlighted through the release or cancel snap.

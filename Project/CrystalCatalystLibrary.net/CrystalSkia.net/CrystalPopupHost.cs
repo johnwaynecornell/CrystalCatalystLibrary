@@ -56,6 +56,7 @@ public sealed class CrystalPopupHost : ICrystalSkia
     private bool visible;
     private PopupResult? result;
     private bool captured;
+    private RectangleF windowBounds;
 
     // Styling
     public Color BackdropColor { get; set; } = Color.FromArgb(0, 0, 0, 120);
@@ -82,6 +83,7 @@ public sealed class CrystalPopupHost : ICrystalSkia
         visible = true;
         result = null;
         captured = false;
+        this.windowBounds = windowBounds;
 
         // Center the popup within the window
         float popupWidth = Math.Min(content.Bounds.Width, windowBounds.Width * 0.7f);
@@ -101,6 +103,14 @@ public sealed class CrystalPopupHost : ICrystalSkia
 
         // Give focus to the content
         content.SetFocus(true);
+    }
+
+    /// <summary>Positions visible content within a resized window.</summary>
+    public void SetLayout(RectangleF windowBounds, RectangleF contentBounds)
+    {
+        this.windowBounds = windowBounds;
+        Bounds = contentBounds;
+        if (content != null) content.Bounds = contentBounds;
     }
 
     /// <summary>
@@ -171,7 +181,7 @@ public sealed class CrystalPopupHost : ICrystalSkia
         using var borderPaint = new SKPaint { Color = ToSkColor(BorderColor), Style = SKPaintStyle.Stroke, StrokeWidth = 2, IsAntialias = true };
 
         // Draw backdrop (full window) — the caller should clip to window bounds
-        canvas.DrawRect(new SKRect(0, 0, Bounds.Width + Bounds.X * 2, Bounds.Height + Bounds.Y * 2), backdropPaint);
+        canvas.DrawRect(new SKRect(windowBounds.Left, windowBounds.Top, windowBounds.Right, windowBounds.Bottom), backdropPaint);
 
         // Draw content border
         var borderRect = new SKRoundRect(
@@ -207,7 +217,7 @@ public sealed class CrystalPopupHost : ICrystalSkia
     {
         if (!visible || content == null) return;
 
-        if (Bounds.Contains(position.X, position.Y))
+        if (captured || Bounds.Contains(position.X, position.Y))
         {
             PointF local = new(position.X - Bounds.X, position.Y - Bounds.Y);
             content.PointerMove(local);
@@ -218,7 +228,7 @@ public sealed class CrystalPopupHost : ICrystalSkia
     {
         if (!visible || content == null) return;
 
-        if (Bounds.Contains(position.X, position.Y))
+        if (captured || Bounds.Contains(position.X, position.Y))
         {
             PointF local = new(position.X - Bounds.X, position.Y - Bounds.Y);
             content.PointerUp(local, button);

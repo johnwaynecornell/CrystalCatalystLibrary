@@ -34,11 +34,14 @@ public sealed class CrystalSelectionControl : ICrystalSkia
 {
     private readonly List<string> items;
     private readonly List<string> buttonLabels;
+    private readonly bool[] buttonEnabled;
     private readonly CrystalTextEditor editor;
     private readonly CrystalScrollBar scrollBar;
     private int selectedIndex = -1;
     private int hoveredIndex = -1;
     private int hoveredButton = -1;
+    private int focusedButton = -1;
+    private RectangleF bounds;
 
     // Layout constants
     private const float Padding = 8f;
@@ -70,6 +73,32 @@ public sealed class CrystalSelectionControl : ICrystalSkia
     /// <summary>Selected index in the list, or -1 when the edited text does not match an item.</summary>
     public int SelectedIndex => selectedIndex;
 
+    /// <summary>Raised when the resolved selection changes, with the editor text and matching index, or -1 if unmatched.</summary>
+    public event Action<string, int>? SelectionHint;
+
+    /// <summary>Raised when the resolved selection changes.</summary>
+    public event Action? SelectionChanged;
+
+    /// <summary>Sets whether a button can be activated.</summary>
+    public void SetButtonEnabled(int index, bool enabled)
+    {
+        if ((uint)index >= (uint)buttonEnabled.Length) throw new ArgumentOutOfRangeException(nameof(index));
+        buttonEnabled[index] = enabled;
+        if (!enabled && hoveredButton == index) hoveredButton = -1;
+        if (!enabled && focusedButton == index)
+        {
+            focusedButton = -1;
+            editor.SetFocus(true);
+        }
+    }
+
+    /// <summary>Returns whether a button can be activated.</summary>
+    public bool IsButtonEnabled(int index)
+    {
+        if ((uint)index >= (uint)buttonEnabled.Length) throw new ArgumentOutOfRangeException(nameof(index));
+        return buttonEnabled[index];
+    }
+
     /// <summary>
     /// Normalized scroll offset in the range [0.0, 1.0].
     /// 0.0 means scrolled to the start, 1.0 means scrolled to the end.
@@ -77,8 +106,8 @@ public sealed class CrystalSelectionControl : ICrystalSkia
     /// </summary>
     public float ScrollOffset => scrollBar.Offset;
 
-    /// <summary>Whether this control currently has focus (delegated to the editor).</summary>
-    public bool IsFocused => editor.IsFocused;
+    /// <summary>Whether the editor or an action button currently has focus.</summary>
+    public bool IsFocused => editor.IsFocused || focusedButton >= 0;
 
     /// <summary>Event raised when a button is activated.</summary>
     public event Action<SelectionButtonEventArgs>? ButtonActivated;
@@ -98,9 +127,10 @@ public sealed class CrystalSelectionControl : ICrystalSkia
         IEnumerable<string> buttonLabels,
         SKFont font)
     {
-        Bounds = bounds;
+        this.bounds = bounds;
         this.items = new List<string>(items);
         this.buttonLabels = new List<string>(buttonLabels);
+        buttonEnabled = Enumerable.Repeat(true, this.buttonLabels.Count).ToArray();
         ArgumentNullException.ThrowIfNull(font);
 
         editor = new CrystalTextEditor(
@@ -114,10 +144,21 @@ public sealed class CrystalSelectionControl : ICrystalSkia
             ScrollBarOrientation.Vertical);
         scrollBar.Changed += OnScrollBarChanged;
 
+        UpdateScrollBarViewport();
         UpdateSelectedIndex();
     }
 
-    public RectangleF Bounds { get; set; }
+    public RectangleF Bounds
+    {
+        get => bounds;
+        set
+        {
+            bounds = value;
+            scrollBar.Bounds = new RectangleF(value.Width - Padding - ScrollBarWidth, Padding,
+                ScrollBarWidth, Math.Max(0f, value.Height - Padding * 2));
+            UpdateScrollBarViewport();
+        }
+    }
 
     /// <summary>Calculates the total height required for the given number of items and buttons.</summary>
     public static float CalculateHeight(int itemCount, int buttonCount, float width)
@@ -134,9 +175,17 @@ public sealed class CrystalSelectionControl : ICrystalSkia
         return Math.Max(3, Math.Min(12, (int)((effectiveWidth > 0 ? effectiveWidth * 0.6f : 300) / ItemHeight)));
     }
 
+    private int VisibleCount()
+    {
+        float available = Bounds.Height - (Padding * 2 + EditorHeight + SectionGap * 2
+            + (buttonLabels.Count > 0 ? ButtonHeight : 0));
+        int heightCount = (int)(Math.Max(0f, available) / ItemHeight);
+        return Math.Min(items.Count, Math.Min(MaxVisibleItems(Bounds.Width), heightCount));
+    }
+
     private void UpdateScrollBarViewport()
     {
-        int visibleCount = Math.Min(items.Count, MaxVisibleItems(Bounds.Width));
+        int visibleCount = VisibleCount();
         float totalHeight = items.Count * ItemHeight;
         float listHeight = visibleCount * ItemHeight;
 
@@ -151,7 +200,7 @@ public sealed class CrystalSelectionControl : ICrystalSkia
 
     private float GetScrollOffsetPixels()
     {
-        int visibleCount = Math.Min(items.Count, MaxVisibleItems(Bounds.Width));
+        int visibleCount = VisibleCount();
         float listHeight = visibleCount * ItemHeight;
         float totalHeight = items.Count * ItemHeight;
         float availableScroll = Math.Max(0f, totalHeight - listHeight);
@@ -160,7 +209,7 @@ public sealed class CrystalSelectionControl : ICrystalSkia
 
     private void SetScrollOffsetPixels(float pixels)
     {
-        int visibleCount = Math.Min(items.Count, MaxVisibleItems(Bounds.Width));
+        int visibleCount = VisibleCount();
         float listHeight = visibleCount * ItemHeight;
         float totalHeight = items.Count * ItemHeight;
         float availableScroll = Math.Max(0f, totalHeight - listHeight);
@@ -188,18 +237,26 @@ public sealed class CrystalSelectionControl : ICrystalSkia
     private void UpdateSelectedIndex()
     {
         string text = editor.Text;
-        selectedIndex = -1;
+        int resolvedIndex = -1;
         for (int i = 0; i < items.Count; i++)
         {
             if (items[i] == text)
             {
-                selectedIndex = i;
+                resolvedIndex = i;
                 break;
             }
         }
+        if (selectedIndex == resolvedIndex) return;
+        selectedIndex = resolvedIndex;
+        SelectionHint?.Invoke(text, resolvedIndex);
+        SelectionChanged?.Invoke();
     }
 
-    public void SetFocus(bool focused) => editor.SetFocus(focused);
+    public void SetFocus(bool focused)
+    {
+        focusedButton = -1;
+        editor.SetFocus(focused);
+    }
 
     public void OnIdle(double timeSeconds)
     {
@@ -246,7 +303,7 @@ public sealed class CrystalSelectionControl : ICrystalSkia
             y += EditorHeight + SectionGap;
 
             // List area
-            int visibleCount = Math.Min(items.Count, MaxVisibleItems(Bounds.Width));
+            int visibleCount = VisibleCount();
             float listHeight = visibleCount * ItemHeight;
 
             // Draw list items
@@ -294,7 +351,12 @@ public sealed class CrystalSelectionControl : ICrystalSkia
                     var btnRect = new SKRect(btnX, btnY, btnX + buttonWidth, btnY + ButtonHeight);
                     var btnRRect = new SKRoundRect(btnRect, 4f, 4f);
 
-                    if (i == hoveredButton)
+                    if (!buttonEnabled[i])
+                    {
+                        using var disabledPaint = new SKPaint { Color = ToSkColor(ButtonColor).WithAlpha(70), IsAntialias = true };
+                        canvas.DrawRoundRect(btnRRect, disabledPaint);
+                    }
+                    else if (i == hoveredButton || i == focusedButton)
                         canvas.DrawRoundRect(btnRRect, buttonHoverPaint);
                     else
                         canvas.DrawRoundRect(btnRRect, buttonPaint);
@@ -302,7 +364,13 @@ public sealed class CrystalSelectionControl : ICrystalSkia
                     string label = buttonLabels[i];
                     float labelX = btnRect.MidX - editor.Font.MeasureText(label) / 2;
                     float labelY = btnRect.Top + (btnRect.Height - editor.Font.Metrics.Ascent) / 2 - editor.Font.Metrics.Descent;
-                    canvas.DrawText(label, labelX, labelY, editor.Font, textPaint);
+                    if (buttonEnabled[i])
+                        canvas.DrawText(label, labelX, labelY, editor.Font, textPaint);
+                    else
+                    {
+                        using var disabledTextPaint = new SKPaint { Color = ToSkColor(TextColor).WithAlpha(100), IsAntialias = true };
+                        canvas.DrawText(label, labelX, labelY, editor.Font, disabledTextPaint);
+                    }
                 }
             }
 
@@ -348,6 +416,8 @@ public sealed class CrystalSelectionControl : ICrystalSkia
         // Check editor
         if (editorBounds.Contains(localX, localY))
         {
+            if (focusedButton >= 0) editor.SetFocus(true);
+            focusedButton = -1;
             PointF editorLocal = new(localX - editorBounds.X, localY - editorBounds.Y);
             editor.PointerDown(editorLocal, button);
             return;
@@ -356,7 +426,7 @@ public sealed class CrystalSelectionControl : ICrystalSkia
         y += EditorHeight + SectionGap;
 
         // Compute button position first — buttons are drawn on top, so check them first
-        int visibleCount = Math.Min(items.Count, MaxVisibleItems(Bounds.Width));
+        int visibleCount = VisibleCount();
         float listHeight = visibleCount * ItemHeight;
         float buttonsY = y + listHeight + SectionGap;
 
@@ -371,7 +441,8 @@ public sealed class CrystalSelectionControl : ICrystalSkia
                 var btnRect = new SKRect(btnX, btnY, btnX + buttonWidth, btnY + ButtonHeight);
                 if (btnRect.Contains(localX, localY))
                 {
-                    ButtonActivated?.Invoke(new SelectionButtonEventArgs(buttonLabels[i], editor.Text, selectedIndex));
+                    if (buttonEnabled[i])
+                        ButtonActivated?.Invoke(new SelectionButtonEventArgs(buttonLabels[i], editor.Text, selectedIndex));
                     return;
                 }
             }
@@ -388,8 +459,13 @@ public sealed class CrystalSelectionControl : ICrystalSkia
                 continue;
 
             var itemRect = new SKRect(x + 2, itemY + 2, x + contentWidth - 2, itemY + ItemHeight - 2);
-            if (itemRect.Contains(localX, localY))
+            if (localY >= y && localY < listBottom && itemRect.Contains(localX, localY))
             {
+                if (focusedButton >= 0)
+                {
+                    focusedButton = -1;
+                    editor.SetFocus(true);
+                }
                 // Copy item text to editor
                 editor.Text = items[i];
                 UpdateSelectedIndex();
@@ -432,7 +508,7 @@ public sealed class CrystalSelectionControl : ICrystalSkia
         y += EditorHeight + SectionGap;
 
         // Update hovered button first — buttons are drawn on top
-        int visibleCount = Math.Min(items.Count, MaxVisibleItems(Bounds.Width));
+        int visibleCount = VisibleCount();
         float listHeight = visibleCount * ItemHeight;
         float buttonsY = y + listHeight + SectionGap;
         hoveredButton = -1;
@@ -446,7 +522,7 @@ public sealed class CrystalSelectionControl : ICrystalSkia
                 var btnRect = new SKRect(btnX, btnY, btnX + buttonWidth, btnY + ButtonHeight);
                 if (btnRect.Contains(localX, localY))
                 {
-                    hoveredButton = i;
+                    hoveredButton = buttonEnabled[i] ? i : -1;
                     return;
                 }
             }
@@ -463,7 +539,7 @@ public sealed class CrystalSelectionControl : ICrystalSkia
                 continue;
 
             var itemRect = new SKRect(x + 2, itemY + 2, x + contentWidth - 2, itemY + ItemHeight - 2);
-            if (itemRect.Contains(localX, localY))
+            if (localY >= y && localY < y + listHeight && itemRect.Contains(localX, localY))
             {
                 hoveredIndex = i;
                 return;
@@ -501,19 +577,38 @@ public sealed class CrystalSelectionControl : ICrystalSkia
 
     public void KeyDown(KeyCode key, bool shift, bool control)
     {
+        if (key == KeyCode.Tab)
+        {
+            int next = focusedButton;
+            do
+            {
+                next += shift ? -1 : 1;
+                if (next < -1) next = buttonLabels.Count - 1;
+                if (next >= buttonLabels.Count) next = -1;
+            } while (next >= 0 && !buttonEnabled[next]);
+            focusedButton = next;
+            editor.SetFocus(next < 0);
+            return;
+        }
+
+        if (focusedButton >= 0)
+        {
+            if (key == KeyCode.Enter && buttonEnabled[focusedButton])
+                ButtonActivated?.Invoke(new SelectionButtonEventArgs(buttonLabels[focusedButton], editor.Text, selectedIndex));
+            return;
+        }
+
         switch (key)
         {
             case KeyCode.Up:
                 if (selectedIndex >= 0 && selectedIndex > 0)
                 {
-                    selectedIndex--;
-                    editor.Text = items[selectedIndex];
+                    editor.Text = items[selectedIndex - 1];
                     AdjustScrollForSelection();
                 }
                 else if (selectedIndex < 0 && items.Count > 0)
                 {
-                    selectedIndex = items.Count - 1;
-                    editor.Text = items[selectedIndex];
+                    editor.Text = items[items.Count - 1];
                     AdjustScrollForSelection();
                 }
                 break;
@@ -521,19 +616,18 @@ public sealed class CrystalSelectionControl : ICrystalSkia
             case KeyCode.Down:
                 if (selectedIndex < items.Count - 1)
                 {
-                    selectedIndex++;
-                    editor.Text = items[selectedIndex];
+                    editor.Text = items[selectedIndex + 1];
                     AdjustScrollForSelection();
                 }
                 break;
 
             case KeyCode.PageUp:
                 {
-                    int visibleCount = MaxVisibleItems(Bounds.Width);
+                    if (items.Count == 0) break;
+                    int visibleCount = Math.Max(1, VisibleCount());
                     int target = Math.Max(0, selectedIndex - visibleCount);
                     if (target < 0 && items.Count > 0) target = items.Count - visibleCount;
                     target = Math.Max(0, target);
-                    selectedIndex = target;
                     editor.Text = items[target];
                     AdjustScrollForSelection();
                 }
@@ -541,10 +635,10 @@ public sealed class CrystalSelectionControl : ICrystalSkia
 
             case KeyCode.PageDown:
                 {
-                    int visibleCount = MaxVisibleItems(Bounds.Width);
+                    if (items.Count == 0) break;
+                    int visibleCount = Math.Max(1, VisibleCount());
                     int target = Math.Min(items.Count - 1, selectedIndex + visibleCount);
                     if (target < 0) target = 0;
-                    selectedIndex = target;
                     editor.Text = items[target];
                     AdjustScrollForSelection();
                 }
@@ -553,7 +647,6 @@ public sealed class CrystalSelectionControl : ICrystalSkia
             case KeyCode.Home:
                 if (items.Count > 0)
                 {
-                    selectedIndex = 0;
                     editor.Text = items[0];
                     SetScrollOffsetPixels(0f);
                 }
@@ -562,8 +655,7 @@ public sealed class CrystalSelectionControl : ICrystalSkia
             case KeyCode.End:
                 if (items.Count > 0)
                 {
-                    selectedIndex = items.Count - 1;
-                    editor.Text = items[selectedIndex];
+                    editor.Text = items[items.Count - 1];
                     AdjustScrollForSelection();
                 }
                 break;
@@ -574,11 +666,14 @@ public sealed class CrystalSelectionControl : ICrystalSkia
         }
     }
 
-    public void TextInput(string text) => editor.TextInput(text);
+    public void TextInput(string text)
+    {
+        if (focusedButton < 0) editor.TextInput(text);
+    }
 
     private void AdjustScrollForSelection()
     {
-        int visibleCount = MaxVisibleItems(Bounds.Width);
+        int visibleCount = VisibleCount();
         float listHeight = visibleCount * ItemHeight;
 
         if (selectedIndex < 0) return;
@@ -599,7 +694,7 @@ public sealed class CrystalSelectionControl : ICrystalSkia
     /// <summary>Scroll up by one page.</summary>
     public void ScrollUp()
     {
-        int visibleCount = MaxVisibleItems(Bounds.Width);
+        int visibleCount = VisibleCount();
         float listHeight = visibleCount * ItemHeight;
         float currentScroll = GetScrollOffsetPixels();
         SetScrollOffsetPixels(Math.Max(0f, currentScroll - listHeight));
@@ -608,7 +703,7 @@ public sealed class CrystalSelectionControl : ICrystalSkia
     /// <summary>Scroll down by one page.</summary>
     public void ScrollDown()
     {
-        int visibleCount = MaxVisibleItems(Bounds.Width);
+        int visibleCount = VisibleCount();
         float listHeight = visibleCount * ItemHeight;
         float currentScroll = GetScrollOffsetPixels();
         float totalHeight = items.Count * ItemHeight;

@@ -25,4 +25,7 @@
     <ProjectReference Include="..\CrystalSkia.net\CrystalSkia.net.csproj" />
     <ProjectReference Include="..\CrystalOpenGL\CrystalOpenGL.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="challenges.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
