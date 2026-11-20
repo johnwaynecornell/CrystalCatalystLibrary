@@ -181,6 +181,48 @@ public class Window
         return Path.Combine(AppContext.BaseDirectory, "sessions", name + ".json");
     }
 
+    private void ReverseSession()
+    {
+        if (ShowGridSetup)
+        {
+            showMedia = true;
+            sessionMessage = "Close grid setup before reversing";
+            return;
+        }
+        if (sessions.Mode == RecordingControllerMode.Recording)
+        {
+            showMedia = true;
+            sessionMessage = "Stop recording before reversing";
+            return;
+        }
+        if (drag != null || Animations.Count != 0 || State.Mode == GameMode.Scrambling)
+        {
+            showMedia = true;
+            sessionMessage = "Finish the current move first";
+            return;
+        }
+        var source = savedSession ?? sessions.Playback;
+        if (source == null)
+        {
+            showMedia = true;
+            sessionMessage = "No session to reverse";
+            return;
+        }
+
+        var reversed = source.Reverse();
+        var grid = CreateRecordingGrid(reversed, out var controller);
+        MyGrid = grid;
+        sessions = controller;
+        savedSession = reversed;
+        State.Reset();
+        animationLockHoriz = null;
+        animationTileOffset = 0;
+        moveHighlight = null;
+        UpdateTileView();
+        sessionMessage = "Time slides both ways! Recording reversed";
+        wnd.QueueRedraw();
+    }
+
     private void MediaAction(int index)
     {
         if (index != 2) State.TakeBackSolved(wnd.uptimeSeconds());
@@ -517,19 +559,27 @@ public class Window
         wnd.OnMouseUp = OnMouseUp;
         wnd.OnMouseMove = OnMouseMove;
 
+        var modifiers = new ShortcutKeys();
+        wnd.OnKeyUp = (handle, keycode) => modifiers.Release(keycode);
+        wnd.OnFocusOut = handle => modifiers.Clear();
         wnd.OnKeyDown = (handle, keycode) =>
         {
+            if (modifiers.Press(keycode)) return;
+            bool control = modifiers.Control;
+            bool shift = modifiers.Shift;
+            int commandKey = control && keycode >= 'A' && keycode <= 'Z' ? keycode + ('a' - 'A') : keycode;
+            if (modifiers.Other) return;
             // Route to popup when visible
             if (popupHost.IsVisible)
             {
                 // Printable characters must become TextInput, not KeyDown
-                if (keycode >= 32 && keycode <= 126)
+                if (!control && !modifiers.Other && keycode >= 32 && keycode <= 126)
                 {
                     popupHost.TextInput(((char)keycode).ToString());
                 }
                 else
                 {
-                    popupHost.KeyDown((KeyCode)keycode, false, false);
+                    popupHost.KeyDown((KeyCode)commandKey, shift, control);
                 }
                 return;
             }
@@ -540,13 +590,13 @@ public class Window
                     if (keycode == (int)KeyCode.Escape) filenameEditor.Text = filenameBeforeEdit;
                     interaction.SetFocus(null);
                 }
-                else if (keycode >= 32 && keycode <= 126)
+                else if (!control && !modifiers.Other && keycode >= 32 && keycode <= 126)
                     interaction.TextInput(((char)keycode).ToString());
                 else
-                    interaction.KeyDown((KeyCode)keycode);
+                    interaction.KeyDown((KeyCode)commandKey, shift, control);
                 return;
             }
-            if (keycode == (int)KeyCode.Escape)
+            if (keycode == (int)KeyCode.Escape && !control)
             {
                 if (drag != null)
                 {
@@ -583,6 +633,12 @@ public class Window
             }
 
             char c = (char)keycode;
+            if (modifiers.IsReverse(keycode))
+            {
+                ReverseSession();
+                return;
+            }
+            if (!modifiers.AllowOrdinary) return;
             if ((c == 'g' || c == 'G'))
             {
                 ShowGridSetup = !ShowGridSetup;

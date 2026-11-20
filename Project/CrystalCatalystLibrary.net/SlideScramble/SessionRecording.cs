@@ -48,6 +48,28 @@ public sealed class SessionRecording
         }
     }
 
+    /// <summary>Returns a recording that retraces this recording from its final board.</summary>
+    public SessionRecording Reverse()
+    {
+        var cells = (int[,])initialCells.Clone();
+        var reversed = new RecordedMove[moves.Length];
+        for (int i = 0; i < moves.Length; i++)
+        {
+            var move = moves[i];
+            int length = move.Axis == RecordedMoveAxis.Row ? Width : Height;
+            int shift = move.Delta % length;
+            int start = move.Axis == RecordedMoveAxis.Row ? move.StartX : move.StartY;
+            int destination = (int)(((long)start - shift + length) % length);
+            int inverse = move.Delta == int.MinValue ? -shift : -move.Delta;
+            reversed[moves.Length - 1 - i] = move.Axis == RecordedMoveAxis.Row
+                ? new RecordedMove(move.Axis, destination, move.StartY, inverse)
+                : new RecordedMove(move.Axis, move.StartX, destination, inverse);
+            if (move.Axis == RecordedMoveAxis.Row) LogicalMoves.MoveRow(cells, move.Index, move.Delta);
+            else LogicalMoves.MoveColumn(cells, move.Index, move.Delta);
+        }
+        return new SessionRecording(cells, reversed);
+    }
+
     public string ToJson()
     {
         var rows = new int[Height][][];
