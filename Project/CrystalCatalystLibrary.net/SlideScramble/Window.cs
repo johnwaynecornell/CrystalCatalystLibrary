@@ -1515,8 +1515,17 @@ public class Window
         if (_glAvailable && _glPresenter != null)
         {
             wnd.GLMakeCurrent();
-            _glPresenter.Present(ref pixelBacking);
-            wnd.GLPresent();
+            bool presented = _glPresenter.Present(ref pixelBacking);
+            if (presented)
+            {
+                wnd.GLPresent();
+            }
+            else
+            {
+                // Upload or draw failed — fall back to legacy presentation this frame
+                Console.WriteLine($"[GL] Present failed: {_glPresenter.LastError} — using legacy fallback.");
+                windowHandle.PresentPix(ref pixelBacking);
+            }
         }
         else
         {

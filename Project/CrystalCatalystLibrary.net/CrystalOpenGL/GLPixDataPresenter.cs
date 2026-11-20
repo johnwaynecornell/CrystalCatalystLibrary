@@ -66,7 +66,20 @@ public class GLPixDataPresenter : IDisposable
     private int _viewportHeight = 0;
 
     /// <summary>Texture filtering mode; defaults to Nearest for pixel-accurate presentation.</summary>
-    public TextureFilter Filter { get; set; } = TextureFilter.Nearest;
+    /// <remarks>Setting this property updates the underlying GL texture parameters immediately.</remarks>
+    public TextureFilter Filter
+    {
+        get => _filter;
+        set
+        {
+            _filter = value;
+            if (_texture != 0 && !_disposed)
+            {
+                UpdateFilter();
+            }
+        }
+    }
+    private TextureFilter _filter = TextureFilter.Nearest;
 
     /// <summary>Background clear color when ClearBeforeDraw is true.</summary>
     public (float R, float G, float B, float A) ClearColor { get; set; } = (0.1f, 0.1f, 0.1f, 1.0f);
@@ -102,7 +115,8 @@ public class GLPixDataPresenter : IDisposable
     /// and drawing a full-screen textured quad.
     /// </summary>
     /// <param name="pixData">The pixel buffer to present. Caller retains ownership.</param>
-    public void Present(ref PixData pixData)
+    /// <returns>True if presentation succeeded; false if an error occurred (check LastError for details).</returns>
+    public bool Present(ref PixData pixData)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(GLPixDataPresenter));
         if (!pixData) throw new ArgumentException("PixData is not valid.");
@@ -111,24 +125,45 @@ public class GLPixDataPresenter : IDisposable
         FrameDiagnostics diag = default;
         var sw = System.Diagnostics.Stopwatch.StartNew();
 
-        // Ensure texture exists and matches dimensions/format
-        EnsureTexture(ref pixData);
-        sw.Stop();
-        diag.TextureReallocated = (_textureWidth != pixData.width || _textureHeight != pixData.height);
+        // Capture whether texture was reallocated BEFORE EnsureTexture updates state.
+        // This accurately reports texture creation, resizing, and format changes.
+        bool textureReallocated = _texture == 0 ||
+            _textureWidth != pixData.width ||
+            _textureHeight != pixData.height ||
+            _lastFormat != pixData.pix_format;
 
-        // Upload pixel data
-        sw.Restart();
+        // Ensure texture exists and matches dimensions/format.
+        // When a new texture is created, it already contains the pixel data,
+        // so we skip the redundant upload.
+        bool skipUpload = false;
         try
         {
-            GLTextureHelper.WritePixels(_gl, _texture, pixData);
+            EnsureTexture(ref pixData, out skipUpload);
         }
         catch (Exception ex)
         {
-            LastError = $"Texture upload failed: {ex.Message}";
-            return;
+            LastError = $"Texture creation failed: {ex.Message}";
+            return false;
         }
         sw.Stop();
-        diag.TextureUploadMs = sw.Elapsed.TotalMilliseconds;
+        diag.TextureReallocated = textureReallocated;
+
+        // Upload pixel data (skip if texture was just created with data)
+        if (!skipUpload)
+        {
+            sw.Restart();
+            try
+            {
+                GLTextureHelper.WritePixels(_gl, _texture, pixData);
+            }
+            catch (Exception ex)
+            {
+                LastError = $"Texture upload failed: {ex.Message}";
+                return false;
+            }
+            sw.Stop();
+            diag.TextureUploadMs = sw.Elapsed.TotalMilliseconds;
+        }
 
         // Set viewport
         _gl.Viewport(0, 0, (uint)_viewportWidth, (uint)_viewportHeight);
@@ -155,6 +190,8 @@ public class GLPixDataPresenter : IDisposable
         {
             LastFrameDiagnostics = diag;
         }
+
+        return true;
     }
 
     /// <summary>
@@ -268,8 +305,9 @@ public class GLPixDataPresenter : IDisposable
         _gl.UseProgram(0);
     }
 
-    private void EnsureTexture(ref PixData pixData)
+    private void EnsureTexture(ref PixData pixData, out bool skipUpload)
     {
+        skipUpload = false;
         bool needRealloc = _texture == 0 ||
                            _textureWidth != pixData.width ||
                            _textureHeight != pixData.height ||
@@ -284,7 +322,8 @@ public class GLPixDataPresenter : IDisposable
                 _texture = 0;
             }
 
-            // Create new texture from PixData
+            // Create new texture from PixData — this uploads the pixel data,
+            // so we signal the caller to skip the redundant upload.
             _texture = GLTextureHelper.CreateTexture2DFromPixData(_gl, pixData, false, false);
             _textureWidth = pixData.width;
             _textureHeight = pixData.height;
@@ -292,6 +331,7 @@ public class GLPixDataPresenter : IDisposable
 
             // Apply filtering
             UpdateFilter();
+            skipUpload = true;
         }
     }
 
