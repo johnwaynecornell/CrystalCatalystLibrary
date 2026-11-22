@@ -12,6 +12,8 @@ Instead, the player may grab an entire row or column and slide it in either dire
        width="900">
 </p>
 
+For a documented technique for manipulating small groups of tiles, see the [Portable Lens Guide](PortableLens.md), including the verified swap formulas and Shuffle Atlas diagrams.
+
 ## The Puzzle
 
 Each tile has a home coordinate.

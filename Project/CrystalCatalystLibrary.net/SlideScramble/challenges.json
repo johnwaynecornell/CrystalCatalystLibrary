@@ -1,16 +1,16 @@
 {
-  "Row reversal 1": {
+  "Row reversal 1":{
       "format":"SlideScramble",
-      "version": 2,
-      "width": 4,
-      "height": 4,
-      "initialCells": [
+      "version":2,
+      "width":4,
+      "height":4,
+      "initialCells":[
         [[1,1],[2,1],[3,1],[4,1]],
         [[1,2],[2,2],[3,2],[4,2]],
         [[1,3],[2,3],[3,3],[4,3]],
         [[4,4],[3,4],[2,4],[1,4]]
       ],
-      "moves": [
+      "moves":[
         {"axis":"Column","index":1,"dragStart":[1,4],"delta":1},
         {"axis":"Column","index":2,"dragStart":[2,4],"delta":1},
         {"axis":"Row","index":3,"dragStart":[2,3],"delta":1},
@@ -29,18 +29,18 @@
       ]
   },
   
-  "Column pair reversal 1": {
-    "format": "SlideScramble",
-    "version": 2,
-    "width": 4,
-    "height": 4,
-    "initialCells": [
+  "Column pair reversal 1":{
+    "format":"SlideScramble",
+    "version":2,
+    "width":4,
+    "height":4,
+    "initialCells":[
       [[1,1],[2,1],[3,1],[4,1]],
       [[1,2],[2,2],[3,2],[4,2]],
       [[1,3],[2,3],[3,3],[4,3]],
       [[1,4],[2,4],[4,4],[3,4]]
     ],
-    "moves": [
+    "moves":[
       {"axis":"Column","index":3,"dragStart":[3,4],"delta":1},
       {"axis":"Column","index":2,"dragStart":[2,4],"delta":1},
       {"axis":"Row","index":3,"dragStart":[3,3],"delta":1},
@@ -60,18 +60,18 @@
     ]
   },
   
-  "Lens-Column reversal": {
-    "format": "SlideScramble",
-    "version": 2,
-    "width": 4,
-    "height": 4,
-    "initialCells": [
+  "Lens-Column reversal":{
+    "format":"SlideScramble",
+    "version":2,
+    "width":4,
+    "height":4,
+    "initialCells":[
       [[1,1],[2,1],[3,1],[4,1]],
       [[1,2],[2,2],[3,2],[4,2]],
       [[1,3],[2,3],[4,3],[3,3]],
       [[1,4],[2,4],[4,4],[3,4]]
     ],
-    "moves": [
+    "moves":[
       {"axis":"Column","index":3,"dragStart":[3,4],"delta":1},
       {"axis":"Column","index":4,"dragStart":[4,4],"delta":1},
       {"axis":"Row","index":3,"dragStart":[4,3],"delta":1},
@@ -82,17 +82,17 @@
     ]
   },
   
-  "Lens-Row reversal": {
-    "format": "SlideScramble",
-    "version": 2,
-    "width": 4,
-    "height": 4,
-    "initialCells": [
+  "Lens-Row reversal":{
+    "format":"SlideScramble",
+    "version":2,
+    "width":4,
+    "height":4,
+    "initialCells":[
       [[1,1],[2,1],[3,1],[4,1]],
       [[1,2],[2,2],[3,2],[4,2]],
       [[1,3],[2,3],[3,4],[4,4]],
       [[1,4],[2,4],[3,3],[4,3]]],
-    "moves": [
+    "moves":[
       {"axis":"Row","index":3,"dragStart":[3,3],"delta":-1},
       {"axis":"Row","index":4,"dragStart":[3,4],"delta":-1},
       {"axis":"Column","index":4,"dragStart":[4,4],"delta":1},
@@ -101,18 +101,18 @@
       {"axis":"Row","index":4,"dragStart":[4,4],"delta":1},
       {"axis":"Column","index":4,"dragStart":[4,4],"delta":1}]},
   
-  "Lens Parity": {
+  "Lens Parity":{
     "format":"SlideScramble",
-    "version": 2,
-    "width": 4,
-    "height": 4,
-    "initialCells": [
+    "version":2,
+    "width":4,
+    "height":4,
+    "initialCells":[
       [[1,1],[2,1],[3,1],[4,1]],
       [[1,2],[2,2],[3,2],[4,2]],
       [[3,3],[2,3],[4,3],[1,3]],
       [[2,4],[1,4],[4,4],[3,4]]
     ],
-    "moves": [
+    "moves":[
       {"axis":"Column","index":2,"dragStart":[2,4],"delta":1},
       {"axis":"Row","index":3,"dragStart":[3,3],"delta":2},
       {"axis":"Column","index":1,"dragStart":[1,4],"delta":1},
@@ -128,6 +128,29 @@
       {"axis":"Column","index":4,"dragStart":[4,3],"delta":-1},
       {"axis":"Column","index":3,"dragStart":[3,3],"delta":-1},
       {"axis":"Row","index":3,"dragStart":[4,3],"delta":2}
+    ]
+  },
+  
+  "Centered" :{
+    "format": "SlideScramble",
+    "version": 2,
+    "width": 4,
+    "height": 4,
+    "initialCells": [
+      [[4,4],[1,4],[2,4],[3,4]],
+      [[4,1],[1,1],[2,1],[3,1]],
+      [[4,2],[1,2],[2,2],[3,2]],
+      [[4,3],[1,3],[2,3],[3,3]]
+    ],
+    "moves": [
+      {"axis":"Row","index":1,"dragStart":[2,1],"delta":1},
+      {"axis":"Row","index":2,"dragStart":[2,2],"delta":1},
+      {"axis":"Row","index":3,"dragStart":[2,3],"delta":1},
+      {"axis":"Row","index":4,"dragStart":[2,4],"delta":1},
+      {"axis":"Column","index":1,"dragStart":[1,4],"delta":1},
+      {"axis":"Column","index":2,"dragStart":[2,4],"delta":1},
+      {"axis":"Column","index":3,"dragStart":[3,4],"delta":1},
+      {"axis":"Column","index":4,"dragStart":[4,4],"delta":1}
     ]
   }
 }
