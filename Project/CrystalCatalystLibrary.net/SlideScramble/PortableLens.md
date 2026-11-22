@@ -156,6 +156,7 @@ The verifier [`verify_portable_lens.py`](verify_portable_lens.py) applies each a
 - All four row-swap formulas: `△ □ / ○ ☆` (with other cells restored).
 - All eight Shuffle Atlas entries, resolving each visually blank cell to its original value.
 - All eight shuffle operations restore every cell *outside the central 2×2 lens* to its original board value.
+- **Both** was checked as Column swap followed by Row swap and in the reverse order, rebinding the shapes by lens position between formulas. Both compositions produce the diagonal exchange; repeating the composition restores Given.
 
 **Translation and wraparound verification:** The same 16 formulas were also tested at every 2×2 lens placement (including border and corner wrapping) on 3×3, 4×4, 5×5, 5×3, and 7×6 boards. All **1,712 cases** passed: the expected marked-cell result was produced and all cells outside the 2×2 lens returned to their starting identities. This supports geometric portability across the tested placements and dimensions; it does not establish a universal completeness theorem.
 
@@ -184,7 +185,7 @@ This Markdown guide and its linked SVG figures are the technical reference for t
 ## Verification and publication checklist
 
 - [x] Preserve the Given, Column swap, Row swap, and Both outcomes in a symmetric 2×2 figure layout.
-- [x] Document the compositional Both operation and the fresh position-based shape binding required by sequential formulas.
+- [x] Document and verify the compositional Both operation and the fresh position-based shape binding required by sequential formulas.
 - [x] Define blank-cell notation and shape identities correctly.
 - [x] Transcribe and verify all four column-swap and all four row-swap directional formulas.
 - [x] Transcribe and verify eight Shuffle Atlas entries from the corrected diagram on the centered 4×4 board; broader completeness remains open.
