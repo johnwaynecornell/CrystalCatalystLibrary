@@ -98,7 +98,7 @@ The corrected handwritten page arranges eight **entry configurations** in a deli
 
 A **blank diagram cell denotes that cell's original value**. No cell is empty.
 
-The labels below are provisional mnemonic identifiers: the first two named shapes, followed by an A or B variant. They do not claim a proven classification of all possible local states.
+The retained identifiers name the first two shapes in the formula and its A/B variant, for example `Lens.CircleSquare.A`. These are stable documentation names, not a claim of an exhaustive classification of all possible local states.
 
 | Position in page | Working identifier | Shape-directed moves | Marked result (top / bottom) |
 | --- | --- | --- | --- |
@@ -181,20 +181,3 @@ See [the SlideScramble README](SlideScramble.README.md) and [the bundled challen
 ## Reuse and publishing notes
 
 This Markdown guide and its linked SVG figures are the technical reference for the public article. The new `lens-both.svg` completes the set of four introductory diagrams. The Shuffle Atlas must retain its prominent **vertical and horizontal dividing lines**, which separate four deliberately paired groups. In WordPress, publish SVG images through a supported media workflow or render lossless PNG counterparts when direct SVG uploads are unavailable. Use this guide and the verifier for formula authority, and the corrected handwritten pages for visual provenance.
-
-## Verification and publication checklist
-
-- [x] Preserve the Given, Column swap, Row swap, and Both outcomes in a symmetric 2×2 figure layout.
-- [x] Document and verify the compositional Both operation and the fresh position-based shape binding required by sequential formulas.
-- [x] Define blank-cell notation and shape identities correctly.
-- [x] Transcribe and verify all four column-swap and all four row-swap directional formulas.
-- [x] Transcribe and verify eight Shuffle Atlas entries from the corrected diagram on the centered 4×4 board; broader completeness remains open.
-- [x] Document the provisional A/B naming and verify that each pair shares the same glyph order with reversed arrow order.
-- [x] Arrange row-swap entries so their initiating-symbol order exactly reverses the column-swap order.
-- [ ] Decide whether to retain the provisional identifier spellings in a published article.
-- [x] Render the corrected atlas as SVG in its original grid arrangement.
-- [x] Verify all 16 sequences against the centered board's coordinates and the wraparound move convention.
-- [x] Test all 16 formulas against every translated placement on five board dimensions, including wraparound boundaries (1,712 successful cases).
-- [ ] Independently check mathematical completeness of the entry-pattern classification, if desired.
-- [x] Draft the JohnCornell.net HTML article from the verified guide, including the Both figure and A/B symmetries (publication follows merge).
-- [ ] Publish the article after the repository branch is merged.
