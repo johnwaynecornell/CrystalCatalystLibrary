@@ -1,6 +1,6 @@
 # The SlideScramble Portable Lens
 
-> **Working guide.** This document records the portable lens demonstrated in the author's handwritten diagrams. The base arrangements are established below; directional formulas and the Shuffle Atlas are being transcribed and checked against the original pages before being marked canonical.
+> **Verified working guide.** This document records the portable lens from the author's handwritten diagrams, including the corrected Shuffle Atlas. The 16 transcribed formulas have been checked by executable board simulation; a proof of exhaustive classification is outside the present scope.
 
 ## Purpose
 
@@ -74,6 +74,23 @@ For example, `△↑` means: find the current coordinate of the **triangle tile*
 
 Repeated instructions such as `△→ △→` are **two one-cell moves**, not a claim that a two-cell rotation counts as two game moves under every input scheme. They preserve the actual order of the handwritten formula.
 
+## Shared structure of the eight-move swaps
+
+The four column-swap formulas and four row-swap formulas are **one repeated instruction pattern with different shape and direction bindings**.
+
+Let `X` and `Y` be the first and second selected shapes, `Z` the final shape, `a` the first direction, and `b` the third direction. The complete eight-instruction pattern is:
+
+```text
+X:a   Y:a   Y:b   Y:opposite(a)
+X:opposite(b)   X:opposite(b)   X:opposite(a)   Z:b
+```
+
+The pattern of **shape references** is `X Y Y Y X X X Z`; the **directions** follow `a a b −a −b −b −a b`. Here `−` denotes the opposite arrow, not a subtraction of tile coordinates.
+
+For example, Column swap / Up left uses `X=△`, `Y=□`, `Z=☆`, `a=↑`, and `b=←`. Substituting those bindings produces its exact eight arrows. The remaining seven rows use the same structure with different bindings. This describes a shared **formula pattern**, not a claim that all eight executions are the same intermediate board state.
+
+The four column-swap variants share one final column-swap result; likewise, the four row-swap variants share one final row-swap result. Rotating or reflecting the choice of the initial shapes and arrows supplies the corresponding entry orientation. Individual intermediate paths still deserve their own documentation.
+
 ## Shuffle Atlas — corrected transcription
 
 ![Eight shuffle entry configurations, with arrows and resulting two-by-two marked cells](images/lens-shuffle-atlas.svg)
@@ -97,6 +114,19 @@ The labels below are provisional mnemonic identifiers: ordered first two shape n
 
 The dot (`·`) in the table is a *textual placeholder for the original value at that lens cell*, not a new lens symbol and not an empty tile. **On the centered test board**, the eight marked results each resolve the dot to the corresponding original symbol, meaning all four distinguished tiles remain in place except those explicitly repositioned. The SVG keeps those cells visually blank, matching the handwritten page.
 
+### A/B symmetry: opposite traversal order
+
+Each A/B pair uses the **same ordered shapes** (first–second–second–first) and the **same four arrow directions in reverse order**. For example:
+
+```text
+Lens.CircleSquare.A: ○→  □↑  □←  ○↓
+Lens.CircleSquare.B: ○↓  □←  □↑  ○→
+```
+
+This exact relation holds for `CircleSquare`, `StarTriangle`, `TriangleStar`, and `SquareCircle`, and is checked by the verifier. It makes A and B opposite **directional traversals**, but do **not** conflate it with the inverse of a recorded sequence. Reversing a `SessionRecording` also reverses execution order, negates each move, and updates its drag-start binding; these A/B formulas instead preserve their shape-reference order and exchange the order of directions.
+
+Thus the visual symmetry is real, while the two resulting entry configurations remain distinct. This distinction is useful for choosing an entry pattern during play.
+
 ### What the atlas establishes
 
 The corrected page documents four paired groups with two orientations each. Treat these as observed and described portable entry configurations. A separate mathematical check would be needed before claiming they exhaust every possible case up to board translation, wrapping, rotation, or reflection.
@@ -106,7 +136,7 @@ The corrected page documents four paired groups with two orientations each. Trea
 - The upper-right A entry is taken from the **newly redrawn** diagram rather than the crossed-out one.
 - The four arrow steps in each entry are transcribed in displayed left-to-right order.
 - The source's two-column layout and horizontal quadrant divider are preserved.
-- Before final publication, test any transcription with shape-to-coordinate bindings in SlideScramble and compare its marked outcome with the diagram.
+- All 16 transcriptions have now passed the automated centered-board and translated-position checks. A human visual comparison of the SVG against the handwritten source remains worthwhile before publication.
 
 ## Reproducible verification on the centered board
 
@@ -152,9 +182,10 @@ See [the SlideScramble README](SlideScramble.README.md) and [the bundled challen
 - [x] Define blank-cell notation and shape identities correctly.
 - [x] Transcribe and verify all four column-swap and all four row-swap directional formulas.
 - [x] Transcribe and verify eight Shuffle Atlas entries from the corrected diagram on the centered 4×4 board; broader completeness remains open.
-- [ ] Agree on the A/B naming and whether the initial moves alone uniquely identify an entry.
+- [x] Document the provisional A/B naming and verify that each pair shares the same glyph order with reversed arrow order.
+- [ ] Decide whether to retain the provisional identifier spellings in a published article.
 - [x] Render the corrected atlas as SVG in its original grid arrangement.
 - [x] Verify all 16 sequences against the centered board's coordinates and the wraparound move convention.
 - [x] Test all 16 formulas against every translated placement on five board dimensions, including wraparound boundaries (1,712 successful cases).
 - [ ] Independently check mathematical completeness of the entry-pattern classification, if desired.
-- [ ] Prepare a later JohnCornell.net article from the verified guide.
+- [ ] Prepare a later JohnCornell.net article from the verified guide, using the SVGs as canonical figures and highlighting the A/B and swap-pattern symmetries.
