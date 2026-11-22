@@ -1,12 +1,12 @@
 # The SlideScramble Portable Lens
 
-> **Verified working guide.** This document records the portable lens from the author's handwritten diagrams, including the corrected Shuffle Atlas. The 16 transcribed formulas have been checked by executable board simulation; a proof of exhaustive classification is outside the present scope.
+A practical guide to localized tile transformations in SlideScramble, using four shapes to track tiles through wraparound row and column moves. The formulas and Shuffle Atlas have been tested with a reproducible board simulation.
 
-## Purpose
+## How the lens works
 
-SlideScramble moves complete rows or columns cyclically, with wrapping. The *portable lens* is a method for following four distinguished tiles through a localized sequence of full-row and full-column moves. The shapes identify tiles; their assigned coordinates locate them on the board.
+SlideScramble rotates entire rows or columns cyclically, with wrapping. The *portable lens* follows four distinguished tiles through sequences of these full-line moves to achieve a localized result. Shapes identify tiles; their current positions determine which row or column moves.
 
-The same formulas are intended to work at different board positions when their coordinates and affected row/column indices are translated consistently.
+The formulas work at different board positions when the lens is relocated and the current positions of its four tiles are tracked.
 
 ## Symbol and blank-cell convention
 
@@ -45,7 +45,7 @@ The row and column swaps commute as **transformations of the four lens positions
 
 ## Column swap — four verified eight-move formulas
 
-The original page lists four named entry orientations. **Each table row below is an entire eight-move formula read left to right**; the numbered columns are successive moves, not simultaneous actions. A direction indicates a **one-cell cyclic rotation of the entire row or column currently containing that marked tile**.
+The column swap has four entry orientations. **Read each eight-move formula from left to right**; the numbered columns are successive moves, not simultaneous actions. A direction indicates a **one-cell cyclic rotation of the entire row or column currently containing that marked tile**.
 
 | Orientation on handwritten page | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -54,7 +54,7 @@ The original page lists four named entry orientations. **Each table row below is
 | Up right | □↑ | △↑ | △→ | △↓ | □← | □← | □↓ | ○→ |
 | Down right | ☆↓ | ○↓ | ○→ | ○↑ | ☆← | ☆← | ☆↑ | △→ |
 
-All four formulas were independently replayed on the centered 4×4 wraparound board described below. Each produced the depicted column swap in the 2×2 lens **and restored every other board cell to its starting value**.
+Each formula produces the column swap within the 2×2 lens **while restoring every other board cell to its starting value**.
 
 ## Row swap — four verified eight-move formulas
 
@@ -65,7 +65,7 @@ All four formulas were independently replayed on the centered 4×4 wraparound bo
 | Right up | ○→ | △→ | △↑ | △← | ○↓ | ○↓ | ○← | ☆↑ |
 | Right down | △→ | ○→ | ○↓ | ○← | △↑ | △↑ | △← | □↓ |
 
-All four formulas independently produced the depicted row swap in the 2×2 lens and restored all other cells. The row-swap entries are intentionally ordered **Left up, Left down, Right up, Right down**: their initiating symbols (☆, □, ○, △) are the exact reverse of the column-swap entries (△, ○, □, ☆). This is a reversal of the *listed first symbols*, not of the complete move sequences.
+Each formula produces the row swap while restoring all other cells. The entries are ordered **Left up, Left down, Right up, Right down** so that their starting symbols (☆, □, ○, △) exactly reverse those of the column swap (△, ○, □, ☆). This symmetry concerns the starting symbols, not the complete move sequences.
 
 ### Reading a shape-directed move
 
@@ -75,7 +75,7 @@ Repeated instructions such as `△→ △→` are **two one-cell moves**, not a 
 
 ## Shared structure of the eight-move swaps
 
-The four column-swap formulas and four row-swap formulas are **one repeated instruction pattern with different shape and direction bindings**.
+The column-swap and row-swap formulas share **one instruction pattern**, with different shapes and directions.
 
 Let `X` and `Y` be the first and second selected shapes, `Z` the final shape, `a` the first direction, and `b` the third direction. The complete eight-instruction pattern is:
 
@@ -88,22 +88,22 @@ The pattern of **shape references** is `X Y Y Y X X X Z`; the **directions** fol
 
 For example, Column swap / Up left uses `X=△`, `Y=□`, `Z=☆`, `a=↑`, and `b=←`. Substituting those bindings produces its exact eight arrows. The remaining seven rows use the same structure with different bindings. This describes a shared **formula pattern**, not a claim that all eight executions are the same intermediate board state.
 
-The four column-swap variants share one final column-swap result; likewise, the four row-swap variants share one final row-swap result. Rotating or reflecting the choice of the initial shapes and arrows supplies the corresponding entry orientation. Individual intermediate paths still deserve their own documentation.
+All four column-swap variants produce the same final arrangement, as do the four row-swap variants. The intermediate paths differ with the chosen starting shapes and directions.
 
-## Shuffle Atlas — corrected transcription
+## Shuffle Atlas
 
 ![Eight shuffle entry configurations, with arrows and resulting two-by-two marked cells](images/lens-shuffle-atlas.svg)
 
-The corrected handwritten page arranges eight **entry configurations** in a deliberate **two-column, four-row** grid. **The vertical and horizontal separator lines divide four paired groups; this is part of the original organization and should remain visible in derivative illustrations.** The first entry of the upper-right group replaces a crossed-out drawing; the SVG above shows only the corrected diagram. Each direction is the move of the indicated shape, **not an instruction to move just one tile**: SlideScramble still rotates entire rows or columns.
+The atlas arranges eight **entry configurations** in a **two-column, four-row** grid. Its vertical and horizontal dividers organize four paired groups, each containing an A and B variant. Each arrow refers to the row or column containing the indicated shape, **not a move of that tile alone**.
 
 A **blank diagram cell denotes that cell's original value**. No cell is empty.
 
 The retained identifiers name the first two shapes in the formula and its A/B variant, for example `Lens.CircleSquare.A`. These are stable documentation names, not a claim of an exhaustive classification of all possible local states.
 
-| Position in page | Working identifier | Shape-directed moves | Marked result (top / bottom) |
+| Atlas position | Identifier | Shape-directed moves | Marked result (top / bottom) |
 | --- | --- | --- | --- |
 | Upper left A | `Lens.CircleSquare.A` | ○→, □↑, □←, ○↓ | `□ ○ / · ☆` |
-| Upper right A **(corrected)** | `Lens.StarTriangle.A` | ☆←, △↑, △→, ☆↓ | `☆ △ / ○ ·` |
+| Upper right A | `Lens.StarTriangle.A` | ☆←, △↑, △→, ☆↓ | `☆ △ / ○ ·` |
 | Upper left B | `Lens.CircleSquare.B` | ○↓, □←, □↑, ○→ | `□ · / ○ △` |
 | Upper right B | `Lens.StarTriangle.B` | ☆↓, △→, △↑, ☆← | `· △ / □ ☆` |
 | Lower left A | `Lens.TriangleStar.A` | △→, ☆↓, ☆←, △↑ | `· □ / ☆ △` |
@@ -111,7 +111,7 @@ The retained identifiers name the first two shapes in the formula and its A/B va
 | Lower left B | `Lens.TriangleStar.B` | △↑, ☆←, ☆↓, △→ | `△ ○ / ☆ ·` |
 | Lower right B | `Lens.SquareCircle.B` | □↑, ○→, ○↓, □← | `☆ □ / · ○` |
 
-The dot (`·`) in the table is a *textual placeholder for the original value at that lens cell*, not a new lens symbol and not an empty tile. **On the centered test board**, the eight marked results each resolve the dot to the corresponding original symbol, meaning all four distinguished tiles remain in place except those explicitly repositioned. The SVG keeps those cells visually blank, matching the handwritten page.
+The dot (`·`) in the table means the **original value of that cell**. It is not another symbol or an empty space. The SVG leaves those cells visually blank. Each atlas sequence cycles three distinguished tiles while leaving the fourth in its original position.
 
 ### A/B symmetry: opposite traversal order
 
@@ -122,24 +122,17 @@ Lens.CircleSquare.A: ○→  □↑  □←  ○↓
 Lens.CircleSquare.B: ○↓  □←  □↑  ○→
 ```
 
-This exact relation holds for `CircleSquare`, `StarTriangle`, `TriangleStar`, and `SquareCircle`, and is checked by the verifier. It makes A and B opposite **directional traversals**, but do **not** conflate it with the inverse of a recorded sequence. Reversing a `SessionRecording` also reverses execution order, negates each move, and updates its drag-start binding; these A/B formulas instead preserve their shape-reference order and exchange the order of directions.
+The relation holds for `CircleSquare`, `StarTriangle`, `TriangleStar`, and `SquareCircle`. A and B are opposite **directional traversals**, not inverse recordings. An inverse recording reverses the move order and each move direction, while updating the drag-start position.
 
 Thus the visual symmetry is real, while the two resulting entry configurations remain distinct. This distinction is useful for choosing an entry pattern during play.
 
-### What the atlas establishes
+### Scope
 
-The corrected page documents four paired groups, each with two orientations. Their organization and separating rules are part of the reference diagram, not decorative formatting. Treat the entries as observed and verified portable configurations. A separate mathematical check would be needed before claiming they exhaust every possible case up to board translation, wrapping, rotation, or reflection.
+The eight atlas entries are tested, portable transformations. They are not claimed to exhaust every possible configuration up to symmetry. The dividing lines preserve the four paired groups of the original atlas.
 
-### Source and diagram fidelity
+## Reproducible verification
 
-- The upper-right A entry is taken from the **newly redrawn** diagram rather than the crossed-out one.
-- The four arrow steps in each entry are transcribed in displayed left-to-right order.
-- The source's **vertical center divider** and **horizontal mid-page divider** are both preserved; together they distinguish four paired groups.
-- All 16 transcriptions have now passed the automated centered-board and translated-position checks. A human visual comparison of the SVG against the handwritten source remains worthwhile before publication.
-
-## Reproducible verification on the centered board
-
-The source test recording is a 4×4 board with the four home-coordinate tiles `(1,1)`, `(2,1)`, `(1,2)`, and `(2,2)` aligned to ○, ☆, △, and □ respectively in the central 2×2 lens.
+The centered test board is a 4×4 arrangement with the four home-coordinate tiles `(1,1)`, `(2,1)`, `(1,2)`, and `(2,2)` aligned to ○, ☆, △, and □ respectively in the central 2×2 lens.
 
 ```text
 (4,4) (1,4) (2,4) (3,4)
@@ -150,7 +143,7 @@ The source test recording is a 4×4 board with the four home-coordinate tiles `(
 
 The verifier [`verify_portable_lens.py`](verify_portable_lens.py) applies each arrow by locating the selected tile **in the current board**, cyclically rotating the whole indicated row/column by one step, and then checking the board state.
 
-**Verified against the source drawings:**
+**Verified outcomes:**
 
 - All four column-swap formulas: `☆ ○ / □ △` (with other cells restored).
 - All four row-swap formulas: `△ □ / ○ ☆` (with other cells restored).
@@ -158,7 +151,7 @@ The verifier [`verify_portable_lens.py`](verify_portable_lens.py) applies each a
 - All eight shuffle operations restore every cell *outside the central 2×2 lens* to its original board value.
 - **Both** was checked as Column swap followed by Row swap and in the reverse order, rebinding the shapes by lens position between formulas. Both compositions produce the diagonal exchange; repeating the composition restores Given.
 
-**Translation and wraparound verification:** The same 16 formulas were also tested at every 2×2 lens placement (including border and corner wrapping) on 3×3, 4×4, 5×5, 5×3, and 7×6 boards. All **1,712 cases** passed: the expected marked-cell result was produced and all cells outside the 2×2 lens returned to their starting identities. This supports geometric portability across the tested placements and dimensions; it does not establish a universal completeness theorem.
+**Portability:** All 16 formulas were tested at every 2×2 lens placement, including wraparound boundaries, on 3×3, 4×4, 5×5, 5×3, and 7×6 boards. All **1,712 cases** passed, with the expected result inside the lens and every surrounding tile restored. This is test evidence for portability across those boards, not proof that the atlas is mathematically exhaustive.
 
 Run: `python3 verify_portable_lens.py` (standard library only).
 
@@ -170,14 +163,16 @@ Run: `python3 verify_portable_lens.py` (standard library only).
 4. Follow the shape-directed moves, using full-row and full-column rotations in SlideScramble.
 5. Check the resulting arrangement, including the unchanged/original-value cells.
 
-The supplied 4×4 shifted-board fixture puts the original `(1,1)` tile at board position `(2,2)`, aligned to ○ in the centered 2×2 lens. The formulas have also passed the additional board-position checks described above; these tests support portability without proving that the atlas exhausts every possible entry state.
+In the centered board, the tile labeled `(1,1)` appears at current position `(2,2)`, corresponding to ○. The same shape-to-tile technique works when the 2×2 lens moves elsewhere on the board.
 
 ## Centered challenge and related examples
 
-The bundled [`Centered` challenge](challenges.json) uses the shifted 4×4 layout shown in this guide and now includes **eight recorded alignment moves**. It is both a convenient starting configuration for manual lens experiments and a replayable demonstration of how that shifted board returns to the solved arrangement.
+The bundled [`Centered` challenge](challenges.json) uses the shifted 4×4 layout shown in this guide and includes **eight recorded alignment moves**. It is a convenient starting board for lens experiments and a demonstration of how to restore the solved arrangement.
 
-See [the SlideScramble README](SlideScramble.README.md) and [the bundled challenge catalog](challenges.json) for recordings such as `Lens-Column reversal`, `Lens-Row reversal`, and `Lens Parity`. These are useful worked examples for a later article; do not assert they implement a particular named atlas entry without verification.
+See [the SlideScramble README](SlideScramble.README.md) and [the challenge catalog](challenges.json) for further examples, including `Lens-Column reversal`, `Lens-Row reversal`, and `Lens Parity`.
 
-## Reuse and publishing notes
+## From the Author
 
-This Markdown guide and its linked SVG figures are the technical reference for the public article. The new `lens-both.svg` completes the set of four introductory diagrams. The Shuffle Atlas must retain its prominent **vertical and horizontal dividing lines**, which separate four deliberately paired groups. In WordPress, publish SVG images through a supported media workflow or render lossless PNG counterparts when direct SVG uploads are unavailable. Use this guide and the verifier for formula authority, and the corrected handwritten pages for visual provenance.
+I developed the Portable Lens through playing SlideScramble and working through the transformations on graph paper. Following four shapes made it easier to see how full-row and full-column moves could produce a local result while restoring the surrounding board. The formulas became a practical reference, and the later software checks helped verify that the method travels with the lens.
+
+The [illustrated Portable Lens article on JohnCornell.net](https://johncornell.net/the-slidescramble-portable-lens-local-moves-in-a-wraparound-puzzle) tells the story behind the diagrams. This guide keeps the formulas, notation, and verification close to the [SlideScramble source](SlideScramble.README.md).
