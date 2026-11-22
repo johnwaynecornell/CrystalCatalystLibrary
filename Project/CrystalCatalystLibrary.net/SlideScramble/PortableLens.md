@@ -52,20 +52,39 @@ The resulting two-column exchange corresponds to two disjoint swaps among the fo
 
 The resulting two-row exchange likewise corresponds to two disjoint swaps. The exact shape-directed formula remains to be transcribed and checked.
 
-## Shuffle Atlas — working index
+## Shuffle Atlas — corrected transcription
 
-The second handwritten page organizes **eight examples in a deliberate two-column by two-row grid**, with two examples per quadrant. Preserve that arrangement in the SVG rendering, including arrow direction, symbol identity and original-value blanks.
+![Eight shuffle entry configurations, with arrows and resulting two-by-two marked cells](images/lens-shuffle-atlas.svg)
 
-A provisional readable identifier is `Lens.CircleSquare.A`: the first two named moves followed by the A/B variant. The final names must be verified against the actual directional sequences in the handwritten source.
+The corrected handwritten page arranges eight **entry configurations** in a deliberate **two-column, four-row** grid. The second entry in the upper-right quadrant replaces a crossed-out drawing; the SVG above shows only the corrected diagram. Each direction is the move of the indicated shape, **not an instruction to move just one tile**: SlideScramble still rotates entire rows or columns.
 
-**Do not infer that the eight examples are eight mathematically independent transformations.** They may describe different entry configurations of the same portable mechanism.
+A **blank diagram cell denotes that cell's original value**. No cell is empty.
 
-### Intended presentation
+The labels below are provisional mnemonic identifiers: ordered first two shape names, followed by A or B. They do not claim a proven classification of all possible local states.
 
-- Four paired groups, retaining the handwritten grid structure.
-- Each example displays its directional sequence above its resulting 2×2 marked-cell diagram.
-- An accessible textual transcription accompanies each SVG.
-- Blank cells remain visually blank but are defined as **original values**, never empty.
+| Position in page | Working identifier | Shape-directed moves | Marked result (top / bottom) |
+| --- | --- | --- | --- |
+| Upper left A | `Lens.CircleSquare.A` | ○→, □↑, □←, ○↓ | `□ ○ / · ☆` |
+| Upper right A **(corrected)** | `Lens.StarTriangle.A` | ☆←, △↑, △→, ☆↓ | `☆ △ / ○ ·` |
+| Upper left B | `Lens.CircleSquare.B` | ○↓, □←, □↑, ○→ | `□ · / ○ △` |
+| Upper right B | `Lens.StarTriangle.B` | ☆↓, △→, △↑, ☆← | `· △ / □ ☆` |
+| Lower left A | `Lens.TriangleStar.A` | △→, ☆↓, ☆←, △↑ | `· □ / ☆ △` |
+| Lower right A | `Lens.SquareCircle.A` | □←, ○↓, ○→, □↑ | `△ · / □ ○` |
+| Lower left B | `Lens.TriangleStar.B` | △↑, ☆←, ☆↓, △→ | `△ ○ / ☆ ·` |
+| Lower right B | `Lens.SquareCircle.B` | □↑, ○→, ○↓, □← | `☆ □ / · ○` |
+
+The dot (`·`) in the table is a *textual placeholder for the original value*, not a new lens symbol and not an empty tile. The SVG keeps those cells visually blank, matching the handwritten page.
+
+### What the atlas establishes
+
+The corrected page documents four paired groups with two orientations each. Treat these as observed and described portable entry configurations. A separate mathematical check would be needed before claiming they exhaust every possible case up to board translation, wrapping, rotation, or reflection.
+
+### Source verification notes
+
+- The upper-right A entry is taken from the **newly redrawn** diagram rather than the crossed-out one.
+- The four arrow steps in each entry are transcribed in displayed left-to-right order.
+- The source's two-column layout and horizontal quadrant divider are preserved.
+- Before final publication, test any transcription with shape-to-coordinate bindings in SlideScramble and compare its marked outcome with the diagram.
 
 ## Applying the portable lens
 
@@ -86,8 +105,8 @@ See [the SlideScramble README](SlideScramble.README.md) and [the bundled challen
 - [x] Preserve the given, column-swap, and row-swap outcomes.
 - [x] Define blank-cell notation and shape identities correctly.
 - [ ] Transcribe and verify both complete directional formulas.
-- [ ] Transcribe all eight Shuffle Atlas entries exactly, including blanks and arrows.
+- [x] Transcribe eight Shuffle Atlas entries from the corrected diagram; verify their play behavior before claiming canonical completeness.
 - [ ] Agree on the A/B naming and whether the initial moves alone uniquely identify an entry.
-- [ ] Render the atlas as SVG in its original grid arrangement.
+- [x] Render the corrected atlas as SVG in its original grid arrangement.
 - [ ] Compare diagrams with actual SlideScramble recordings and coordinate bindings.
 - [ ] Prepare a later JohnCornell.net article from the verified guide.
