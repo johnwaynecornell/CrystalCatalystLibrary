@@ -39,7 +39,7 @@ The symbols represent the four distinguished tiles, not fixed screen positions. 
 □  △
 ```
 
-The original page lists four named entry orientations. **Each table row below is an entire eight-move formula read left to right**; the columns are successive moves, not four concurrent operations. A direction indicates a **one-cell cyclic rotation of the entire row or column currently containing that marked tile**.
+The original page lists four named entry orientations. **Each table row below is an entire eight-move formula read left to right**; the numbered columns are successive moves, not simultaneous actions. A direction indicates a **one-cell cyclic rotation of the entire row or column currently containing that marked tile**.
 
 | Orientation on handwritten page | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -62,11 +62,11 @@ All four formulas were independently replayed on the centered 4×4 wraparound bo
 | Orientation on handwritten page | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Left up | ☆← | □← | □↑ | □→ | ☆↓ | ☆↓ | ☆→ | △↑ |
-| Right up | ○→ | △→ | △↑ | △← | ○↓ | ○↓ | ○← | ☆↑ |
 | Left down | □← | ☆← | ☆↓ | ☆→ | □↑ | □↑ | □→ | ○↓ |
+| Right up | ○→ | △→ | △↑ | △← | ○↓ | ○↓ | ○← | ☆↑ |
 | Right down | △→ | ○→ | ○↓ | ○← | △↑ | △↑ | △← | □↓ |
 
-All four formulas independently produced the depicted row swap in the 2×2 lens and restored all other cells.
+All four formulas independently produced the depicted row swap in the 2×2 lens and restored all other cells. The row-swap entries are intentionally ordered **Left up, Left down, Right up, Right down**: their initiating symbols (☆, □, ○, △) are the exact reverse of the column-swap entries (△, ○, □, ☆). This is a reversal of the *listed first symbols*, not of the complete move sequences.
 
 ### Reading a shape-directed move
 
@@ -95,11 +95,11 @@ The four column-swap variants share one final column-swap result; likewise, the 
 
 ![Eight shuffle entry configurations, with arrows and resulting two-by-two marked cells](images/lens-shuffle-atlas.svg)
 
-The corrected handwritten page arranges eight **entry configurations** in a deliberate **two-column, four-row** grid. The second entry in the upper-right quadrant replaces a crossed-out drawing; the SVG above shows only the corrected diagram. Each direction is the move of the indicated shape, **not an instruction to move just one tile**: SlideScramble still rotates entire rows or columns.
+The corrected handwritten page arranges eight **entry configurations** in a deliberate **two-column, four-row** grid. **The vertical and horizontal separator lines divide four paired groups; this is part of the original organization and should remain visible in derivative illustrations.** The first entry of the upper-right group replaces a crossed-out drawing; the SVG above shows only the corrected diagram. Each direction is the move of the indicated shape, **not an instruction to move just one tile**: SlideScramble still rotates entire rows or columns.
 
 A **blank diagram cell denotes that cell's original value**. No cell is empty.
 
-The labels below are provisional mnemonic identifiers: ordered first two shape names, followed by A or B. They do not claim a proven classification of all possible local states.
+The labels below are provisional mnemonic identifiers: the first two named shapes, followed by an A or B variant. They do not claim a proven classification of all possible local states.
 
 | Position in page | Working identifier | Shape-directed moves | Marked result (top / bottom) |
 | --- | --- | --- | --- |
@@ -129,13 +129,13 @@ Thus the visual symmetry is real, while the two resulting entry configurations r
 
 ### What the atlas establishes
 
-The corrected page documents four paired groups with two orientations each. Treat these as observed and described portable entry configurations. A separate mathematical check would be needed before claiming they exhaust every possible case up to board translation, wrapping, rotation, or reflection.
+The corrected page documents four paired groups, each with two orientations. Their organization and separating rules are part of the reference diagram, not decorative formatting. Treat the entries as observed and verified portable configurations. A separate mathematical check would be needed before claiming they exhaust every possible case up to board translation, wrapping, rotation, or reflection.
 
-### Source verification notes
+### Source and diagram fidelity
 
 - The upper-right A entry is taken from the **newly redrawn** diagram rather than the crossed-out one.
 - The four arrow steps in each entry are transcribed in displayed left-to-right order.
-- The source's two-column layout and horizontal quadrant divider are preserved.
+- The source's **vertical center divider** and **horizontal mid-page divider** are both preserved; together they distinguish four paired groups.
 - All 16 transcriptions have now passed the automated centered-board and translated-position checks. A human visual comparison of the SVG against the handwritten source remains worthwhile before publication.
 
 ## Reproducible verification on the centered board
@@ -170,7 +170,7 @@ Run: `python3 verify_portable_lens.py` (standard library only).
 4. Follow the shape-directed moves, using full-row and full-column rotations in SlideScramble.
 5. Check the resulting arrangement, including the unchanged/original-value cells.
 
-A shifted, wraparound test board has been recorded with the original `(1,1)` tile at board position `(2,2)`, aligned to the circle in the centered 2×2 lens. This is useful as a reproducible portability test, not proof of mathematical completeness for all possible configurations.
+The supplied 4×4 shifted-board fixture puts the original `(1,1)` tile at board position `(2,2)`, aligned to ○ in the centered 2×2 lens. The formulas have also passed the additional board-position checks described above; these tests support portability without proving that the atlas exhausts every possible entry state.
 
 ## Related examples
 
@@ -183,6 +183,7 @@ See [the SlideScramble README](SlideScramble.README.md) and [the bundled challen
 - [x] Transcribe and verify all four column-swap and all four row-swap directional formulas.
 - [x] Transcribe and verify eight Shuffle Atlas entries from the corrected diagram on the centered 4×4 board; broader completeness remains open.
 - [x] Document the provisional A/B naming and verify that each pair shares the same glyph order with reversed arrow order.
+- [x] Arrange row-swap entries so their initiating-symbol order exactly reverses the column-swap order.
 - [ ] Decide whether to retain the provisional identifier spellings in a published article.
 - [x] Render the corrected atlas as SVG in its original grid arrangement.
 - [x] Verify all 16 sequences against the centered board's coordinates and the wraparound move convention.
