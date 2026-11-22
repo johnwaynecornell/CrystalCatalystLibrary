@@ -30,7 +30,7 @@ The symbols represent the four distinguished tiles, not fixed screen positions. 
 △  □
 ```
 
-## Column swap
+## Column swap — four verified eight-move formulas
 
 ![Column swap result: star and circle above square and triangle](images/lens-column-swap.svg)
 
@@ -39,9 +39,18 @@ The symbols represent the four distinguished tiles, not fixed screen positions. 
 □  △
 ```
 
-The resulting two-column exchange corresponds to two disjoint swaps among the four distinguished tiles. The original handwritten page also includes a directional formula; **verify its precise arrow sequence against the source before transcribing it here**.
+The original page lists four named entry orientations. **Each table row below is an entire eight-move formula read left to right**; the columns are successive moves, not four concurrent operations. A direction indicates a **one-cell cyclic rotation of the entire row or column currently containing that marked tile**.
 
-## Row swap
+| Orientation on handwritten page | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Up left | △↑ | □↑ | □← | □↓ | △→ | △→ | △↓ | ☆← |
+| Down left | ○↓ | ☆↓ | ☆← | ☆↑ | ○→ | ○→ | ○↑ | □← |
+| Up right | □↑ | △↑ | △→ | △↓ | □← | □← | □↓ | ○→ |
+| Down right | ☆↓ | ○↓ | ○→ | ○↑ | ☆← | ☆← | ☆↑ | △→ |
+
+All four formulas were independently replayed on the centered 4×4 wraparound board described below. Each produced the depicted column swap in the 2×2 lens **and restored every other board cell to its starting value**.
+
+## Row swap — four verified eight-move formulas
 
 ![Row swap result: triangle and square above circle and star](images/lens-row-swap.svg)
 
@@ -50,7 +59,20 @@ The resulting two-column exchange corresponds to two disjoint swaps among the fo
 ○  ☆
 ```
 
-The resulting two-row exchange likewise corresponds to two disjoint swaps. The exact shape-directed formula remains to be transcribed and checked.
+| Orientation on handwritten page | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Left up | ☆← | □← | □↑ | □→ | ☆↓ | ☆↓ | ☆→ | △↑ |
+| Right up | ○→ | △→ | △↑ | △← | ○↓ | ○↓ | ○← | ☆↑ |
+| Left down | □← | ☆← | ☆↓ | ☆→ | □↑ | □↑ | □→ | ○↓ |
+| Right down | △→ | ○→ | ○↓ | ○← | △↑ | △↑ | △← | □↓ |
+
+All four formulas independently produced the depicted row swap in the 2×2 lens and restored all other cells.
+
+### Reading a shape-directed move
+
+For example, `△↑` means: find the current coordinate of the **triangle tile**, then rotate that tile's **entire column upward by one cell**, including every other tile in that column. Resolve the next symbol's current position *after* executing this move.
+
+Repeated instructions such as `△→ △→` are **two one-cell moves**, not a claim that a two-cell rotation counts as two game moves under every input scheme. They preserve the actual order of the handwritten formula.
 
 ## Shuffle Atlas — corrected transcription
 
@@ -73,7 +95,7 @@ The labels below are provisional mnemonic identifiers: ordered first two shape n
 | Lower left B | `Lens.TriangleStar.B` | △↑, ☆←, ☆↓, △→ | `△ ○ / ☆ ·` |
 | Lower right B | `Lens.SquareCircle.B` | □↑, ○→, ○↓, □← | `☆ □ / · ○` |
 
-The dot (`·`) in the table is a *textual placeholder for the original value*, not a new lens symbol and not an empty tile. The SVG keeps those cells visually blank, matching the handwritten page.
+The dot (`·`) in the table is a *textual placeholder for the original value at that lens cell*, not a new lens symbol and not an empty tile. **On the centered test board**, the eight marked results each resolve the dot to the corresponding original symbol, meaning all four distinguished tiles remain in place except those explicitly repositioned. The SVG keeps those cells visually blank, matching the handwritten page.
 
 ### What the atlas establishes
 
@@ -85,6 +107,30 @@ The corrected page documents four paired groups with two orientations each. Trea
 - The four arrow steps in each entry are transcribed in displayed left-to-right order.
 - The source's two-column layout and horizontal quadrant divider are preserved.
 - Before final publication, test any transcription with shape-to-coordinate bindings in SlideScramble and compare its marked outcome with the diagram.
+
+## Reproducible verification on the centered board
+
+The source test recording is a 4×4 board with the four home-coordinate tiles `(1,1)`, `(2,1)`, `(1,2)`, and `(2,2)` aligned to ○, ☆, △, and □ respectively in the central 2×2 lens.
+
+```text
+(4,4) (1,4) (2,4) (3,4)
+(4,1) (1,1) (2,1) (3,1)
+(4,2) (1,2) (2,2) (3,2)
+(4,3) (1,3) (2,3) (3,3)
+```
+
+The verifier [`verify_portable_lens.py`](verify_portable_lens.py) applies each arrow by locating the selected tile **in the current board**, cyclically rotating the whole indicated row/column by one step, and then checking the board state.
+
+**Verified against the source drawings:**
+
+- All four column-swap formulas: `☆ ○ / □ △` (with other cells restored).
+- All four row-swap formulas: `△ □ / ○ ☆` (with other cells restored).
+- All eight Shuffle Atlas entries, resolving each visually blank cell to its original value.
+- All eight shuffle operations restore every cell *outside the central 2×2 lens* to its original board value.
+
+This establishes correctness **for this 4×4 centered test arrangement**. The geometric portability claim can be tested further for alternate placements and board sizes, rather than inferred automatically from one fixture.
+
+Run: `python3 verify_portable_lens.py` (standard library only).
 
 ## Applying the portable lens
 
@@ -104,9 +150,10 @@ See [the SlideScramble README](SlideScramble.README.md) and [the bundled challen
 
 - [x] Preserve the given, column-swap, and row-swap outcomes.
 - [x] Define blank-cell notation and shape identities correctly.
-- [ ] Transcribe and verify both complete directional formulas.
-- [x] Transcribe eight Shuffle Atlas entries from the corrected diagram; verify their play behavior before claiming canonical completeness.
+- [x] Transcribe and verify all four column-swap and all four row-swap directional formulas.
+- [x] Transcribe and verify eight Shuffle Atlas entries from the corrected diagram on the centered 4×4 board; broader completeness remains open.
 - [ ] Agree on the A/B naming and whether the initial moves alone uniquely identify an entry.
 - [x] Render the corrected atlas as SVG in its original grid arrangement.
-- [ ] Compare diagrams with actual SlideScramble recordings and coordinate bindings.
+- [x] Verify all 16 sequences against the centered board's coordinates and the wraparound move convention.
+- [ ] Test the same formulas against additional positions and board dimensions.
 - [ ] Prepare a later JohnCornell.net article from the verified guide.
