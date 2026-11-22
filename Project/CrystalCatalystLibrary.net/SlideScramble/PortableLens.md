@@ -128,7 +128,7 @@ The verifier [`verify_portable_lens.py`](verify_portable_lens.py) applies each a
 - All eight Shuffle Atlas entries, resolving each visually blank cell to its original value.
 - All eight shuffle operations restore every cell *outside the central 2×2 lens* to its original board value.
 
-This establishes correctness **for this 4×4 centered test arrangement**. The geometric portability claim can be tested further for alternate placements and board sizes, rather than inferred automatically from one fixture.
+**Translation and wraparound verification:** The same 16 formulas were also tested at every 2×2 lens placement (including border and corner wrapping) on 3×3, 4×4, 5×5, 5×3, and 7×6 boards. All **1,712 cases** passed: the expected marked-cell result was produced and all cells outside the 2×2 lens returned to their starting identities. This supports geometric portability across the tested placements and dimensions; it does not establish a universal completeness theorem.
 
 Run: `python3 verify_portable_lens.py` (standard library only).
 
@@ -155,5 +155,6 @@ See [the SlideScramble README](SlideScramble.README.md) and [the bundled challen
 - [ ] Agree on the A/B naming and whether the initial moves alone uniquely identify an entry.
 - [x] Render the corrected atlas as SVG in its original grid arrangement.
 - [x] Verify all 16 sequences against the centered board's coordinates and the wraparound move convention.
-- [ ] Test the same formulas against additional positions and board dimensions.
+- [x] Test all 16 formulas against every translated placement on five board dimensions, including wraparound boundaries (1,712 successful cases).
+- [ ] Independently check mathematical completeness of the entry-pattern classification, if desired.
 - [ ] Prepare a later JohnCornell.net article from the verified guide.
