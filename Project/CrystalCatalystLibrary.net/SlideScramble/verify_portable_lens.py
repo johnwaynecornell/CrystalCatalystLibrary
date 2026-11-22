@@ -86,6 +86,59 @@ def check(name, sequence, expected):
     print(f"PASS {name}: {''.join(reverse.get(board[y][x], '?') for x, y in cells)}")
 
 
+def verify_portable_positions(width, height):
+    """Test all entries at every translated position, including wrapped corners."""
+    patterns = (
+        [(f"Column swap ({name})", seq, "☆○□△")
+         for name, seq in COLUMN_SWAPS.items()]
+        + [(f"Row swap ({name})", seq, "△□○☆")
+           for name, seq in ROW_SWAPS.items()]
+        + [(name, moves(spec), result)
+           for name, (spec, result) in SHUFFLES.items()]
+    )
+    checked = 0
+    symbols = list(SHAPES)
+    for top in range(height):
+        for left in range(width):
+            cells = [
+                (left, top),
+                ((left + 1) % width, top),
+                (left, (top + 1) % height),
+                ((left + 1) % width, (top + 1) % height),
+            ]
+            identities = dict(zip(symbols, cells))
+            board_initial = [[(x, y) for x in range(width)] for y in range(height)]
+            local_cells = set(cells)
+            for label, seq, expected in patterns:
+                board = [row.copy() for row in board_initial]
+                for glyph, direction in seq:
+                    identity = identities[glyph]
+                    x, y = next((x, y) for y, row in enumerate(board)
+                                for x, value in enumerate(row) if value == identity)
+                    if direction in "←→":
+                        k = (1 if direction == "←" else -1) % width
+                        board[y] = board[y][k:] + board[y][:k]
+                    else:
+                        k = (1 if direction == "↑" else -1) % height
+                        col = [row[x] for row in board]
+                        col = col[k:] + col[:k]
+                        for row, value in zip(board, col):
+                            row[x] = value
+                for i, (x, y) in enumerate(cells):
+                    # Blank in the source means the original tile was left here.
+                    want = board_initial[y][x] if expected[i] == "·" else identities[expected[i]]
+                    assert board[y][x] == want, (
+                        f"{width}x{height} at {(left, top)}: {label}, lens cell {i}")
+                for y in range(height):
+                    for x in range(width):
+                        if (x, y) not in local_cells:
+                            assert board[y][x] == board_initial[y][x], (
+                                f"{width}x{height} at {(left, top)}: {label}, "
+                                f"outside cell {(x, y)}")
+                checked += 1
+    return checked
+
+
 if __name__ == "__main__":
     for name, sequence in COLUMN_SWAPS.items():
         check(f"Column swap ({name})", sequence, "☆○□△")
@@ -94,3 +147,9 @@ if __name__ == "__main__":
     for name, (text, expected) in SHUFFLES.items():
         check(name, moves(text), expected)
     print("Verified 16 of 16 sequences on the centered 4x4 fixture.")
+    total = 0
+    for width, height in [(3, 3), (4, 4), (5, 5), (5, 3), (7, 6)]:
+        count = verify_portable_positions(width, height)
+        total += count
+        print(f"PASS portability {width}x{height}: {count} cases")
+    print(f"Verified {total} translated/wrapped portability cases.")
