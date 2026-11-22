@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="1160" viewBox="0 0 1120 1160" role="img" aria-labelledby="title desc">
+<title id="title">Portable Lens Shuffle Atlas: eight entry configurations</title>
+<desc id="desc">Eight shuffles arranged in the same two-column, four-row grid as the corrected handwritten page. Each entry shows four shape-directed moves and the resulting two by two diagram. A blank square represents the cell's original value, not an empty tile.</desc>
+<rect width="1120" height="1160" fill="#f8fafc"/>
+<text x="40" y="57" font-family="sans-serif" font-size="33" font-weight="700" fill="#0f172a">Portable Lens — Shuffle Atlas</text>
+<text x="40" y="91" font-family="sans-serif" font-size="18" fill="#475569">Blank square = original cell value; never an empty tile. Read each formula left to right.</text>
+<line x1="558" y1="119" x2="558" y2="1122" stroke="#cbd5e1" stroke-width="2"/>
+<line x1="40" y1="628" x2="1080" y2="628" stroke="#cbd5e1" stroke-width="2"/>
+<g transform="translate(40 135)">
+<rect x="0" y="0" width="507" height="225" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text x="18" y="32" font-size="21" font-weight="700" font-family="sans-serif" fill="#0f172a">Lens.CircleSquare.A</text>
+<text x="18" y="63" font-size="26" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" fill="#1e293b">○→   □↑   □←   ○↓</text>
+<rect x="185" y="84" width="132" height="126" rx="2" fill="#f8fafc" stroke="#334155" stroke-width="2"/>
+<line x1="251" y1="84" x2="251" y2="210" stroke="#334155" stroke-width="2"/><line x1="185" y1="147" x2="317" y2="147" stroke="#334155" stroke-width="2"/>
+<text x="218" y="124" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">□</text><text x="284" y="124" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">○</text><text x="284" y="187" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">☆</text>
+</g>
+<g transform="translate(570 135)">
+<rect x="0" y="0" width="507" height="225" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text x="18" y="32" font-size="21" font-weight="700" font-family="sans-serif" fill="#0f172a">Lens.StarTriangle.A</text>
+<text x="18" y="63" font-size="26" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" fill="#1e293b">☆←   △↑   △→   ☆↓</text>
+<rect x="185" y="84" width="132" height="126" rx="2" fill="#f8fafc" stroke="#334155" stroke-width="2"/>
+<line x1="251" y1="84" x2="251" y2="210" stroke="#334155" stroke-width="2"/><line x1="185" y1="147" x2="317" y2="147" stroke="#334155" stroke-width="2"/>
+<text x="218" y="124" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">☆</text><text x="284" y="124" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">△</text><text x="218" y="187" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">○</text>
+</g>
+<g transform="translate(40 382)">
+<rect x="0" y="0" width="507" height="225" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text x="18" y="32" font-size="21" font-weight="700" font-family="sans-serif" fill="#0f172a">Lens.CircleSquare.B</text>
+<text x="18" y="63" font-size="26" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" fill="#1e293b">○↓   □←   □↑   ○→</text>
+<rect x="185" y="84" width="132" height="126" rx="2" fill="#f8fafc" stroke="#334155" stroke-width="2"/>
+<line x1="251" y1="84" x2="251" y2="210" stroke="#334155" stroke-width="2"/><line x1="185" y1="147" x2="317" y2="147" stroke="#334155" stroke-width="2"/>
+<text x="218" y="124" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">□</text><text x="218" y="187" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">○</text><text x="284" y="187" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">△</text>
+</g>
+<g transform="translate(570 382)">
+<rect x="0" y="0" width="507" height="225" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text x="18" y="32" font-size="21" font-weight="700" font-family="sans-serif" fill="#0f172a">Lens.StarTriangle.B</text>
+<text x="18" y="63" font-size="26" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" fill="#1e293b">☆↓   △→   △↑   ☆←</text>
+<rect x="185" y="84" width="132" height="126" rx="2" fill="#f8fafc" stroke="#334155" stroke-width="2"/>
+<line x1="251" y1="84" x2="251" y2="210" stroke="#334155" stroke-width="2"/><line x1="185" y1="147" x2="317" y2="147" stroke="#334155" stroke-width="2"/>
+<text x="284" y="124" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">△</text><text x="218" y="187" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">□</text><text x="284" y="187" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">☆</text>
+</g>
+<g transform="translate(40 629)">
+<rect x="0" y="0" width="507" height="225" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text x="18" y="32" font-size="21" font-weight="700" font-family="sans-serif" fill="#0f172a">Lens.TriangleStar.A</text>
+<text x="18" y="63" font-size="26" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" fill="#1e293b">△→   ☆↓   ☆←   △↑</text>
+<rect x="185" y="84" width="132" height="126" rx="2" fill="#f8fafc" stroke="#334155" stroke-width="2"/>
+<line x1="251" y1="84" x2="251" y2="210" stroke="#334155" stroke-width="2"/><line x1="185" y1="147" x2="317" y2="147" stroke="#334155" stroke-width="2"/>
+<text x="284" y="124" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">□</text><text x="218" y="187" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">☆</text><text x="284" y="187" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">△</text>
+</g>
+<g transform="translate(570 629)">
+<rect x="0" y="0" width="507" height="225" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text x="18" y="32" font-size="21" font-weight="700" font-family="sans-serif" fill="#0f172a">Lens.SquareCircle.A</text>
+<text x="18" y="63" font-size="26" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" fill="#1e293b">□←   ○↓   ○→   □↑</text>
+<rect x="185" y="84" width="132" height="126" rx="2" fill="#f8fafc" stroke="#334155" stroke-width="2"/>
+<line x1="251" y1="84" x2="251" y2="210" stroke="#334155" stroke-width="2"/><line x1="185" y1="147" x2="317" y2="147" stroke="#334155" stroke-width="2"/>
+<text x="218" y="124" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">△</text><text x="218" y="187" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">□</text><text x="284" y="187" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">○</text>
+</g>
+<g transform="translate(40 876)">
+<rect x="0" y="0" width="507" height="225" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text x="18" y="32" font-size="21" font-weight="700" font-family="sans-serif" fill="#0f172a">Lens.TriangleStar.B</text>
+<text x="18" y="63" font-size="26" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" fill="#1e293b">△↑   ☆←   ☆↓   △→</text>
+<rect x="185" y="84" width="132" height="126" rx="2" fill="#f8fafc" stroke="#334155" stroke-width="2"/>
+<line x1="251" y1="84" x2="251" y2="210" stroke="#334155" stroke-width="2"/><line x1="185" y1="147" x2="317" y2="147" stroke="#334155" stroke-width="2"/>
+<text x="218" y="124" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">△</text><text x="284" y="124" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">○</text><text x="218" y="187" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">☆</text>
+</g>
+<g transform="translate(570 876)">
+<rect x="0" y="0" width="507" height="225" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+<text x="18" y="32" font-size="21" font-weight="700" font-family="sans-serif" fill="#0f172a">Lens.SquareCircle.B</text>
+<text x="18" y="63" font-size="26" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" fill="#1e293b">□↑   ○→   ○↓   □←</text>
+<rect x="185" y="84" width="132" height="126" rx="2" fill="#f8fafc" stroke="#334155" stroke-width="2"/>
+<line x1="251" y1="84" x2="251" y2="210" stroke="#334155" stroke-width="2"/><line x1="185" y1="147" x2="317" y2="147" stroke="#334155" stroke-width="2"/>
+<text x="218" y="124" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">☆</text><text x="284" y="124" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">□</text><text x="284" y="187" font-size="40" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" text-anchor="middle" dominant-baseline="middle" fill="#0f172a">○</text>
+</g>
+<text x="40" y="1140" font-family="sans-serif" font-size="15" fill="#475569">Source: corrected handwritten Shuffle Atlas, 2026-11. Identifier names provisional until verified.</text></svg>
