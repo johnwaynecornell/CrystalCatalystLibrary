@@ -47,6 +47,33 @@ SHUFFLES = {
 }
 
 
+def verify_formula_symmetries():
+    """Check the structural relationships described in PortableLens.md."""
+    opposite = {"↑": "↓", "↓": "↑", "←": "→", "→": "←"}
+    expected_symbol_pattern = (0, 1, 1, 1, 0, 0, 0, 2)
+    for family, formulas in [("column", COLUMN_SWAPS), ("row", ROW_SWAPS)]:
+        for name, seq in formulas.items():
+            assert len(seq) == 8, (family, name, "length")
+            x, y, z = seq[0][0], seq[1][0], seq[7][0]
+            a, b = seq[0][1], seq[2][1]
+            symbols = [x, y, z]
+            expected = [
+                (symbols[expected_symbol_pattern[i]], direction)
+                for i, direction in enumerate([
+                    a, a, b, opposite[a], opposite[b], opposite[b], opposite[a], b
+                ])
+            ]
+            assert seq == expected, (family, name, seq, expected)
+    for prefix in ["CircleSquare", "StarTriangle", "TriangleStar", "SquareCircle"]:
+        a = moves(SHUFFLES[f"Lens.{prefix}.A"][0])
+        b = moves(SHUFFLES[f"Lens.{prefix}.B"][0])
+        assert [glyph for glyph, _ in a] == [glyph for glyph, _ in b], prefix
+        assert [direction for _, direction in a] == [
+            direction for _, direction in reversed(b)
+        ], prefix
+    print("PASS all eight swap formula patterns and all four A/B traversal symmetries.")
+
+
 def replay(sequence):
     board = [row.copy() for row in START]
     for glyph, direction in sequence:
@@ -140,6 +167,7 @@ def verify_portable_positions(width, height):
 
 
 if __name__ == "__main__":
+    verify_formula_symmetries()
     for name, sequence in COLUMN_SWAPS.items():
         check(f"Column swap ({name})", sequence, "☆○□△")
     for name, sequence in ROW_SWAPS.items():
