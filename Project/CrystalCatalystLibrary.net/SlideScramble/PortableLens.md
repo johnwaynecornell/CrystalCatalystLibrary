@@ -21,23 +21,29 @@ The same formulas are intended to work at different board positions when their c
 
 The symbols represent the four distinguished tiles, not fixed screen positions. To apply a lens, write the four shapes together with the corresponding current cell coordinates and follow the shape-directed formula.
 
-## Given lens
+## Four tiles on a wraparound board
 
-![Given: circle and star above triangle and square](images/lens-given.svg)
+Start from the four shapes arranged as a 2×2 lens. **Column swap** exchanges the left/right positions in both rows; **row swap** exchanges the upper/lower positions in both columns. **Both** applies the two swaps together, exchanging each tile with its diagonal partner.
+
+| Given | Column swap |
+| :---: | :---: |
+| ![Given lens: circle star above triangle square](images/lens-given.svg) | ![Column swap: star circle above square triangle](images/lens-column-swap.svg) |
+| **Row swap** | **Both** |
+| ![Row swap: triangle square above circle star](images/lens-row-swap.svg) | ![Both swaps: square triangle above star circle](images/lens-both.svg) |
+
+In shape notation:
 
 ```text
-○  ☆
-△  □
+Given           Column swap      Row swap         Both
+○  ☆            ☆  ○             △  □             □  △
+△  □            □  △             ○  ☆             ☆  ○
 ```
+
+The row and column swaps commute as **transformations of the four lens positions**: either composition produces the same diagonal exchange. Each individual swap is an involution, and applying Both twice returns to Given.
+
+**Applying both formulas in sequence:** each eight-move formula assumes the symbols are assigned to the four lens *positions* in the Given arrangement. Before executing the second formula, assign ○, ☆, △, □ afresh to the tiles currently in the upper-left, upper-right, lower-left, and lower-right cells. These temporary shape labels guide the next sequence; they do not change the tiles' actual identities. Both orders were checked using the full row/column moves, including restoration of the surrounding cells.
 
 ## Column swap — four verified eight-move formulas
-
-![Column swap result: star and circle above square and triangle](images/lens-column-swap.svg)
-
-```text
-☆  ○
-□  △
-```
 
 The original page lists four named entry orientations. **Each table row below is an entire eight-move formula read left to right**; the numbered columns are successive moves, not simultaneous actions. A direction indicates a **one-cell cyclic rotation of the entire row or column currently containing that marked tile**.
 
@@ -51,13 +57,6 @@ The original page lists four named entry orientations. **Each table row below is
 All four formulas were independently replayed on the centered 4×4 wraparound board described below. Each produced the depicted column swap in the 2×2 lens **and restored every other board cell to its starting value**.
 
 ## Row swap — four verified eight-move formulas
-
-![Row swap result: triangle and square above circle and star](images/lens-row-swap.svg)
-
-```text
-△  □
-○  ☆
-```
 
 | Orientation on handwritten page | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -172,13 +171,20 @@ Run: `python3 verify_portable_lens.py` (standard library only).
 
 The supplied 4×4 shifted-board fixture puts the original `(1,1)` tile at board position `(2,2)`, aligned to ○ in the centered 2×2 lens. The formulas have also passed the additional board-position checks described above; these tests support portability without proving that the atlas exhausts every possible entry state.
 
-## Related examples
+## Centered challenge and related examples
+
+The bundled [`Centered` challenge](challenges.json) uses the shifted 4×4 layout shown in this guide and now includes **eight recorded alignment moves**. It is both a convenient starting configuration for manual lens experiments and a replayable demonstration of how that shifted board returns to the solved arrangement.
 
 See [the SlideScramble README](SlideScramble.README.md) and [the bundled challenge catalog](challenges.json) for recordings such as `Lens-Column reversal`, `Lens-Row reversal`, and `Lens Parity`. These are useful worked examples for a later article; do not assert they implement a particular named atlas entry without verification.
 
+## Reuse and publishing notes
+
+This Markdown guide and its linked SVG figures are the technical reference for the public article. The new `lens-both.svg` completes the set of four introductory diagrams. The Shuffle Atlas must retain its prominent **vertical and horizontal dividing lines**, which separate four deliberately paired groups. In WordPress, publish SVG images through a supported media workflow or render lossless PNG counterparts when direct SVG uploads are unavailable. Use this guide and the verifier for formula authority, and the corrected handwritten pages for visual provenance.
+
 ## Verification and publication checklist
 
-- [x] Preserve the given, column-swap, and row-swap outcomes.
+- [x] Preserve the Given, Column swap, Row swap, and Both outcomes in a symmetric 2×2 figure layout.
+- [x] Document the compositional Both operation and the fresh position-based shape binding required by sequential formulas.
 - [x] Define blank-cell notation and shape identities correctly.
 - [x] Transcribe and verify all four column-swap and all four row-swap directional formulas.
 - [x] Transcribe and verify eight Shuffle Atlas entries from the corrected diagram on the centered 4×4 board; broader completeness remains open.
@@ -189,4 +195,5 @@ See [the SlideScramble README](SlideScramble.README.md) and [the bundled challen
 - [x] Verify all 16 sequences against the centered board's coordinates and the wraparound move convention.
 - [x] Test all 16 formulas against every translated placement on five board dimensions, including wraparound boundaries (1,712 successful cases).
 - [ ] Independently check mathematical completeness of the entry-pattern classification, if desired.
-- [ ] Prepare a later JohnCornell.net article from the verified guide, using the SVGs as canonical figures and highlighting the A/B and swap-pattern symmetries.
+- [x] Draft the JohnCornell.net HTML article from the verified guide, including the Both figure and A/B symmetries (publication follows merge).
+- [ ] Publish the article after the repository branch is merged.
