@@ -74,6 +74,51 @@ def verify_formula_symmetries():
     print("PASS all eight swap formula patterns and all four A/B traversal symmetries.")
 
 
+def verify_both_swaps():
+    """Compose verified swap formulas with symbols rebound to lens positions."""
+    original = [row.copy() for row in START]
+    positions = [(1, 1), (2, 1), (1, 2), (2, 2)]
+    expected = [
+        [START[2][2], START[2][1]],
+        [START[1][2], START[1][1]],
+    ]
+
+    def apply(board, seq):
+        # Every swap formula is written for the Given arrangement: rebind
+        # shapes to CURRENT cell contents before this complete formula.
+        current = dict(zip("○☆△□", (board[y][x] for x, y in positions)))
+        for glyph, direction in seq:
+            identity = current[glyph]
+            x, y = next((x, y) for y, row in enumerate(board)
+                        for x, tile in enumerate(row) if tile == identity)
+            if direction in "←→":
+                shift = (1 if direction == "←" else -1) % len(board[y])
+                board[y] = board[y][shift:] + board[y][:shift]
+            else:
+                column = [row[x] for row in board]
+                shift = (1 if direction == "↑" else -1) % len(column)
+                column = column[shift:] + column[:shift]
+                for row, tile in zip(board, column):
+                    row[x] = tile
+
+    for names in [("Column", "Row"), ("Row", "Column")]:
+        board = [row.copy() for row in original]
+        for name in names:
+            apply(board, COLUMN_SWAPS["Up left"] if name == "Column"
+                  else ROW_SWAPS["Left up"])
+        assert [board[1][1:3], board[2][1:3]] == expected, names
+        assert all(board[y][x] == original[y][x]
+                   for y in range(4) for x in range(4)
+                   if (x, y) not in LENS), names
+        # Both is a half turn (diagonal exchange), so doing it twice
+        # must restore the original board and surrounding cells.
+        for name in names:
+            apply(board, COLUMN_SWAPS["Up left"] if name == "Column"
+                  else ROW_SWAPS["Left up"])
+        assert board == original, names
+    print("PASS Both = Column+Row = Row+Column; Both twice = Given.")
+
+
 def replay(sequence):
     board = [row.copy() for row in START]
     for glyph, direction in sequence:
@@ -168,6 +213,7 @@ def verify_portable_positions(width, height):
 
 if __name__ == "__main__":
     verify_formula_symmetries()
+    verify_both_swaps()
     for name, sequence in COLUMN_SWAPS.items():
         check(f"Column swap ({name})", sequence, "☆○□△")
     for name, sequence in ROW_SWAPS.items():
