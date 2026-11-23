@@ -94,23 +94,23 @@ All four column-swap variants produce the same final arrangement, as do the four
 
 ![Eight shuffle entry configurations, with arrows and resulting two-by-two marked cells](images/lens-shuffle-atlas.svg)
 
-The atlas arranges eight **entry configurations** in a **two-column, four-row** grid. Its vertical and horizontal dividers organize four paired groups, each containing two opposite directional variants. Each arrow refers to the row or column containing the indicated shape, **not a move of that tile alone**.
+The atlas arranges eight **entry configurations** in a **two-column, four-row** grid. Its vertical and horizontal dividers organize four quadrants. The entries are arranged so the **unchanged (blank) cells face inward toward the center of each half**, and inverse rotations appear **directly above or below one another**. Each arrow refers to the row or column containing the indicated shape, **not a move of that tile alone**.
 
 A **blank diagram cell denotes that cell's original value**. No cell is empty.
-To find the inverse shuffle, locate the entry whose **blank** occupies the same cell. With the retained naming convention, its identifier has the **same A or B suffix** in the diagonally opposite family.
+To find the inverse shuffle, locate the entry whose **blank** occupies the same cell. With the inverse-aligned naming convention, its identifier has the **same A or B suffix** in the corresponding family directly above or below it.
 
-The identifiers name the first two shapes in the formula and its A/B variant, for example `Lens.CircleSquare.A`. The lower-half A/B labels are deliberately reversed relative to their vertical order, so **inverse 3-cycles in diagonally opposite families share the same suffix**. These names do not imply an exhaustive classification of all possible local states.
+The identifiers name the first two shapes in the formula and its A/B variant, for example `Lens.CircleSquare.A`. The matching A/B labels on the top and bottom halves identify **inverse 3-cycles aligned vertically**. These names do not imply an exhaustive classification of all possible local states.
 
 | Atlas position | Identifier | Shape-directed moves | Marked result (top / bottom) |
 | --- | --- | --- | --- |
-| Upper left A | `Lens.CircleSquare.A` | ○→, □↑, □←, ○↓ | `□ ○ / · ☆` |
-| Upper right A | `Lens.StarTriangle.A` | ☆←, △↑, △→, ☆↓ | `☆ △ / ○ ·` |
+| Upper left A | `Lens.StarTriangle.A` | ☆←, △↑, △→, ☆↓ | `☆ △ / ○ ·` |
+| Upper right A | `Lens.CircleSquare.A` | ○→, □↑, □←, ○↓ | `□ ○ / · ☆` |
 | Upper left B | `Lens.CircleSquare.B` | ○↓, □←, □↑, ○→ | `□ · / ○ △` |
 | Upper right B | `Lens.StarTriangle.B` | ☆↓, △→, △↑, ☆← | `· △ / □ ☆` |
-| Lower left B | `Lens.TriangleStar.B` | △→, ☆↓, ☆←, △↑ | `· □ / ☆ △` |
-| Lower right B | `Lens.SquareCircle.B` | □←, ○↓, ○→, □↑ | `△ · / □ ○` |
 | Lower left A | `Lens.TriangleStar.A` | △↑, ☆←, ☆↓, △→ | `△ ○ / ☆ ·` |
 | Lower right A | `Lens.SquareCircle.A` | □↑, ○→, ○↓, □← | `☆ □ / · ○` |
+| Lower left B | `Lens.SquareCircle.B` | □←, ○↓, ○→, □↑ | `△ · / □ ○` |
+| Lower right B | `Lens.TriangleStar.B` | △→, ☆↓, ☆←, △↑ | `· □ / ☆ △` |
 
 The dot (`·`) in the table means the **original value of that cell**. It is not another symbol or an empty space. The SVG leaves those cells visually blank. Each atlas sequence cycles three distinguished tiles while leaving the fourth in its original position.
 
@@ -133,11 +133,11 @@ Lens.CircleSquare.B: ○↓  □←  □↑  ○→
 
 The relation holds for `CircleSquare`, `StarTriangle`, `TriangleStar`, and `SquareCircle`. A and B are opposite **directional traversals**, not inverse recordings. An inverse recording reverses the move order and each move direction, while updating the drag-start position.
 
-Within each named family, A and B retain their opposite directional traversals. **Across diagonal families, matching suffixes now indicate inverses**: CircleSquare pairs with SquareCircle, and StarTriangle pairs with TriangleStar. The lower half therefore displays B above A; this preserves the original physical arrangement while highlighting its diagonal inverse symmetry.
+Within each named family, A and B retain their opposite directional traversals. **Across top and bottom halves, matching suffixes now indicate vertically aligned inverses**: CircleSquare pairs with SquareCircle, and StarTriangle pairs with TriangleStar. Every result's blank cell faces the center line within its half. The two bold dividers continue to distinguish the four quadrants.
 
 ### Scope
 
-The eight atlas entries are tested, portable transformations. Their identifiers are defined by this inverse-aligned naming convention. They are not claimed to exhaust every possible configuration up to symmetry. The dividing lines preserve the four paired groups of the original atlas.
+The eight atlas entries are tested, portable transformations. Their identifiers are defined by this inverse-aligned naming convention. They are not claimed to exhaust every possible configuration up to symmetry. The dividing lines preserve the four quadrants; the ordering emphasizes fixed-cell positions and vertical inverse relationships.
 
 ## Reproducible verification
 
