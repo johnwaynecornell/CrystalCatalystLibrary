@@ -40,7 +40,7 @@
 </g>
 <g transform="translate(40 629)">
 <rect x="0" y="0" width="507" height="225" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
-<text x="18" y="32" font-size="21" font-weight="700" font-family="sans-serif" fill="#0f172a">Lens.TriangleStar.A</text>
+<text x="18" y="32" font-size="21" font-weight="700" font-family="sans-serif" fill="#0f172a">Lens.TriangleStar.B</text>
 <text x="18" y="63" font-size="26" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" fill="#1e293b">△→   ☆↓   ☆←   △↑</text>
 <rect x="185" y="84" width="132" height="126" rx="2" fill="#f8fafc" stroke="#334155" stroke-width="2"/>
 <line x1="251" y1="84" x2="251" y2="210" stroke="#334155" stroke-width="2"/><line x1="185" y1="147" x2="317" y2="147" stroke="#334155" stroke-width="2"/>
@@ -48,7 +48,7 @@
 </g>
 <g transform="translate(570 629)">
 <rect x="0" y="0" width="507" height="225" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
-<text x="18" y="32" font-size="21" font-weight="700" font-family="sans-serif" fill="#0f172a">Lens.SquareCircle.A</text>
+<text x="18" y="32" font-size="21" font-weight="700" font-family="sans-serif" fill="#0f172a">Lens.SquareCircle.B</text>
 <text x="18" y="63" font-size="26" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" fill="#1e293b">□←   ○↓   ○→   □↑</text>
 <rect x="185" y="84" width="132" height="126" rx="2" fill="#f8fafc" stroke="#334155" stroke-width="2"/>
 <line x1="251" y1="84" x2="251" y2="210" stroke="#334155" stroke-width="2"/><line x1="185" y1="147" x2="317" y2="147" stroke="#334155" stroke-width="2"/>
@@ -56,7 +56,7 @@
 </g>
 <g transform="translate(40 876)">
 <rect x="0" y="0" width="507" height="225" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
-<text x="18" y="32" font-size="21" font-weight="700" font-family="sans-serif" fill="#0f172a">Lens.TriangleStar.B</text>
+<text x="18" y="32" font-size="21" font-weight="700" font-family="sans-serif" fill="#0f172a">Lens.TriangleStar.A</text>
 <text x="18" y="63" font-size="26" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" fill="#1e293b">△↑   ☆←   ☆↓   △→</text>
 <rect x="185" y="84" width="132" height="126" rx="2" fill="#f8fafc" stroke="#334155" stroke-width="2"/>
 <line x1="251" y1="84" x2="251" y2="210" stroke="#334155" stroke-width="2"/><line x1="185" y1="147" x2="317" y2="147" stroke="#334155" stroke-width="2"/>
@@ -64,7 +64,7 @@
 </g>
 <g transform="translate(570 876)">
 <rect x="0" y="0" width="507" height="225" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
-<text x="18" y="32" font-size="21" font-weight="700" font-family="sans-serif" fill="#0f172a">Lens.SquareCircle.B</text>
+<text x="18" y="32" font-size="21" font-weight="700" font-family="sans-serif" fill="#0f172a">Lens.SquareCircle.A</text>
 <text x="18" y="63" font-size="26" font-family="'DejaVu Sans','Noto Sans Symbols 2',sans-serif" fill="#1e293b">□↑   ○→   ○↓   □←</text>
 <rect x="185" y="84" width="132" height="126" rx="2" fill="#f8fafc" stroke="#334155" stroke-width="2"/>
 <line x1="251" y1="84" x2="251" y2="210" stroke="#334155" stroke-width="2"/><line x1="185" y1="147" x2="317" y2="147" stroke="#334155" stroke-width="2"/>
