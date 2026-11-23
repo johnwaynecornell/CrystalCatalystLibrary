@@ -19,7 +19,22 @@ The formulas work at different board positions when the lens is relocated and th
 
 **An unmarked (blank) cell in a lens diagram means its original cell value. It does not mean an empty position.** SlideScramble has no empty cells.
 
-The symbols represent the four distinguished tiles, not fixed screen positions. To apply a lens, write the four shapes together with the corresponding current cell coordinates and follow the shape-directed formula.
+The symbols represent the four distinguished tiles, not fixed screen positions. Establish their identities at the beginning of an operation; the arrows then follow those tiles through the board.
+
+### Symbolic operations and the circle anchor
+
+Write `○@(column,row)` to locate a lens by the **initial position of ○**, the upper-left reference cell of the Given 2×2 arrangement. Coordinates are one-based, with the column first. ☆, △, and □ occupy the other three lens positions to the right and below, wrapping around board edges as needed.
+
+```text
+ColumnSwap ○@(3,3)          column-swap effect at this lens
+ColumnSwap.UpLeft ○@(3,3)   the specific Up left formula
+RowSwap.LeftUp ○@(3,3)     the specific Left up formula
+Lens.CircleSquare.A ○@(3,3)   the named Shuffle Atlas rotation
+```
+
+An **unqualified operation** (`ColumnSwap` or `RowSwap`) names the desired permutation, independent of the four formulas that implement it. Use the qualified name when a specific execution sequence matters. The anchor identifies the *starting binding*, not a permanently fixed tile. After each arrow, find the named tile at its current position. Before applying another complete operation, rebind the Given shapes to the tiles currently occupying the lens positions.
+
+A **formula step** is one unit arrow. A **game move** is one committed row/column rotation (which may move multiple cells). A **lens operation** is the complete local transformation. Their counts need not coincide.
 
 ## Four tiles on a wraparound board
 
@@ -43,27 +58,29 @@ The row and column swaps commute as **transformations of the four lens positions
 
 **Applying both formulas in sequence:** each eight-move formula assumes the symbols are assigned to the four lens *positions* in the Given arrangement. Before executing the second formula, assign ○, ☆, △, □ afresh to the tiles currently in the upper-left, upper-right, lower-left, and lower-right cells. These temporary shape labels guide the next sequence; they do not change the tiles' actual identities. Both orders were checked using the full row/column moves, including restoration of the surrounding cells.
 
-## Column swap — four verified eight-move formulas
+## Column swap — four verified eight-step formulas
 
-The column swap has four entry orientations. **Read each eight-move formula from left to right**; the numbered columns are successive moves, not simultaneous actions. A direction indicates a **one-cell cyclic rotation of the entire row or column currently containing that marked tile**.
+The operation `ColumnSwap` has four entry orientations. **Read each eight-step formula from left to right**; the numbered columns are successive one-cell formula steps, not simultaneous actions. A direction indicates a **one-cell cyclic rotation of the entire row or column currently containing that marked tile**.
 
-| Orientation on handwritten page | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+| Identifier (handwritten orientation) | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Up left | △↑ | □↑ | □← | □↓ | △→ | △→ | △↓ | ☆← |
-| Down left | ○↓ | ☆↓ | ☆← | ☆↑ | ○→ | ○→ | ○↑ | □← |
-| Up right | □↑ | △↑ | △→ | △↓ | □← | □← | □↓ | ○→ |
-| Down right | ☆↓ | ○↓ | ○→ | ○↑ | ☆← | ☆← | ☆↑ | △→ |
+| `ColumnSwap.UpLeft` (Up left) | △↑ | □↑ | □← | □↓ | △→ | △→ | △↓ | ☆← |
+| `ColumnSwap.DownLeft` (Down left) | ○↓ | ☆↓ | ☆← | ☆↑ | ○→ | ○→ | ○↑ | □← |
+| `ColumnSwap.UpRight` (Up right) | □↑ | △↑ | △→ | △↓ | □← | □← | □↓ | ○→ |
+| `ColumnSwap.DownRight` (Down right) | ☆↓ | ○↓ | ○→ | ○↑ | ☆← | ☆← | ☆↑ | △→ |
 
 Each formula produces the column swap within the 2×2 lens **while restoring every other board cell to its starting value**.
 
-## Row swap — four verified eight-move formulas
+## Row swap — four verified eight-step formulas
 
-| Orientation on handwritten page | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+The operation `RowSwap` likewise has four entry orientations.
+
+| Identifier (handwritten orientation) | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Left up | ☆← | □← | □↑ | □→ | ☆↓ | ☆↓ | ☆→ | △↑ |
-| Left down | □← | ☆← | ☆↓ | ☆→ | □↑ | □↑ | □→ | ○↓ |
-| Right up | ○→ | △→ | △↑ | △← | ○↓ | ○↓ | ○← | ☆↑ |
-| Right down | △→ | ○→ | ○↓ | ○← | △↑ | △↑ | △← | □↓ |
+| `RowSwap.LeftUp` (Left up) | ☆← | □← | □↑ | □→ | ☆↓ | ☆↓ | ☆→ | △↑ |
+| `RowSwap.LeftDown` (Left down) | □← | ☆← | ☆↓ | ☆→ | □↑ | □↑ | □→ | ○↓ |
+| `RowSwap.RightUp` (Right up) | ○→ | △→ | △↑ | △← | ○↓ | ○↓ | ○← | ☆↑ |
+| `RowSwap.RightDown` (Right down) | △→ | ○→ | ○↓ | ○← | △↑ | △↑ | △← | □↓ |
 
 Each formula produces the row swap while restoring all other cells. The entries are ordered **Left up, Left down, Right up, Right down** so that their starting symbols (☆, □, ○, △) exactly reverse those of the column swap (△, ○, □, ☆). This symmetry concerns the starting symbols, not the complete move sequences.
 
@@ -71,7 +88,7 @@ Each formula produces the row swap while restoring all other cells. The entries 
 
 For example, `△↑` means: find the current coordinate of the **triangle tile**, then rotate that tile's **entire column upward by one cell**, including every other tile in that column. Resolve the next symbol's current position *after* executing this move.
 
-Repeated instructions such as `△→ △→` are **two one-cell moves**, not a claim that a two-cell rotation counts as two game moves under every input scheme. They preserve the actual order of the handwritten formula.
+Repeated instructions such as `△→ △→` are **two one-cell formula steps**, not a claim that a two-cell rotation counts as two committed game moves. They preserve the actual order of the handwritten formula.
 
 ## Shared structure of the eight-move swaps
 
@@ -86,7 +103,7 @@ X:opposite(b)   X:opposite(b)   X:opposite(a)   Z:b
 
 The pattern of **shape references** is `X Y Y Y X X X Z`; the **directions** follow `a a b −a −b −b −a b`. Here `−` denotes the opposite arrow, not a subtraction of tile coordinates.
 
-For example, Column swap / Up left uses `X=△`, `Y=□`, `Z=☆`, `a=↑`, and `b=←`. Substituting those bindings produces its exact eight arrows. The remaining seven rows use the same structure with different bindings. This describes a shared **formula pattern**, not a claim that all eight executions are the same intermediate board state.
+For example, `ColumnSwap.UpLeft` uses `X=△`, `Y=□`, `Z=☆`, `a=↑`, and `b=←`. Substituting those bindings produces its exact eight arrows. The remaining seven rows use the same structure with different bindings. This describes a shared **formula pattern**, not a claim that all eight executions are the same intermediate board state.
 
 All four column-swap variants produce the same final arrangement, as do the four row-swap variants. The intermediate paths differ with the chosen starting shapes and directions.
 
@@ -170,13 +187,13 @@ Run: `python3 verify_portable_lens.py` (standard library only).
 
 ## Applying the portable lens
 
-1. Choose the four distinguished tile identities.
-2. Write the shape-to-current-cell-coordinate bindings.
-3. Identify the matching shuffle/entry configuration.
-4. Follow the shape-directed moves, using full-row and full-column rotations in SlideScramble.
-5. Check the resulting arrangement, including the unchanged/original-value cells.
+1. Establish the lens position with a circle anchor such as `○@(3,3)` (column, row).
+2. Bind the four shapes to the tile identities currently occupying the Given lens positions.
+3. Select the transformation, for instance `ColumnSwap`, or the qualified variant `ColumnSwap.UpLeft` if a particular formula is required.
+4. Execute the shape-directed formula steps, finding each tile's current row or column after the preceding step.
+5. Check the resulting arrangement, including unchanged/original-value cells. Rebind the shapes before another complete operation.
 
-In the centered board, the tile labeled `(1,1)` appears at current position `(2,2)`, corresponding to ○. The same shape-to-tile technique works when the 2×2 lens moves elsewhere on the board.
+In the centered board, `○@(2,2)` establishes the lens in the middle. The tile labeled `(1,1)` initially occupies that circle anchor. The same shape-to-tile technique works when the 2×2 lens moves elsewhere on the board.
 
 ## Centered challenge and related examples
 

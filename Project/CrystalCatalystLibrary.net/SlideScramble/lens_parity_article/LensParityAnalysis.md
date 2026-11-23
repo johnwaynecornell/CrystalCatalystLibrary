@@ -21,7 +21,8 @@ The question is **not** merely how to fix row 3. It is which correction to choos
 | --- | --- |
 | **Game move** | One committed whole-row or whole-column SlideScramble rotation. A two-cell drag still counts as **one move**. |
 | **Formula step** | One arrow in a shape-directed lens formula: a one-cell rotation of the indicated tile's current row or column. |
-| **Column-swap operation** | A complete [portable-lens]([portable-lens](https://github.com/johnwaynecornell/CrystalCatalystLibrary/blob/main/Project/CrystalCatalystLibrary.net/SlideScramble/PortableLens.md)) transformation that exchanges the two horizontal neighbors in each of two neighboring rows, restoring surrounding tiles. It is **not one game move**. |
+| **Column-swap operation (`ColumnSwap`)** | A complete [Portable Lens](../PortableLens.md) transformation that exchanges the two horizontal neighbors in each of two neighboring rows, restoring surrounding tiles. It is **not one game move**. |
+| **Lens anchor (`○@(x,y)`)** | The starting location of ○ in the upper-left lens cell, with one-based column `x` and row `y`. The circle reference locates all four lens cells; it is **not** a drag-start coordinate. |
 | **Adjacent pair exchange** | A *projected* swap of entries at columns `1–2`, `2–3`, `3–4`, or `4–1` around the wraparound row. This is our planning unit, not automatically a legal standalone game move. |
 | **Cyclic order** | An ordering equivalent to `1234` by rotating the row: `1234`, `2341`, `3412`, or `4123`. |
 | **Correction count** | The fewest *adjacent pair exchanges* required to reach **any** of those four cyclic orders; final alignment is counted separately. |
@@ -84,6 +85,8 @@ A **column-swap lens operation exchanges one adjacent pair in each of two neighb
 
 ### From the counts to the actual game moves
 
+Write `ColumnSwap ○@(x,y)` to name the intended column-swap effect at the lens anchored by ○ at column `x`, row `y`. The unqualified `ColumnSwap` deliberately leaves the execution variant open. **Both recordings use the `ColumnSwap.UpLeft` pattern**; their correction blocks include alignments and combined full-line rotations, so each block of six saved game moves is not itself a substitute for the standalone eight-step formula. The [Portable Lens guide](../PortableLens.md) documents its exact arrows.
+
 1. **Count both rows first.** Row 3 offers totals **1, 2, 3, 2**; row 4 offers **2, 2, 2, 2**. The candidate totals **2 and 2** match.
 2. **Choose a compatible pair of two-exchange routes.** The row-3 choices starting at columns **2–3** and **4–1** are equivalent by *exchange count*, but not necessarily by the row alignment they require. Inspect row 4's candidate paths and select a pairing that can be realized by the same lens placements.
 3. **Establish the first lens position.** Rotate the working row if necessary. This is an actual **game move**, not an abstract exchange.
@@ -115,16 +118,16 @@ The method also works **perpendicularly**: on a board with an **even number of r
 | After move 13 | `23 33 43 13` | `14 24 34 44` |
 | After move 14 | `13 23 33 43` | `14 24 34 44` |
 
-The recording can be understood in five stages:
+The recording can be understood in four stages:
 
-1. **Move 1 — establish the working alignment.** Row 3 rotates left one cell. That places the next selected lens area where it can be used in the planned correction.
-2. **Moves 2–7 — first coordinated correction block.** The first recorded group leaves row 4 as `14 24 44 34` and row 3 as `33 43 23 13`. Both have useful remaining work; neither has to be solved exactly yet.
-3. **Moves 8–13 — second coordinated correction block.** After this group, row 4 is completely solved, while row 3 is `23 33 43 13`: **correct cyclic order**, but not yet aligned to home positions.
+1. **Move 1 — establish the working alignment.** Row 3 rotates left one cell, preparing the lens at `○@(1,3)`. This is the circle's reference coordinate, not a drag-start position.
+2. **Moves 2–7 — `ColumnSwap ○@(1,3)`, first coordinated correction block.** The first recorded group leaves row 4 as `14 24 44 34` and row 3 as `33 43 23 13`. Both have useful remaining work; neither has to be solved exactly yet.
+3. **Moves 8–13 — `ColumnSwap ○@(3,3)`, second coordinated correction block.** After this group, row 4 is completely solved, while row 3 is `23 33 43 13`: **correct cyclic order**, but not yet aligned to home positions.
 4. **Move 14 — final rectification.** Rotate row 3 one cell **right**, transforming `23 33 43 13` into `13 23 33 43`. The entire board is solved.
 
 **Why the rectification matters:** the state at move 13 is *not* a completed solution. A correct cyclic order is a useful planning milestone, but the final whole-row alignment is a **real game move** and belongs in the score. This construction solves the puzzle in **14 committed moves**, one fewer than the earlier 15-move reference challenge.
 
-The groups are presented as parts of one recorded construction, **not** as independently verified six-move implementations of the generic eight-step column-swap formula. The initial alignment and move batching are integral to this specific solution. The full recording is preserved as [`Project/CrystalCatalystLibrary.net/SlideScramble/lens_parity_article/lens-parity-14.json`](lens-parity-14.json). It can be copied into sessions in the binary directory for load.
+The symbolic labels give the **intended local effect and anchor**, not a six-step standalone formula. The groups are parts of one recorded construction, **not** independently verified six-move implementations of the generic eight-step column-swap formula. The initial alignment and move batching are integral to this specific solution. The full recording is preserved as [`Project/CrystalCatalystLibrary.net/SlideScramble/lens_parity_article/lens-parity-14.json`](lens-parity-14.json). It can be copied into sessions in the binary directory for load.
 
 ## Second recorded demonstration: 15 game moves
 
@@ -141,10 +144,10 @@ The groups are presented as parts of one recorded construction, **not** as indep
 
 This route uses an additional intermediate row alignment:
 
-1. **Move 1:** rotate row 3 right one cell to begin with a different working alignment.
-2. **Moves 2–7:** perform the first correction block. Row 4 becomes `14 24 44 34`.
-3. **Move 8:** rotate row 3 by two cells to position the second correction.
-4. **Moves 9–14:** perform the second correction block. Row 4 is solved, and row 3 has correct cyclic order as `43 13 23 33`.
+1. **Move 1:** rotate row 3 right one cell to prepare `○@(1,3)` with a different working alignment.
+2. **Moves 2–7 — `ColumnSwap ○@(1,3)`:** perform the first correction block. Row 4 becomes `14 24 44 34`.
+3. **Move 8:** rotate row 3 by two cells to position the second correction at `○@(3,3)`.
+4. **Moves 9–14 — `ColumnSwap ○@(3,3)`:** perform the second correction block. Row 4 is solved, and row 3 has correct cyclic order as `43 13 23 33`.
 5. **Move 15:** rotate row 3 left one cell to rectify its exact position, solving the board.
 
 The extra realignment is visible and counted. Thus the 15-move trace is not a worse explanation just because it scores one move more: it shows how the choice of working offset affects implementation cost while retaining the same broad strategy.
