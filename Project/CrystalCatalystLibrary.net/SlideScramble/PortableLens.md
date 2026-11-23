@@ -114,6 +114,14 @@ The retained identifiers name the first two shapes in the formula and its A/B va
 
 The dot (`·`) in the table means the **original value of that cell**. It is not another symbol or an empty space. The SVG leaves those cells visually blank. Each atlas sequence cycles three distinguished tiles while leaving the fourth in its original position.
 
+### The shuffle as a three-position rotation
+
+Every Shuffle Atlas entry cycles three positions while preserving the fourth. Applying the same operation three times restores the original arrangement.
+
+A shuffle therefore has a period of three, and applying it twice produces its inverse. The matching-blank entry in the atlas provides that inverse directly, without repeating the original operation.
+
+For example, `Lens.CircleSquare.A` rotates the three positions surrounding its fixed bottom-left cell. With shapes rebound by position before each application, three successive executions return the entire board to its starting state.
+
 ### A/B symmetry: opposite traversal order
 
 Each A/B pair uses the **same ordered shapes** (first–second–second–first) and the **same four arrow directions in reverse order**. For example:
