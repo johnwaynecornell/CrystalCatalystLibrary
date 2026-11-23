@@ -40,10 +40,10 @@ SHUFFLES = {
     "Lens.StarTriangle.A": ("☆← △↑ △→ ☆↓", "☆△○·"),
     "Lens.CircleSquare.B": ("○↓ □← □↑ ○→", "□·○△"),
     "Lens.StarTriangle.B": ("☆↓ △→ △↑ ☆←", "·△□☆"),
-    "Lens.TriangleStar.A": ("△→ ☆↓ ☆← △↑", "·□☆△"),
-    "Lens.SquareCircle.A": ("□← ○↓ ○→ □↑", "△·□○"),
-    "Lens.TriangleStar.B": ("△↑ ☆← ☆↓ △→", "△○☆·"),
-    "Lens.SquareCircle.B": ("□↑ ○→ ○↓ □←", "☆□·○"),
+    "Lens.TriangleStar.B": ("△→ ☆↓ ☆← △↑", "·□☆△"),
+    "Lens.SquareCircle.B": ("□← ○↓ ○→ □↑", "△·□○"),
+    "Lens.TriangleStar.A": ("△↑ ☆← ☆↓ △→", "△○☆·"),
+    "Lens.SquareCircle.A": ("□↑ ○→ ○↓ □←", "☆□·○"),
 }
 
 
@@ -71,6 +71,27 @@ def verify_formula_symmetries():
         assert [direction for _, direction in a] == [
             direction for _, direction in reversed(b)
         ], prefix
+    inverse_families = [
+        ("CircleSquare", "SquareCircle"),
+        ("StarTriangle", "TriangleStar"),
+    ]
+    # An atlas result is a local permutation of four starting positions.
+    # All four fixed cells occur twice, with opposite orientations.
+    for first, second in inverse_families:
+        for suffix in ("A", "B"):
+            entry1 = SHUFFLES[f"Lens.{first}.{suffix}"][1]
+            entry2 = SHUFFLES[f"Lens.{second}.{suffix}"][1]
+            assert entry1.index("·") == entry2.index("·"), (first, second, suffix)
+            def resolve_result(pattern):
+                original = list("○☆△□")
+                return [original[i] if value == "·" else value
+                        for i, value in enumerate(pattern)]
+            a, b = resolve_result(entry1), resolve_result(entry2)
+            original = list("○☆△□")
+            inverse = [original.index(glyph) for glyph in a]
+            composed = [a[original.index(glyph)] for glyph in b]
+            assert composed == original, (first, second, suffix, a, b)
+    print("PASS four inverse-aligned same-suffix pairs.")
     print("PASS all eight swap formula patterns and all four A/B traversal symmetries.")
 
 
