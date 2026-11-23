@@ -97,6 +97,7 @@ All four column-swap variants produce the same final arrangement, as do the four
 The atlas arranges eight **entry configurations** in a **two-column, four-row** grid. Its vertical and horizontal dividers organize four paired groups, each containing an A and B variant. Each arrow refers to the row or column containing the indicated shape, **not a move of that tile alone**.
 
 A **blank diagram cell denotes that cell's original value**. No cell is empty.
+To find the inverse shuffle, locate the entry whose **blank** occupies the same cell.
 
 The retained identifiers name the first two shapes in the formula and its A/B variant, for example `Lens.CircleSquare.A`. These are stable documentation names, not a claim of an exhaustive classification of all possible local states.
 
