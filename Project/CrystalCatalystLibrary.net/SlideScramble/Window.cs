@@ -588,6 +588,7 @@ public partial class Window
         {
             new(new CrystalMenuEntry("Edit Board"), OpenBoardEditor),
             new(new CrystalMenuEntry("Scramble", "S"), ScrambleBoard),
+            new(new CrystalMenuEntry("Generate Challenge"), ShowChallengeGenerator),
             new(new CrystalMenuEntry("Reset Board", "X"), ResetBoard),
             new(new CrystalMenuEntry("Grid Setup", "G"), () => ShowGridSetup = !ShowGridSetup),
             new(new CrystalMenuEntry("3 × 3 Grid", "1"), () => SetGridSize(3)),
@@ -728,7 +729,7 @@ public partial class Window
         if (!CanChangeBoard) return;
         goal = null;
         State.StartScrambling();
-        ScrambleCount = (MyGrid.Width + MyGrid.Height) * 2;
+        ScrambleCount = SingleScrambleMoves;
     }
 
     private void ResetBoard()
@@ -1233,18 +1234,17 @@ public partial class Window
         {
             if (ScrambleCount <= 0 && State.Mode == GameMode.Scrambling)
             {
+                FinishGeneratedChallenge();
                 State.FinishScrambling(wnd.uptimeSeconds());
                 Audio.PlayGameStartChime();
             }
             
             if (State.Mode == GameMode.Scrambling)
             {
-                bool horizontal = rand.Next(2) == 0;
-                int ordinal = rand.Next(horizontal ? MyGrid.Width : MyGrid.Height);
-                int delta_length = horizontal ? MyGrid.Height : MyGrid.Width;
-                
-                int delta = rand.Next(delta_length) - (delta_length >> 1);
-                if (delta == 0) delta = 1;
+                var move = NextScrambleMove();
+                bool column = move.Axis == RecordedMoveAxis.Column;
+                int ordinal = move.Index;
+                int delta = move.Delta;
 
                 Animation anim = new Animation();
                 double start = -1;
@@ -1260,18 +1260,13 @@ public partial class Window
                     {
                         animationLockHoriz = null;
                         animationTileOffset = 0;
-                        if (!horizontal)
-                        {
-                            MyGrid.MoveRow(ordinal, delta);
-                        }
-                        else
-                        {
-                            MyGrid.MoveColumn(ordinal, delta);
-                        }
+                        if (column) MyGrid.MoveColumn(ordinal, delta);
+                        else MyGrid.MoveRow(ordinal, delta);
+                        generatedMoves?.Add(move);
                         return false;
                     }
                     
-                    animationLockHoriz = horizontal;
+                    animationLockHoriz = column;
                     animationOrdinal = ordinal;
                     float t = Math.Clamp((float)(elapsed / duration), 0f, 1f);
                     float progress = t * t * (3f - 2f * t); // smoothstep
@@ -1632,7 +1627,7 @@ public partial class Window
             if (showMedia) DrawMedia(canvas, media);
 
             // Session Selection Popup
-            if (popupHost.IsVisible && commandMenu == null)
+            if (popupHost.IsVisible && commandMenu == null && challengeGenerator == null)
             {
                 LayoutSelectionPopup(width, height);
                 ((ICrystalSkia)popupHost).OnDraw(canvas);
@@ -1733,6 +1728,8 @@ public partial class Window
             canvas.Scale(footerScale);
             canvas.DrawText(footerText, -footerBounds.Width / 2f, 0, footerFont, hudMutedPaint);
             canvas.Restore();
+
+            if (challengeGenerator != null) DrawChallengeGenerator(canvas, width, height);
 
             if (commandMenu != null)
             {
@@ -1913,6 +1910,7 @@ public partial class Window
     private void OnPopupClosed(PopupResult result)
     {
         commandMenu = null;
+        challengeGenerator = null;
         selectionKind = SelectionKind.None;
         selectionControl = null;
         challengeCatalog = null;

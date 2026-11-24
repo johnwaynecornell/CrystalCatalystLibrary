@@ -69,6 +69,7 @@ menu first. Press **Space** again or **Esc** to close it without running a comma
 | --- | --- | --- |
 | **Edit Board** | | Opens the board editor. It is the first entry, so **Space**, then **Enter**, opens it. |
 | **Scramble** | **S** | Mixes the board with legal row and column moves. |
+| **Generate Challenge** | | Starts from solved, then scrambles and keeps a replayable solution. |
 | **Reset Board** | **X** | Returns the current grid to its solved arrangement. |
 | **Grid Setup** | **G** | Opens the column and row controls. Set each dimension independently from 2 to 9. |
 | **3 × 3**, **4 × 4**, **6 × 6**, **8 × 8 Grid** | **1**, **2**, **3**, **4** | Switches to the corresponding square grid. |
@@ -219,6 +220,18 @@ Starting a game performs a sequence of legal row and column transformations.
 Because the scrambled state is produced through the same operations available to the player, the resulting puzzle remains reachable through normal play.
 
 The move counter begins when the scramble is complete.
+
+### Generate Challenge
+
+Open **Generate Challenge** from the Space menu and choose **1–10** with the
+slider or **Left** and **Right**. **1** uses the same number of slides as one
+ordinary scramble, and **3** uses three times that number. Click **Generate** or
+press **Enter** to start from the solved grid at the current dimensions.
+
+When the shuffle ends, play from the generated layout with zero player moves.
+The goal is the first solved position in the reversed scramble recording. Open
+**Session Controls** to replay that solution or **Save** it under a filename of
+your choice. Generation creates no file on its own.
 
 ## Audio
 
