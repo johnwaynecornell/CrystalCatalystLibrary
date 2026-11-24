@@ -1,0 +1,33 @@
+○ ☆
+△ □
+
+The first operations are board setup then
+
+Move 6:
+LensCircleSquare.B ○@(1,2) 
+○ =1,3 ☆ =4,4
+△ =4,1 □ =4,4
+
+This operation is counterclockwise around ☆ 
+
+Move 13:
+Lens.TriangleStar.A ○@(3,4) 
+○ =4,3 ☆ =3,2
+△ =3,3 □ =4,2 
+
+This operation is clockwise around □ 
+
+Move 17
+Lens.SquareCircle.B ○@(1,3) 
+○ =1,3 ☆ =4,1
+△ =3,1 □ =2,3 
+
+This operation is counterclockwise around ☆ 
+
+Move 22
+pairing has been achieved and swap count is even.
+ColumnSwap ○@(1,3) 
+○ =2,2 ☆ =1,2
+△ =2,3 □ =1,3 
+
+The rest of the solution reorder the pairs.
