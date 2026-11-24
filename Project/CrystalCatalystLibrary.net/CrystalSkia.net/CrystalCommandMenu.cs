@@ -30,6 +30,7 @@ public sealed class CrystalCommandMenu : ICrystalSkia
 
     public RectangleF Bounds { get; set; }
     public event Action<int>? Activated;
+    public SKColor ShortcutColor { get; set; } = new SKColor(147, 197, 253);
 
     public RectangleF GetCenteredBounds(RectangleF area)
     {
@@ -142,7 +143,7 @@ public sealed class CrystalCommandMenu : ICrystalSkia
             canvas.Restore();
             if (entry.Shortcut != null)
             {
-                paint.Color = new SKColor(219, 230, 247);
+                paint.Color = ShortcutColor;
                 canvas.DrawText(entry.Shortcut, Width - 20 - shortcutWidth, baseline, font, paint);
             }
         }

@@ -597,11 +597,21 @@ public class Window
             new(new CrystalMenuEntry("Session Controls", "R"), () => showMedia = !showMedia),
             new(new CrystalMenuEntry("Challenges", "C"), () => ShowSelectionPopup(SelectionKind.Challenge)),
             new(new CrystalMenuEntry("Time Reversal", "Ctrl+Shift+R"), ReverseSession, (keys, key) => keys.IsReverse(key)),
-            new(new CrystalMenuEntry("Close Menu", "Esc"))
+            new(new CrystalMenuEntry("Close Menu", "Space / Esc"),
+                MatchShortcut: (keys, key) => keys.AllowOrdinary && !keys.Shift && key == (int)KeyCode.Space)
         };
         var modifiers = new ShortcutKeys();
-        wnd.OnKeyUp = (handle, keycode) => modifiers.Release(keycode);
-        wnd.OnFocusOut = handle => modifiers.Clear();
+        bool spaceHeld = false;
+        wnd.OnKeyUp = (handle, keycode) =>
+        {
+            modifiers.Release(keycode);
+            if (keycode == (int)KeyCode.Space) spaceHeld = false;
+        };
+        wnd.OnFocusOut = handle =>
+        {
+            modifiers.Clear();
+            spaceHeld = false;
+        };
         wnd.OnKeyDown = (handle, keycode) =>
         {
             if (modifiers.Press(keycode)) return;
@@ -610,9 +620,18 @@ public class Window
             int commandKey = control && keycode >= 'A' && keycode <= 'Z' ? keycode + ('a' - 'A') : keycode;
             if (modifiers.Other) return;
             if (keycode == (int)KeyCode.Space && !control && !shift &&
-                !filenameEditor.IsFocused && !popupHost.IsVisible)
+                !filenameEditor.IsFocused && (commandMenu != null || !popupHost.IsVisible))
             {
-                ShowCommandMenu();
+                if (spaceHeld) return;
+                spaceHeld = true;
+                if (commandMenu != null) DispatchBoardCommand(modifiers, keycode);
+                else ShowCommandMenu();
+                return;
+            }
+            if (commandMenu != null)
+            {
+                if (!DispatchBoardCommand(modifiers, keycode))
+                    popupHost.KeyDown((KeyCode)commandKey, shift, control);
                 return;
             }
             // Route to popup when visible
@@ -678,13 +697,21 @@ public class Window
                 return;
             }
 
-            foreach (var command in boardCommands)
-            {
-                if (!command.Matches(modifiers, keycode)) continue;
-                command.Execute?.Invoke();
-                break;
-            }
+            DispatchBoardCommand(modifiers, keycode);
         };
+    }
+
+    private bool DispatchBoardCommand(ShortcutKeys keys, int key)
+    {
+        for (int i = 0; i < boardCommands.Length; i++)
+        {
+            var command = boardCommands[i];
+            if (!command.Entry.Enabled || !command.Matches(keys, key)) continue;
+            if (commandMenu != null) ActivateMenuCommand(i);
+            else command.Execute?.Invoke();
+            return true;
+        }
+        return false;
     }
 
     private bool CanChangeBoard =>
@@ -713,23 +740,26 @@ public class Window
     {
         if (drag != null || activeSlider != ActiveSlider.None || Animations.Count != 0) return;
         var menu = new CrystalCommandMenu("SlideScramble Commands", boardCommands.Select(c => c.Entry), hudFont);
-        menu.Activated += index =>
-        {
-            var command = boardCommands[index];
-            if (command.Execute == null)
-            {
-                popupHost.Cancel();
-                return;
-            }
-            popupHost.Accept(selectedIndex: index);
-            command.Execute();
-        };
+        menu.Activated += ActivateMenuCommand;
         commandMenu = menu;
         wnd.GetSize(out int width, out int height);
         var area = new System.Drawing.RectangleF(0, 0, width, height);
         popupHost.Show(menu, area);
         popupHost.SetLayout(area, menu.GetCenteredBounds(area));
         wnd.QueueRedraw();
+    }
+
+    private void ActivateMenuCommand(int index)
+    {
+        var command = boardCommands[index];
+        if (command.Execute == null)
+        {
+            popupHost.Cancel();
+            return;
+        }
+
+        popupHost.Accept(selectedIndex: index);
+        command.Execute();
     }
 
     public void UpdateTileView(int width = 0, int height = 0)
