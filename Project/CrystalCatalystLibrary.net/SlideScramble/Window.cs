@@ -7,7 +7,7 @@ using SkiaSharp;
 
 namespace SlideScramble;
 
-public class Window
+public partial class Window
 {
     /// <summary>
     /// Set to true to use OpenGL texture presentation instead of the legacy PresentPix path.
@@ -586,7 +586,7 @@ public class Window
 
         boardCommands = new BoardCommand[]
         {
-            new(new CrystalMenuEntry("Edit Board", Enabled: false)),
+            new(new CrystalMenuEntry("Edit Board"), OpenBoardEditor),
             new(new CrystalMenuEntry("Scramble", "S"), ScrambleBoard),
             new(new CrystalMenuEntry("Reset Board", "X"), ResetBoard),
             new(new CrystalMenuEntry("Grid Setup", "G"), () => ShowGridSetup = !ShowGridSetup),
@@ -619,6 +619,11 @@ public class Window
             bool shift = modifiers.Shift;
             int commandKey = control && keycode >= 'A' && keycode <= 'Z' ? keycode + ('a' - 'A') : keycode;
             if (modifiers.Other) return;
+            if (boardDraft != null)
+            {
+                if (keycode == (int)KeyCode.Escape && !control) CloseBoardEditor();
+                return;
+            }
             if (keycode == (int)KeyCode.Space && !control && !shift &&
                 !filenameEditor.IsFocused && (commandMenu != null || !popupHost.IsVisible))
             {
@@ -864,6 +869,10 @@ public class Window
 
     private void OnMouseMove(CrystalWindow windowHandle, int x, int y)
     {
+        if (boardDraft != null)
+        {
+            return;
+        }
         if (popupHost.IsVisible)
         {
             popupHost.PointerMove(new System.Drawing.PointF(x, y));
@@ -1032,6 +1041,10 @@ public class Window
 
     private void OnMouseUp(CrystalWindow windowHandle, int button, int x, int y)
     {
+        if (boardDraft != null)
+        {
+            return;
+        }
         if (popupHost.IsVisible)
         {
             popupHost.PointerUp(new System.Drawing.PointF(x, y), (CrystalMouseButton)button);
@@ -1073,6 +1086,11 @@ public class Window
 
     private void OnMouseDown(CrystalWindow windowHandle, int button, int x, int y)
     {
+        if (boardDraft != null)
+        {
+            if (button == (int)CrystalMouseButton.Left) EditBoardClick(x, y);
+            return;
+        }
         if (button != (int)CrystalMouseButton.Left) return;
 
         // Route to popup when visible
@@ -1187,6 +1205,11 @@ public class Window
 
     private void OnIdle(CrystalWindow windowHandle)
     {
+        if (boardDraft != null)
+        {
+            windowHandle.QueueRedraw();
+            return;
+        }
         interaction.OnIdle(windowHandle.uptimeSeconds());
         if (popupHost.IsVisible)
         {
@@ -1352,7 +1375,7 @@ public class Window
                 {
                     if (animationLockHoriz != null && animationLockHoriz.Value == true && animationOrdinal == x) continue;
                     
-                    SKImage image = MyGrid.Tiles[y, x].Image;
+                    SKImage image = (boardDraft ?? MyGrid.Tiles)[y, x].Image;
 
                     float _x = tileView.xx + tileW * x;
                     float _y = tileView.yy + tileH * y;
@@ -1362,6 +1385,12 @@ public class Window
                     
                     canvas.DrawImage(image, src, dest, paint: tilePaint);
                 }
+            }
+
+            if (boardDraft != null)
+            {
+                DrawBoardEditor(canvas, width);
+                return;
             }
 
             // Draw Active Animated Row / Column
@@ -1763,7 +1792,7 @@ public class Window
                     ? Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "sessions"), "*.json")
                         .Select(Path.GetFileNameWithoutExtension).Where(n => n != null).Select(n => n!).ToArray()
                     : Array.Empty<string>())
-                : (challengeCatalog = ChallengeCatalog.LoadBundled()).Names.ToArray();
+                : (challengeCatalog = ChallengeCatalog.LoadWithUserChallenges()).Names.ToArray();
             Array.Sort(names, StringComparer.Ordinal);
             selectionKind = kind;
             selectionMessage = names.Length == 0 ? "No entries available" : "Select an entry";
