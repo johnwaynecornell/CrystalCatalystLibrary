@@ -173,6 +173,8 @@ preserves the session for resuming. Recording,
 loading, and playback wait until the current drag, snap, or scramble finishes. Reset,
 scramble, and grid changes are unavailable while recording or inspecting.
 
+A loaded session can be reversed in play mode by using **Time Reversal** **Ctrl+Shift+R** This offers an easy way to create challenge. Starting from board identity, Record, slide, Stop record, Reverse. And identity becomes the final move. Save if desired.
+
 **To save a board for loading later**, click **Rec**, then **Stop Rec** without
 moving any tiles. Enter a filename and click **Save**. The empty recording keeps
 the exact starting layout. Open it through **Session Controls → Load**, then
