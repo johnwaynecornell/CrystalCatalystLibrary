@@ -13,6 +13,42 @@ public sealed class ChallengeCatalog
 
     public static ChallengeCatalog LoadBundled() => Load(Path.Combine(AppContext.BaseDirectory, "challenges.json"));
 
+    private static string UserDirectory => Path.Combine(AppContext.BaseDirectory, "user-challenges");
+
+    internal static ChallengeCatalog LoadWithUserChallenges()
+    {
+        var catalog = LoadBundled();
+        if (!Directory.Exists(UserDirectory)) return catalog;
+
+        foreach (string path in Directory.EnumerateFiles(UserDirectory, "*.json"))
+        {
+            try
+            {
+                if (new FileInfo(path).Length > 4_000_000) continue;
+                var recording = SessionRecording.FromJson(File.ReadAllText(path));
+                catalog.challenges.TryAdd(Path.GetFileNameWithoutExtension(path), recording);
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+            catch (JsonException) { }
+        }
+        return catalog;
+    }
+
+    internal static string SaveEditedBoard(SessionRecording board)
+    {
+        Directory.CreateDirectory(UserDirectory);
+        string name = $"Edited board {DateTime.Now:yyyy-MM-dd HHmmss} {Guid.NewGuid().ToString("N")[..6]}";
+        string json = board.ToJson();
+        string path = Path.Combine(UserDirectory, name + ".json");
+        string temporaryPath = path + ".tmp";
+        using (var stream = new FileStream(temporaryPath, FileMode.CreateNew))
+        using (var writer = new StreamWriter(stream))
+            writer.Write(json);
+        File.Move(temporaryPath, path);
+        return name;
+    }
+
     public static ChallengeCatalog Load(string path)
     {
         ArgumentNullException.ThrowIfNull(path);

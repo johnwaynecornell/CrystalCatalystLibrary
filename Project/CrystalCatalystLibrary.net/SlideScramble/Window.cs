@@ -7,7 +7,7 @@ using SkiaSharp;
 
 namespace SlideScramble;
 
-public class Window
+public partial class Window
 {
     /// <summary>
     /// Set to true to use OpenGL texture presentation instead of the legacy PresentPix path.
@@ -85,6 +85,18 @@ public class Window
 
     // Popup selection integration
     private readonly CrystalPopupHost popupHost = new();
+    private readonly BoardCommand[] boardCommands;
+    private CrystalCommandMenu? commandMenu;
+
+    private sealed record BoardCommand(
+        CrystalMenuEntry Entry, Action? Execute = null, Func<ShortcutKeys, int, bool>? MatchShortcut = null)
+    {
+        public bool Matches(ShortcutKeys keys, int key) =>
+            MatchShortcut?.Invoke(keys, key) ??
+            (keys.AllowOrdinary && key is >= 32 and <= 126 && Entry.Shortcut is { Length: 1 } shortcut &&
+             char.ToUpperInvariant((char)key) == shortcut[0]);
+    }
+
     private enum SelectionKind { None, Session, Challenge }
     private SelectionKind selectionKind;
     private CrystalSelectionControl? selectionControl;
@@ -572,9 +584,35 @@ public class Window
         wnd.OnMouseUp = OnMouseUp;
         wnd.OnMouseMove = OnMouseMove;
 
+        boardCommands = new BoardCommand[]
+        {
+            new(new CrystalMenuEntry("Edit Board"), OpenBoardEditor),
+            new(new CrystalMenuEntry("Scramble", "S"), ScrambleBoard),
+            new(new CrystalMenuEntry("Generate Challenge"), ShowChallengeGenerator),
+            new(new CrystalMenuEntry("Reset Board", "X"), ResetBoard),
+            new(new CrystalMenuEntry("Grid Setup", "G"), () => ShowGridSetup = !ShowGridSetup),
+            new(new CrystalMenuEntry("3 × 3 Grid", "1"), () => SetGridSize(3)),
+            new(new CrystalMenuEntry("4 × 4 Grid", "2"), () => SetGridSize(4)),
+            new(new CrystalMenuEntry("6 × 6 Grid", "3"), () => SetGridSize(6)),
+            new(new CrystalMenuEntry("8 × 8 Grid", "4"), () => SetGridSize(8)),
+            new(new CrystalMenuEntry("Session Controls", "R"), () => showMedia = !showMedia),
+            new(new CrystalMenuEntry("Challenges", "C"), () => ShowSelectionPopup(SelectionKind.Challenge)),
+            new(new CrystalMenuEntry("Time Reversal", "Ctrl+Shift+R"), ReverseSession, (keys, key) => keys.IsReverse(key)),
+            new(new CrystalMenuEntry("Close Menu", "Space / Esc"),
+                MatchShortcut: (keys, key) => keys.AllowOrdinary && !keys.Shift && key == (int)KeyCode.Space)
+        };
         var modifiers = new ShortcutKeys();
-        wnd.OnKeyUp = (handle, keycode) => modifiers.Release(keycode);
-        wnd.OnFocusOut = handle => modifiers.Clear();
+        bool spaceHeld = false;
+        wnd.OnKeyUp = (handle, keycode) =>
+        {
+            modifiers.Release(keycode);
+            if (keycode == (int)KeyCode.Space) spaceHeld = false;
+        };
+        wnd.OnFocusOut = handle =>
+        {
+            modifiers.Clear();
+            spaceHeld = false;
+        };
         wnd.OnKeyDown = (handle, keycode) =>
         {
             if (modifiers.Press(keycode)) return;
@@ -582,6 +620,26 @@ public class Window
             bool shift = modifiers.Shift;
             int commandKey = control && keycode >= 'A' && keycode <= 'Z' ? keycode + ('a' - 'A') : keycode;
             if (modifiers.Other) return;
+            if (boardDraft != null)
+            {
+                if (keycode == (int)KeyCode.Escape && !control) CloseBoardEditor();
+                return;
+            }
+            if (keycode == (int)KeyCode.Space && !control && !shift &&
+                !filenameEditor.IsFocused && (commandMenu != null || !popupHost.IsVisible))
+            {
+                if (spaceHeld) return;
+                spaceHeld = true;
+                if (commandMenu != null) DispatchBoardCommand(modifiers, keycode);
+                else ShowCommandMenu();
+                return;
+            }
+            if (commandMenu != null)
+            {
+                if (!DispatchBoardCommand(modifiers, keycode))
+                    popupHost.KeyDown((KeyCode)commandKey, shift, control);
+                return;
+            }
             // Route to popup when visible
             if (popupHost.IsVisible)
             {
@@ -645,56 +703,69 @@ public class Window
                 return;
             }
 
-            char c = (char)keycode;
-            if (modifiers.IsReverse(keycode))
-            {
-                ReverseSession();
-                return;
-            }
-            if (!modifiers.AllowOrdinary) return;
-            if ((c == 'g' || c == 'G'))
-            {
-                ShowGridSetup = !ShowGridSetup;
-            }
-            else if ((c == 's' || c == 'S') && sessions.Mode == RecordingControllerMode.Idle && State.Mode != GameMode.Scrambling && drag == null && Animations.Count == 0)
-            {
-                goal = null;
-                State.StartScrambling();
-                ScrambleCount = (MyGrid.Width + MyGrid.Height) * 2;
-            }
-            else if (c == 'r' || c == 'R')
-            {
-                showMedia = !showMedia;
-            }
-            else if (c == 'c' || c == 'C')
-            {
-                ShowSelectionPopup(SelectionKind.Challenge);
-            }
-            else if ((c == 'x' || c == 'X') && sessions.Mode == RecordingControllerMode.Idle && State.Mode != GameMode.Scrambling && drag == null && Animations.Count == 0)
-            {
-                MyGrid.Reset();
-                State.Reset();
-                goal = null;
-                animationLockHoriz = null;
-                animationTileOffset = 0;
-            }
-            else if (c == '1')
-            {
-                SetGridSize(3, 3);
-            }
-            else if (c == '2')
-            {
-                SetGridSize(4, 4);
-            }
-            else if (c == '3')
-            {
-                SetGridSize(6, 6);
-            }
-            else if (c == '4')
-            {
-                SetGridSize(8, 8);
-            }
+            DispatchBoardCommand(modifiers, keycode);
         };
+    }
+
+    private bool DispatchBoardCommand(ShortcutKeys keys, int key)
+    {
+        for (int i = 0; i < boardCommands.Length; i++)
+        {
+            var command = boardCommands[i];
+            if (!command.Entry.Enabled || !command.Matches(keys, key)) continue;
+            if (commandMenu != null) ActivateMenuCommand(i);
+            else command.Execute?.Invoke();
+            return true;
+        }
+        return false;
+    }
+
+    private bool CanChangeBoard =>
+        sessions.Mode == RecordingControllerMode.Idle && State.Mode != GameMode.Scrambling &&
+        drag == null && Animations.Count == 0;
+
+    private void ScrambleBoard()
+    {
+        if (!CanChangeBoard) return;
+        goal = null;
+        State.StartScrambling();
+        ScrambleCount = SingleScrambleMoves;
+    }
+
+    private void ResetBoard()
+    {
+        if (!CanChangeBoard) return;
+        MyGrid.Reset();
+        State.Reset();
+        goal = null;
+        animationLockHoriz = null;
+        animationTileOffset = 0;
+    }
+
+    private void ShowCommandMenu()
+    {
+        if (drag != null || activeSlider != ActiveSlider.None || Animations.Count != 0) return;
+        var menu = new CrystalCommandMenu("SlideScramble Commands", boardCommands.Select(c => c.Entry), hudFont);
+        menu.Activated += ActivateMenuCommand;
+        commandMenu = menu;
+        wnd.GetSize(out int width, out int height);
+        var area = new System.Drawing.RectangleF(0, 0, width, height);
+        popupHost.Show(menu, area);
+        popupHost.SetLayout(area, menu.GetCenteredBounds(area));
+        wnd.QueueRedraw();
+    }
+
+    private void ActivateMenuCommand(int index)
+    {
+        var command = boardCommands[index];
+        if (command.Execute == null)
+        {
+            popupHost.Cancel();
+            return;
+        }
+
+        popupHost.Accept(selectedIndex: index);
+        command.Execute();
     }
 
     public void UpdateTileView(int width = 0, int height = 0)
@@ -739,7 +810,7 @@ public class Window
     {
         width = Math.Clamp(width, 2, 9);
         height = Math.Clamp(height, 2, 9);
-        if (sessions.Mode == RecordingControllerMode.Idle && State.Mode != GameMode.Scrambling && drag == null && Animations.Count == 0)
+        if (CanChangeBoard)
         {
             MyGrid = new Grid(width, height);
             sessions = new SessionRecordingController(MyGrid);
@@ -799,6 +870,10 @@ public class Window
 
     private void OnMouseMove(CrystalWindow windowHandle, int x, int y)
     {
+        if (boardDraft != null)
+        {
+            return;
+        }
         if (popupHost.IsVisible)
         {
             popupHost.PointerMove(new System.Drawing.PointF(x, y));
@@ -967,6 +1042,10 @@ public class Window
 
     private void OnMouseUp(CrystalWindow windowHandle, int button, int x, int y)
     {
+        if (boardDraft != null)
+        {
+            return;
+        }
         if (popupHost.IsVisible)
         {
             popupHost.PointerUp(new System.Drawing.PointF(x, y), (CrystalMouseButton)button);
@@ -1008,6 +1087,11 @@ public class Window
 
     private void OnMouseDown(CrystalWindow windowHandle, int button, int x, int y)
     {
+        if (boardDraft != null)
+        {
+            if (button == (int)CrystalMouseButton.Left) EditBoardClick(x, y);
+            return;
+        }
         if (button != (int)CrystalMouseButton.Left) return;
 
         // Route to popup when visible
@@ -1122,6 +1206,11 @@ public class Window
 
     private void OnIdle(CrystalWindow windowHandle)
     {
+        if (boardDraft != null)
+        {
+            windowHandle.QueueRedraw();
+            return;
+        }
         interaction.OnIdle(windowHandle.uptimeSeconds());
         if (popupHost.IsVisible)
         {
@@ -1145,18 +1234,17 @@ public class Window
         {
             if (ScrambleCount <= 0 && State.Mode == GameMode.Scrambling)
             {
+                FinishGeneratedChallenge();
                 State.FinishScrambling(wnd.uptimeSeconds());
                 Audio.PlayGameStartChime();
             }
             
             if (State.Mode == GameMode.Scrambling)
             {
-                bool horizontal = rand.Next(2) == 0;
-                int ordinal = rand.Next(horizontal ? MyGrid.Width : MyGrid.Height);
-                int delta_length = horizontal ? MyGrid.Height : MyGrid.Width;
-                
-                int delta = rand.Next(delta_length) - (delta_length >> 1);
-                if (delta == 0) delta = 1;
+                var move = NextScrambleMove();
+                bool column = move.Axis == RecordedMoveAxis.Column;
+                int ordinal = move.Index;
+                int delta = move.Delta;
 
                 Animation anim = new Animation();
                 double start = -1;
@@ -1172,18 +1260,13 @@ public class Window
                     {
                         animationLockHoriz = null;
                         animationTileOffset = 0;
-                        if (!horizontal)
-                        {
-                            MyGrid.MoveRow(ordinal, delta);
-                        }
-                        else
-                        {
-                            MyGrid.MoveColumn(ordinal, delta);
-                        }
+                        if (column) MyGrid.MoveColumn(ordinal, delta);
+                        else MyGrid.MoveRow(ordinal, delta);
+                        generatedMoves?.Add(move);
                         return false;
                     }
                     
-                    animationLockHoriz = horizontal;
+                    animationLockHoriz = column;
                     animationOrdinal = ordinal;
                     float t = Math.Clamp((float)(elapsed / duration), 0f, 1f);
                     float progress = t * t * (3f - 2f * t); // smoothstep
@@ -1287,7 +1370,7 @@ public class Window
                 {
                     if (animationLockHoriz != null && animationLockHoriz.Value == true && animationOrdinal == x) continue;
                     
-                    SKImage image = MyGrid.Tiles[y, x].Image;
+                    SKImage image = (boardDraft ?? MyGrid.Tiles)[y, x].Image;
 
                     float _x = tileView.xx + tileW * x;
                     float _y = tileView.yy + tileH * y;
@@ -1297,6 +1380,12 @@ public class Window
                     
                     canvas.DrawImage(image, src, dest, paint: tilePaint);
                 }
+            }
+
+            if (boardDraft != null)
+            {
+                DrawBoardEditor(canvas, width);
+                return;
             }
 
             // Draw Active Animated Row / Column
@@ -1538,7 +1627,7 @@ public class Window
             if (showMedia) DrawMedia(canvas, media);
 
             // Session Selection Popup
-            if (popupHost.IsVisible)
+            if (popupHost.IsVisible && commandMenu == null && challengeGenerator == null)
             {
                 LayoutSelectionPopup(width, height);
                 ((ICrystalSkia)popupHost).OnDraw(canvas);
@@ -1631,7 +1720,7 @@ public class Window
             }
 
             // Bottom Footer Shortcuts
-            string footerText = "[S] Scramble   [X] Reset   [G] Grid   [1-4] Size   [R] Session   [C] Challenge   [Esc] Cancel";
+            string footerText = "[Space] Commands";
             footerFont.MeasureText(footerText, out SKRect footerBounds, hudMutedPaint);
             canvas.Save();
             float footerScale = Math.Min(1, Math.Max(1, width - 16) / Math.Max(1, footerBounds.Width));
@@ -1639,6 +1728,15 @@ public class Window
             canvas.Scale(footerScale);
             canvas.DrawText(footerText, -footerBounds.Width / 2f, 0, footerFont, hudMutedPaint);
             canvas.Restore();
+
+            if (challengeGenerator != null) DrawChallengeGenerator(canvas, width, height);
+
+            if (commandMenu != null)
+            {
+                var area = new System.Drawing.RectangleF(0, 0, width, height);
+                popupHost.SetLayout(area, commandMenu.GetCenteredBounds(area));
+                popupHost.OnDraw(canvas);
+            }
         });
 
         // Present via OpenGL or legacy path
@@ -1691,7 +1789,7 @@ public class Window
                     ? Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "sessions"), "*.json")
                         .Select(Path.GetFileNameWithoutExtension).Where(n => n != null).Select(n => n!).ToArray()
                     : Array.Empty<string>())
-                : (challengeCatalog = ChallengeCatalog.LoadBundled()).Names.ToArray();
+                : (challengeCatalog = ChallengeCatalog.LoadWithUserChallenges()).Names.ToArray();
             Array.Sort(names, StringComparer.Ordinal);
             selectionKind = kind;
             selectionMessage = names.Length == 0 ? "No entries available" : "Select an entry";
@@ -1811,6 +1909,8 @@ public class Window
 
     private void OnPopupClosed(PopupResult result)
     {
+        commandMenu = null;
+        challengeGenerator = null;
         selectionKind = SelectionKind.None;
         selectionControl = null;
         challengeCatalog = null;

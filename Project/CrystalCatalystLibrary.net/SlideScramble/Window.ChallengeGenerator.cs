@@ -1,0 +1,192 @@
+using System.Drawing;
+using CrystalCatalystLibrary.net;
+using CrystalSkia.net;
+using SkiaSharp;
+
+namespace SlideScramble;
+
+public partial class Window
+{
+    private ChallengeGenerator? challengeGenerator;
+    private int[,]? generationStart;
+    private List<RecordedMove>? generatedMoves;
+    private int challengeScale = 1;
+    private int SingleScrambleMoves => 2 * (MyGrid.Width + MyGrid.Height);
+
+    private void ShowChallengeGenerator()
+    {
+        if (!CanChangeBoard)
+        {
+            showMedia = true;
+            sessionMessage = "Stop recording or playback and finish the current move first";
+            return;
+        }
+
+        var control = new ChallengeGenerator(this, challengeScale);
+        challengeGenerator = control;
+        wnd.GetSize(out int width, out int height);
+        var window = new RectangleF(0, 0, width, height);
+        popupHost.Show(control, window);
+        popupHost.SetLayout(window, ChallengeGenerator.CenterIn(window));
+        wnd.QueueRedraw();
+    }
+
+    private void DrawChallengeGenerator(SKCanvas canvas, int width, int height)
+    {
+        var window = new RectangleF(0, 0, width, height);
+        popupHost.SetLayout(window, ChallengeGenerator.CenterIn(window));
+        popupHost.OnDraw(canvas);
+    }
+
+    private void BeginGeneratedChallenge(int multiplier)
+    {
+        popupHost.Accept();
+        challengeScale = multiplier;
+        ShowGridSetup = false;
+        MyGrid.Reset();
+        sessions = new SessionRecordingController(MyGrid);
+        savedSession = null;
+        goal = null;
+        moveHighlight = null;
+        sessionMessage = "";
+        generationStart = new int[MyGrid.Height, MyGrid.Width];
+        for (int y = 0; y < MyGrid.Height; y++)
+            for (int x = 0; x < MyGrid.Width; x++)
+                generationStart[y, x] = y * MyGrid.Width + x;
+
+        ScrambleCount = SingleScrambleMoves * multiplier;
+        generatedMoves = new List<RecordedMove>(ScrambleCount);
+        State.StartScrambling();
+    }
+
+    private RecordedMove NextScrambleMove()
+    {
+        bool column = rand.Next(2) == 0;
+        int ordinal = rand.Next(column ? MyGrid.Width : MyGrid.Height);
+        int length = column ? MyGrid.Height : MyGrid.Width;
+        int delta = rand.Next(length) - length / 2;
+        if (delta == 0) delta = 1;
+        var axis = column ? RecordedMoveAxis.Column : RecordedMoveAxis.Row;
+        var move = new RecordedMove(axis, ordinal, delta);
+        if (generatedMoves == null || ScrambleCount != 1) return move;
+
+        // If the last move would solve the board, a move on the other axis cannot have the same effect.
+        var finalTiles = (Tile[,])MyGrid.Tiles.Clone();
+        if (column) LogicalMoves.MoveColumn(finalTiles, ordinal, delta);
+        else LogicalMoves.MoveRow(finalTiles, ordinal, delta);
+        for (int y = 0; y < MyGrid.Height; y++)
+            for (int x = 0; x < MyGrid.Width; x++)
+                if (finalTiles[y, x].OriginX != x || finalTiles[y, x].OriginY != y) return move;
+        return new RecordedMove(column ? RecordedMoveAxis.Row : RecordedMoveAxis.Column, 0, 1);
+    }
+
+    private void FinishGeneratedChallenge()
+    {
+        if (generatedMoves == null) return;
+        var solution = new SessionRecording(generationStart!, generatedMoves).Reverse();
+        generationStart = null;
+        generatedMoves = null;
+        sessions.LoadPlayback(solution);
+        sessions.StopPlayback();
+        savedSession = solution;
+        goal = solution.GetVerifiedGoal();
+        sessionMessage = "Challenge ready. Save or replay the solution here.";
+    }
+
+    private sealed class ChallengeGenerator(Window owner, int value) : ICrystalSkia
+    {
+        private const float Width = 360;
+        private const float Height = 172;
+        private const float TrackLeft = 36;
+        private const float TrackRight = Width - 36;
+        private const float TrackY = 90;
+        private static readonly SKRect CancelButton = new(160, 124, 235, 154);
+        private static readonly SKRect GenerateButton = new(243, 124, 338, 154);
+        private int multiplier = value;
+        private bool dragging;
+
+        public RectangleF Bounds { get; set; } = new(0, 0, Width, Height);
+
+        public static RectangleF CenterIn(RectangleF area)
+        {
+            float scale = Math.Min(1, Math.Min(Math.Max(1, area.Width - 20) / Width,
+                Math.Max(1, area.Height - 20) / Height));
+            return new RectangleF(area.X + (area.Width - Width * scale) / 2,
+                area.Y + (area.Height - Height * scale) / 2, Width * scale, Height * scale);
+        }
+
+        public void SetFocus(bool focused) => dragging = false;
+        public void OnIdle(double timeSeconds) { }
+        public void TextInput(string text) { }
+
+        public void KeyDown(KeyCode key, bool shift, bool control)
+        {
+            if (control) return;
+            switch (key)
+            {
+                case KeyCode.Left: multiplier = Math.Max(1, multiplier - 1); break;
+                case KeyCode.Right: multiplier = Math.Min(10, multiplier + 1); break;
+                case KeyCode.Enter:
+                case KeyCode.KP_Enter: owner.BeginGeneratedChallenge(multiplier); break;
+            }
+        }
+
+        private SKPoint Local(PointF point) => new(point.X * Width / Bounds.Width, point.Y * Height / Bounds.Height);
+
+        private void SetSlider(float x) =>
+            multiplier = 1 + (int)Math.Round(9 * Math.Clamp((x - TrackLeft) / (TrackRight - TrackLeft), 0, 1));
+
+        public void PointerDown(PointF position, CrystalMouseButton button)
+        {
+            if (button != CrystalMouseButton.Left) return;
+            var point = Local(position);
+            if (GenerateButton.Contains(point.X, point.Y)) owner.BeginGeneratedChallenge(multiplier);
+            else if (CancelButton.Contains(point.X, point.Y)) owner.popupHost.Cancel();
+            else if (Math.Abs(point.Y - TrackY) <= 14)
+            {
+                dragging = true;
+                SetSlider(point.X);
+            }
+        }
+
+        public void PointerMove(PointF position)
+        {
+            if (dragging) SetSlider(Local(position).X);
+        }
+
+        public void PointerUp(PointF position, CrystalMouseButton button)
+        {
+            if (button != CrystalMouseButton.Left || !dragging) return;
+            SetSlider(Local(position).X);
+            dragging = false;
+        }
+
+        public void OnDraw(SKCanvas canvas)
+        {
+            canvas.Save();
+            canvas.Translate(Bounds.X, Bounds.Y);
+            canvas.Scale(Bounds.Width / Width, Bounds.Height / Height);
+            canvas.DrawRoundRect(new SKRect(0, 0, Width, Height), 14, 14, owner.hudBarPaint);
+            canvas.DrawText("Generate Challenge", 22, 34, owner.panelTitleFont, owner.hudTextPaint);
+            canvas.DrawText($"{multiplier}× scramble  ·  {multiplier * owner.SingleScrambleMoves} slides",
+                22, 62, owner.hudFont, owner.hudTextPaint);
+
+            float thumb = TrackLeft + (TrackRight - TrackLeft) * (multiplier - 1) / 9;
+            canvas.DrawLine(TrackLeft, TrackY, TrackRight, TrackY, owner.sliderTrackPaint);
+            canvas.DrawLine(TrackLeft, TrackY, thumb, TrackY, owner.sliderFillPaint);
+            canvas.DrawCircle(thumb, TrackY, 7, owner.sliderThumbPaint);
+            canvas.DrawText("1", TrackLeft - 4, 112, owner.footerFont, owner.hudMutedPaint);
+            canvas.DrawText("10", TrackRight - 8, 112, owner.footerFont, owner.hudMutedPaint);
+            DrawButton(canvas, CancelButton, "Cancel");
+            DrawButton(canvas, GenerateButton, "Generate");
+            canvas.Restore();
+        }
+
+        private void DrawButton(SKCanvas canvas, SKRect bounds, string label)
+        {
+            canvas.DrawRoundRect(bounds, 6, 6, owner.hudChipPaint);
+            canvas.DrawText(label, bounds.MidX - owner.hudFont.MeasureText(label) / 2,
+                bounds.Top + 20, owner.hudFont, owner.hudTextPaint);
+        }
+    }
+}

@@ -58,25 +58,54 @@ For that reason, grid dimensions act almost like **puzzle parameters or levels**
 
 SlideScramble can therefore be thought of not only as one puzzle, but as a small generator for a family of related puzzles.
 
-## Controls
+## Command menu
 
-The current HUD exposes the main game operations directly.
+Press **Space** to open the centered command menu. Use **Up** and **Down** to
+highlight a command, then **Enter** to run it. You can also click an entry or
+press its listed shortcut while the menu is open. Running a command closes the
+menu first. Press **Space** again or **Esc** to close it without running a command.
 
-```text
-S       Scramble
-R       Toggle session panel
-X       Reset
-G       Grid Setup
-C       Challenges
-1-4     Grid presets
-Esc     Cancel
-```
+| Command | Shortcut | What it does |
+| --- | --- | --- |
+| **Edit Board** | | Opens the board editor. It is the first entry, so **Space**, then **Enter**, opens it. |
+| **Scramble** | **S** | Mixes the board with legal row and column moves. |
+| **Generate Challenge** | | Starts from solved, then scrambles and keeps a replayable solution. |
+| **Reset Board** | **X** | Returns the current grid to its solved arrangement. |
+| **Grid Setup** | **G** | Opens the column and row controls. Set each dimension independently from 2 to 9. |
+| **3 × 3**, **4 × 4**, **6 × 6**, **8 × 8 Grid** | **1**, **2**, **3**, **4** | Switches to the corresponding square grid. |
+| **Session Controls** | **R** | Shows or hides the recording and playback panel. |
+| **Challenges** | **C** | Opens the challenge picker and board preview. |
+| **Time Reversal** | **Ctrl+Shift+R** | Opens the reversed recording for inspection, starting from the original recording's final board. |
+| **Close Menu** | **Space** or **Esc** | Returns to the board. |
 
-Rows and columns are manipulated directly with the pointer.
+During play, drag a row or column and release to commit a move.
+**Esc** cancels an active drag or closes Grid Setup or Session Controls.
 
-The Grid Setup interface allows the board dimensions to be selected independently.
+## Board editor
+
+Open **Edit Board** from the command menu to create a draft of the current
+layout. Select a tile, then select another tile to swap the pair. Select the
+highlighted tile again to clear the selection. Use **Undo** to reverse the last
+swap. Stop any active recording and let the current move or scramble finish
+before editing.
+
+| Editor action | Effect |
+| --- | --- |
+| **Commit & Play** | Uses the draft as the starting board for a fresh run. The timer, move count, goal, and in-memory recording and playback state reset. |
+| **Cancel** or **Esc** | Discards the draft and resumes the previous run. The timer excludes the time spent editing. |
+| **Save Challenge** | Saves the current draft as a named starting board with zero recorded moves. You can keep editing, commit, or cancel afterward. The saved challenge remains available in the picker. |
+
+An editor swap changes the starting layout. It does not count as a game move
+or appear in a replay. To record a solution from an edited layout, choose
+**Commit & Play**, then start recording before making the first game move.
+A draft can be saved or played without a known solution.
 
 ## Challenge catalog
+
+The picker lists both bundled challenges and boards saved with **Save Challenge**.
+Editor saves are separate JSON files in `user-challenges/` beside the executable.
+Rebuilding the bundled catalog leaves those files alone. Keep a copy of
+`user-challenges/` before deleting or replacing the entire build output directory.
 
 `challenges.json` is a JSON object keyed by challenge names, with session recordings
 as values. The bundled file is
@@ -125,7 +154,7 @@ sequence reaches the solved board. `0` means the starting board is already solve
 If the recording does not establish a solution, the preview shows `?` and the HUD omits
 the goal; this does not mean the puzzle is unsolvable.
 The goal is a benchmark, not necessarily an optimal solution, and stays fixed during
-manual moves. Reset, grid changes and scrambling clear it. Playback separately shows
+manual moves. Reset, grid changes, scrambling, and committing an edited board clear it. Playback separately shows
 recorded moves remaining, even when the sequence does not solve the board.
 
 ## Session recording and playback
@@ -135,7 +164,7 @@ It may overlap the board when space is limited. Click the filename field to edit
 Enter accepts and Escape restores the previous name. While it has focus, game shortcuts
 are suppressed. Click **Rec** to capture the current arrangement, play normally, then
 click **Stop Rec**. The recording is immediately available for inspection at its final
-move; **Save** writes it to a file. **Load** opens the session selector; its **Load**
+move. **Save** writes it to a file. **Load** opens the session selector. Its **Load**
 starts a playable board and **Moves** opens recorded steps. **|<**, **<**,
 and **>** reset, step backward, and step forward. **Play/Pause** advances automatically;
 steps animate and highlight the original drag-start cell until the transition finishes.
@@ -145,8 +174,16 @@ preserves the session for resuming. Recording,
 loading, and playback wait until the current drag, snap, or scramble finishes. Reset,
 scramble, and grid changes are unavailable while recording or inspecting.
 
+A loaded session can be reversed in play mode by using **Time Reversal** **Ctrl+Shift+R** This offers an easy way to create challenge. Starting from board identity, Record, slide, Stop record, Reverse. And identity becomes the final move. Save if desired.
+
+**To save a board for loading later**, click **Rec**, then **Stop Rec** without
+moving any tiles. Enter a filename and click **Save**. The empty recording keeps
+the exact starting layout. Open it through **Session Controls → Load**, then
+choose **Load** in the picker. **Moves** is unavailable because there are zero steps.
+
 Files are stored as `.json` in the `sessions` directory next to the executable. Names
-cannot contain paths or reserved filename characters. Errors are displayed in the footer.
+cannot contain paths or reserved filename characters. Saving under an existing name
+replaces that file. The session panel shows status and errors.
 Loading validates the file before replacing the current board. Playback does not add
 game moves or record itself.
 
@@ -167,7 +204,8 @@ one again writes version 2. Older versions of the application cannot read versio
 `Grid` owns the rotations; `SessionRecording` validates and serializes the starting
 arrangement and moves; `SessionRecordingController` manages recording and inspection.
 `ICrystal`, `CrystalInteraction`, and `CrystalTextEditor` provide renderer-independent
-input and editing models, while the window draws them with Skia.
+input and editing models. The reusable `CrystalCommandMenu` implements
+`ICrystalSkia` and uses `CrystalPopupHost` for modal input and focus.
 
 The window binding currently exposes named keys, not committed Unicode text or IME
 events. The reusable editor accepts Unicode text from hosts with such an input source,
@@ -182,6 +220,18 @@ Starting a game performs a sequence of legal row and column transformations.
 Because the scrambled state is produced through the same operations available to the player, the resulting puzzle remains reachable through normal play.
 
 The move counter begins when the scramble is complete.
+
+### Generate Challenge
+
+Open **Generate Challenge** from the Space menu and choose **1–10** with the
+slider or **Left** and **Right**. **1** uses the same number of slides as one
+ordinary scramble, and **3** uses three times that number. Click **Generate** or
+press **Enter** to start from the solved grid at the current dimensions.
+
+When the shuffle ends, play from the generated layout with zero player moves.
+The goal is the first solved position in the reversed scramble recording. Open
+**Session Controls** to replay that solution or **Save** it under a filename of
+your choice. Generation creates no file on its own.
 
 ## Audio
 
@@ -294,7 +344,8 @@ Current work has focused on:
 - polished row and column dragging;
 - wraparound animation;
 - configurable grid dimensions;
-- presets;
+- presets and an in-window command menu;
+- draft board editing and local challenge saves;
 - responsive fitting of different board geometries;
 - restrained game audio;
 - CrystalOpenAL integration;

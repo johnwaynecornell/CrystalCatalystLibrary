@@ -79,6 +79,11 @@ public class GameState
         return false;
     }
 
+    internal void ExcludePause(double duration)
+    {
+        if (Mode == GameMode.InGame) StartTime += Math.Max(0, duration);
+    }
+
     public void Reset()
     {
         Mode = GameMode.Ready;
