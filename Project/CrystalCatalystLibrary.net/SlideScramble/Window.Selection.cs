@@ -80,7 +80,7 @@ public partial class Window
     private static Grid CreateRecordingGrid(SessionRecording recording, out SessionRecordingController controller)
     {
         var grid = new Grid(recording.Width, recording.Height);
-        controller = new SessionRecordingController(grid);
+        controller = new SessionRecordingController(grid, recording.RuleSet);
         controller.LoadPlayback(recording);
         return grid;
     }
@@ -109,7 +109,7 @@ public partial class Window
                 previewGrid = CreateRecordingGrid(recording, out _);
                 control.SetButtonEnabled(0, true);
                 control.SetButtonEnabled(1, recording.Moves.Count > 0);
-                selectionMessage = $"Starting board  Goal: {recording.GetVerifiedGoal()?.ToString() ?? "?"}";
+                selectionMessage = $"Starting board  Goal: {recording.GetVerifiedGoalMoveCost()?.ToString() ?? "?"}";
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException or NotSupportedException)
             {
@@ -128,11 +128,13 @@ public partial class Window
             var recording = ResolveSelection(e.CurrentText);
             if (e.ButtonLabel == "Moves" && recording.Moves.Count == 0)
                 throw new InvalidOperationException("This entry has no recorded moves.");
-            int? selectedGoal = recording.GetVerifiedGoal();
+            int? selectedGoal = recording.GetVerifiedGoalMoveCost();
             var grid = CreateRecordingGrid(recording, out var controller);
-            if (e.ButtonLabel == "Load") controller = new SessionRecordingController(grid);
+            if (e.ButtonLabel == "Load") controller = new SessionRecordingController(grid, recording.RuleSet);
             MyGrid = grid;
             sessions = controller;
+            activeRules = recording.RuleSet;
+            lensInteraction.Cancel();
             savedSession = e.ButtonLabel == "Moves" ? recording : null;
             State.Reset();
             goal = selectedGoal;

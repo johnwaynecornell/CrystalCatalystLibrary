@@ -43,8 +43,13 @@ public partial class Window
         popupHost.Accept();
         challengeScale = multiplier;
         ShowGridSetup = false;
+        if (IsShuffleLogic)
+        {
+            BeginShuffleChallenge(SingleScrambleMoves * multiplier);
+            return;
+        }
         MyGrid.Reset();
-        sessions = new SessionRecordingController(MyGrid);
+        sessions = new SessionRecordingController(MyGrid, activeRules);
         savedSession = null;
         goal = null;
         moveHighlight = null;
@@ -168,7 +173,8 @@ public partial class Window
             canvas.Scale(Bounds.Width / Width, Bounds.Height / Height);
             canvas.DrawRoundRect(new SKRect(0, 0, Width, Height), 14, 14, owner.hudBarPaint);
             canvas.DrawText("Generate Challenge", 22, 34, owner.panelTitleFont, owner.hudTextPaint);
-            canvas.DrawText($"{multiplier}× scramble  ·  {multiplier * owner.SingleScrambleMoves} slides",
+            string unit = owner.IsShuffleLogic ? "shuffles" : "slides";
+            canvas.DrawText($"{multiplier}× scramble  ·  {multiplier * owner.SingleScrambleMoves} {unit}",
                 22, 62, owner.hudFont, owner.hudTextPaint);
 
             float thumb = TrackLeft + (TrackRight - TrackLeft) * (multiplier - 1) / 9;

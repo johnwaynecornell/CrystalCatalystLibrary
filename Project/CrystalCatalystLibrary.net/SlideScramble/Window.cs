@@ -73,6 +73,10 @@ public partial class Window
     private string filenameBeforeEdit = "session";
     private string sessionMessage = "";
     private SessionRecordingController sessions;
+    private PuzzleRuleSet activeRules = PuzzleRuleSet.CreateClassic();
+    private readonly PortableLensInteractionController lensInteraction = new();
+    private readonly PortableLensDoubleClickTracker lensDoubleClick = new();
+    private bool controlPressed;
     private SessionRecording? savedSession;
     private int? goal;
     private double lastPlaybackTick;
@@ -83,6 +87,10 @@ public partial class Window
 
     internal static string FormatMovesText(int moves, int? goal) =>
         goal.HasValue ? $"Moves: {moves}  Goal: {goal.Value}" : $"Moves: {moves}";
+
+    private string FormatGameScoreText(int moves, int? goal) => IsShuffleLogic
+        ? goal.HasValue ? $"Logical moves: {moves}  Goal: {goal.Value}" : $"Logical moves: {moves}"
+        : FormatMovesText(moves, goal);
 
     // Popup selection integration
     private readonly CrystalPopupHost popupHost = new();
@@ -312,7 +320,7 @@ public partial class Window
         interaction.Add(filenameEditor);
         interaction.Add(popupHost);
         MyGrid = new Grid(4, 4);
-        sessions = new SessionRecordingController(MyGrid);
+        sessions = new SessionRecordingController(MyGrid, activeRules);
         UpdateTileView(850, 700);
 
         // Wire popup closed event
@@ -384,6 +392,8 @@ public partial class Window
         boardCommands = new BoardCommand[]
         {
             new(new CrystalMenuEntry("Edit Board"), OpenBoardEditor),
+            new(new CrystalMenuEntry("Game Mode (Classic / ShuffleLogic)"), ToggleGamePreset),
+            new(new CrystalMenuEntry("Position Portable Lens"), BeginPortableLensPlacement),
             new(new CrystalMenuEntry("Scramble", "S"), ScrambleBoard),
             new(new CrystalMenuEntry("Generate Challenge"), ShowChallengeGenerator),
             new(new CrystalMenuEntry("Reset Board", "X"), ResetBoard),
@@ -403,16 +413,21 @@ public partial class Window
         wnd.OnKeyUp = (handle, keycode) =>
         {
             modifiers.Release(keycode);
+            controlPressed = modifiers.Control;
             if (keycode == (int)KeyCode.Space) spaceHeld = false;
         };
         wnd.OnFocusOut = handle =>
         {
             modifiers.Clear();
+            controlPressed = false;
+            lensInteraction.CancelGesture();
             spaceHeld = false;
         };
         wnd.OnKeyDown = (handle, keycode) =>
         {
-            if (modifiers.Press(keycode)) return;
+            bool modifierKey = modifiers.Press(keycode);
+            controlPressed = modifiers.Control;
+            if (modifierKey) return;
             bool control = modifiers.Control;
             bool shift = modifiers.Shift;
             int commandKey = control && keycode >= 'A' && keycode <= 'Z' ? keycode + ('a' - 'A') : keycode;
@@ -464,6 +479,21 @@ public partial class Window
                     interaction.KeyDown((KeyCode)commandKey, shift, control);
                 return;
             }
+            if ((keycode == (int)KeyCode.Enter || keycode == (int)KeyCode.KP_Enter) &&
+                lensInteraction.Phase == PortableLensInteractionPhase.Positioning)
+            {
+                if (lensInteraction.AcceptPosition())
+                    sessionMessage = "Lens accepted. Drag between neighboring symbols; Escape cancels.";
+                wnd.QueueRedraw();
+                return;
+            }
+            if (keycode == (int)KeyCode.Escape && lensInteraction.Phase != PortableLensInteractionPhase.Inactive)
+            {
+                lensInteraction.Cancel();
+                sessionMessage = "Portable Lens cancelled";
+                wnd.QueueRedraw();
+                return;
+            }
             if (keycode == (int)KeyCode.Escape && !control)
             {
                 if (drag != null)
@@ -507,11 +537,16 @@ public partial class Window
 
     private bool CanChangeBoard =>
         sessions.Mode == RecordingControllerMode.Idle && State.Mode != GameMode.Scrambling &&
-        drag == null && Animations.Count == 0;
+        drag == null && Animations.Count == 0 && lensInteraction.Phase == PortableLensInteractionPhase.Inactive;
 
     private void ScrambleBoard()
     {
         if (!CanChangeBoard) return;
+        if (activeRules.Name == "ShuffleLogic")
+        {
+            BeginShuffleChallenge(SingleScrambleMoves);
+            return;
+        }
         goal = null;
         State.StartScrambling();
         ScrambleCount = SingleScrambleMoves;
@@ -525,6 +560,7 @@ public partial class Window
         goal = null;
         animationLockHoriz = null;
         animationTileOffset = 0;
+        lensInteraction.Cancel();
     }
 
 
