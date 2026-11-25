@@ -78,9 +78,7 @@ public partial class Window
     private double lastPlaybackTick;
     private (int X, int Y)? moveHighlight;
     private static readonly string[] mediaLabels = { "Rec", "Save", "Load", "|<", "<", ">", "Play", "Stop", "Continue" };
-    // Two deliberate clicks: Continue at the playback index, then Confirm.
-    // A change of playback index or another session action cancels confirmation.
-    private int? pendingContinuePosition;
+    private ContinueRecordingDialog? continueRecordingDialog;
     private bool showMedia;
 
     internal static string FormatMovesText(int moves, int? goal) =>
@@ -175,9 +173,7 @@ public partial class Window
                 (screenRect.Right - layout.X) / layout.Scale, (screenRect.Bottom - layout.Y) / layout.Scale);
             canvas.DrawRoundRect(new SKRoundRect(buttonRect, 4, 4), hudChipPaint);
             string label = i == 0 && sessions.Mode == RecordingControllerMode.Recording ? "Stop Rec" :
-                i == 6 && sessions.IsAutoplaying ? "Pause" :
-                i == 8 && pendingContinuePosition == sessions.Position && sessions.Mode == RecordingControllerMode.Playback
-                    ? "Confirm" : mediaLabels[i];
+                i == 6 && sessions.IsAutoplaying ? "Pause" : mediaLabels[i];
             canvas.Save();
             canvas.ClipRect(buttonRect);
             canvas.DrawText(label, buttonRect.MidX - footerFont.MeasureText(label) / 2, buttonRect.Top + 17, footerFont, hudTextPaint);
@@ -248,7 +244,6 @@ public partial class Window
 
     private void MediaAction(int index)
     {
-        if (index != 8) pendingContinuePosition = null;
         if (index != 2 && index != 8) State.TakeBackSolved(wnd.uptimeSeconds());
 
         if (drag != null || Animations.Count != 0 || State.Mode == GameMode.Scrambling)
@@ -310,7 +305,7 @@ public partial class Window
                     moveHighlight = null;
                     break;
                 case 8:
-                    ContinueSessionFromHere();
+                    ShowContinueRecordingDialog();
                     break;
             }
         }
@@ -320,26 +315,24 @@ public partial class Window
         }
     }
 
-    private void ContinueSessionFromHere()
+    private void ConfirmContinueRecording(SessionRecordingController expectedController, int expectedPosition)
     {
-        if (sessions.Mode != RecordingControllerMode.Playback)
-            throw new InvalidOperationException("Use Moves to inspect a recording before continuing.");
-
-        // The current index is a count of already applied moves, not the
-        // one-based number of the next move.
-        if (pendingContinuePosition != sessions.Position)
+        // The dialog blocks other interactions, but verify its captured context
+        // before making the one-way change to the working recording.
+        if (!ReferenceEquals(sessions, expectedController) ||
+            sessions.Mode != RecordingControllerMode.Playback ||
+            sessions.Position != expectedPosition ||
+            drag != null || Animations.Count != 0 || State.Mode == GameMode.Scrambling)
         {
-            sessions.SetAutoplay(false);
-            pendingContinuePosition = sessions.Position;
-            sessionMessage = $"Keep first {sessions.Position} moves? Click Confirm.";
-            wnd.QueueRedraw();
+            sessionMessage = "Recording position changed; reopen Continue.";
+            popupHost.Cancel();
             return;
         }
 
+        popupHost.Accept();
         int prefixCount = sessions.ContinueRecordingFromHere();
-        pendingContinuePosition = null;
-        savedSession = null; // Prevent Save from writing the old unmodified playback.
-        goal = null; // The prior solution's goal does not describe the edited run.
+        savedSession = null; // Never save an obsolete, unmodified recording.
+        goal = null;
         State.BeginContinuedRun(prefixCount, wnd.uptimeSeconds());
         moveHighlight = null;
         sessionMessage = $"Recording from move {prefixCount}. Stop Rec, then Save.";
@@ -1664,7 +1657,7 @@ public partial class Window
             if (showMedia) DrawMedia(canvas, media);
 
             // Session Selection Popup
-            if (popupHost.IsVisible && commandMenu == null && challengeGenerator == null)
+            if (popupHost.IsVisible && commandMenu == null && challengeGenerator == null && continueRecordingDialog == null)
             {
                 LayoutSelectionPopup(width, height);
                 ((ICrystalSkia)popupHost).OnDraw(canvas);
@@ -1767,6 +1760,7 @@ public partial class Window
             canvas.Restore();
 
             if (challengeGenerator != null) DrawChallengeGenerator(canvas, width, height);
+            if (continueRecordingDialog != null) DrawContinueRecordingDialog(canvas, width, height);
 
             if (commandMenu != null)
             {
@@ -1948,6 +1942,7 @@ public partial class Window
     {
         commandMenu = null;
         challengeGenerator = null;
+        continueRecordingDialog = null;
         selectionKind = SelectionKind.None;
         selectionControl = null;
         challengeCatalog = null;
