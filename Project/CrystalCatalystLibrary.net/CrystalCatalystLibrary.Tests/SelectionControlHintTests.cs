@@ -78,7 +78,7 @@ public class SelectionControlHintTests
         control.Bounds = new RectangleF(10, 20, 200, 148);
         var field = typeof(CrystalSelectionControl).GetField("scrollBar", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
         var scrollBar = (CrystalScrollBar)field.GetValue(control)!;
-        Assert.Equal(new RectangleF(182, 8, 10, 132), scrollBar.Bounds);
+        Assert.Equal(new RectangleF(182, 44, 10, 56), scrollBar.Bounds);
         Assert.Equal(0.1f, scrollBar.ViewportRatio);
     }
 
@@ -160,5 +160,39 @@ public class SelectionControlHintTests
         control.PointerDown(new PointF(50, 125), CrystalMouseButton.Left);
         Assert.Equal(new[] { "OK" }, activated);
         Assert.True(control.ScrollOffset > 0);
+    }
+
+    [Theory]
+    [InlineData(120, 400)]
+    [InlineData(360, 600)]
+    [InlineData(360, 148)]
+    [InlineData(800, 240)]
+    public void ResizedList_UsesAvailableHeightForRowsAndScrollbar(float width, float height)
+    {
+        var control = Create(Enumerable.Range(0, 100).Select(i => i.ToString()).ToArray());
+        control.Bounds = new RectangleF(0, 0, width, height);
+        int rows = (int)((height - 92) / 28);
+        var field = typeof(CrystalSelectionControl).GetField("scrollBar", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        var scrollBar = (CrystalScrollBar)field.GetValue(control)!;
+        Assert.Equal(new RectangleF(width - 18, 44, 10, rows * 28), scrollBar.Bounds);
+        Assert.Equal(rows / 100f, scrollBar.ViewportRatio);
+        control.PointerDown(new PointF(20, 44 + (rows - 1) * 28 + 14), CrystalMouseButton.Left);
+        Assert.Equal(rows - 1, control.SelectedIndex);
+        control.KeyDown(KeyCode.End, false, false);
+        control.PointerDown(new PointF(20, 44 + (rows - 1) * 28 + 14), CrystalMouseButton.Left);
+        Assert.Equal(99, control.SelectedIndex);
+    }
+
+    [Fact]
+    public void ScrollbarDrag_ContinuesAndEndsOutsideTrack()
+    {
+        var control = Create(Enumerable.Range(0, 100).Select(i => i.ToString()).ToArray());
+        control.Bounds = new RectangleF(0, 0, 300, 400);
+        control.PointerDown(new PointF(287, 50), CrystalMouseButton.Left);
+        control.PointerMove(new PointF(320, 500));
+        Assert.Equal(1f, control.ScrollOffset);
+        control.PointerUp(new PointF(320, 500), CrystalMouseButton.Left);
+        control.PointerMove(new PointF(287, 50));
+        Assert.Equal(1f, control.ScrollOffset);
     }
 }

@@ -42,6 +42,7 @@ public sealed class CrystalSelectionControl : ICrystalSkia
     private int hoveredButton = -1;
     private int focusedButton = -1;
     private RectangleF bounds;
+    private bool scrollBarPointerDown;
 
     // Layout constants
     private const float Padding = 8f;
@@ -154,8 +155,7 @@ public sealed class CrystalSelectionControl : ICrystalSkia
         set
         {
             bounds = value;
-            scrollBar.Bounds = new RectangleF(value.Width - Padding - ScrollBarWidth, Padding,
-                ScrollBarWidth, Math.Max(0f, value.Height - Padding * 2));
+            editor.Bounds = new RectangleF(Padding, Padding, Math.Max(0, value.Width - Padding * 2 - ScrollBarWidth), EditorHeight);
             UpdateScrollBarViewport();
         }
     }
@@ -180,14 +180,15 @@ public sealed class CrystalSelectionControl : ICrystalSkia
         float available = Bounds.Height - (Padding * 2 + EditorHeight + SectionGap * 2
             + (buttonLabels.Count > 0 ? ButtonHeight : 0));
         int heightCount = (int)(Math.Max(0f, available) / ItemHeight);
-        return Math.Min(items.Count, Math.Min(MaxVisibleItems(Bounds.Width), heightCount));
+        return Math.Min(items.Count, heightCount);
     }
 
     private void UpdateScrollBarViewport()
     {
         int visibleCount = VisibleCount();
-        float totalHeight = items.Count * ItemHeight;
         float listHeight = visibleCount * ItemHeight;
+        scrollBar.Bounds = new RectangleF(Bounds.Width - Padding - ScrollBarWidth,
+            Padding + EditorHeight + SectionGap, ScrollBarWidth, listHeight);
 
         if (items.Count == 0)
         {
@@ -402,12 +403,12 @@ public sealed class CrystalSelectionControl : ICrystalSkia
         RectangleF editorBounds = new RectangleF(Padding, Padding, contentWidth, EditorHeight);
 
         // Compute scroll bar bounds dynamically
-        RectangleF scrollBarBounds = new RectangleF(
-            Bounds.Width - Padding - ScrollBarWidth, Padding, ScrollBarWidth, Bounds.Height - Padding * 2);
+        RectangleF scrollBarBounds = scrollBar.Bounds;
 
         // Check scroll bar first
-        if (scrollBarBounds.Contains(localX, localY))
+        if (scrollBar.Visible && scrollBarBounds.Contains(localX, localY))
         {
+            scrollBarPointerDown = true;
             PointF scrollLocal = new(localX - scrollBarBounds.X, localY - scrollBarBounds.Y);
             scrollBar.PointerDown(scrollLocal, button);
             return;
@@ -486,11 +487,10 @@ public sealed class CrystalSelectionControl : ICrystalSkia
         RectangleF editorBounds = new RectangleF(Padding, Padding, contentWidth, EditorHeight);
 
         // Compute scroll bar bounds dynamically
-        RectangleF scrollBarBounds = new RectangleF(
-            Bounds.Width - Padding - ScrollBarWidth, Padding, ScrollBarWidth, Bounds.Height - Padding * 2);
+        RectangleF scrollBarBounds = scrollBar.Bounds;
 
         // Forward to scroll bar if within its bounds
-        if (scrollBarBounds.Contains(localX, localY))
+        if (scrollBarPointerDown || (scrollBar.Visible && scrollBarBounds.Contains(localX, localY)))
         {
             PointF scrollLocal = new(localX - scrollBarBounds.X, localY - scrollBarBounds.Y);
             scrollBar.PointerMove(scrollLocal);
@@ -553,12 +553,12 @@ public sealed class CrystalSelectionControl : ICrystalSkia
         float localY = position.Y;
 
         // Compute scroll bar bounds dynamically
-        RectangleF scrollBarBounds = new RectangleF(
-            Bounds.Width - Padding - ScrollBarWidth, Padding, ScrollBarWidth, Bounds.Height - Padding * 2);
+        RectangleF scrollBarBounds = scrollBar.Bounds;
 
         // Forward to scroll bar if within its bounds
-        if (scrollBarBounds.Contains(localX, localY))
+        if (scrollBarPointerDown)
         {
+            scrollBarPointerDown = false;
             PointF scrollLocal = new(localX - scrollBarBounds.X, localY - scrollBarBounds.Y);
             scrollBar.PointerUp(scrollLocal, button);
             return;
