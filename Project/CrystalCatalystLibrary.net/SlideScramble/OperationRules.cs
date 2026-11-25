@@ -9,6 +9,7 @@ public sealed class PuzzleRuleSet
     private readonly OperationRegistry registry;
 
     public string Name { get; }
+    internal OperationRegistry Registry => registry;
     public IReadOnlyCollection<string> ScrambleAllowed { get; }
     public IReadOnlyCollection<string> SolveAllowed { get; }
     public IReadOnlyCollection<string> UIEnabled { get; }

@@ -32,7 +32,8 @@ public partial class Window
         float right = Math.Clamp(tileView.xx + tileView.width + 8, 0, w);
         float boardTop = Math.Clamp(tileView.yy - 8, top, bottom);
         float boardBottom = Math.Clamp(tileView.yy + tileView.height + 8, top, bottom);
-        SKRect[] gutters = {
+        SKRect[] gutters =
+        {
             new SKRect(0, top, left, bottom), new SKRect(right, top, w, bottom),
             new SKRect(0, top, w, boardTop), new SKRect(0, boardBottom, w, bottom)
         };
@@ -44,13 +45,15 @@ public partial class Window
         float scale = Math.Min(1, Math.Min(w / panelWidth, Math.Max(1, bottom - top) / panelHeight));
         float x = Math.Clamp(gutter.MidX - panelWidth * scale / 2, 0, Math.Max(0, w - panelWidth * scale));
         float y = Math.Clamp(gutter.MidY - panelHeight * scale / 2, top, Math.Max(top, bottom - panelHeight * scale));
-        return new MediaLayout { X = x, Y = y, Width = panelWidth, Height = panelHeight, Scale = scale, Columns = columns };
+        return new MediaLayout
+            { X = x, Y = y, Width = panelWidth, Height = panelHeight, Scale = scale, Columns = columns };
     }
 
     private void UpdateMediaEditorBounds(MediaLayout layout)
     {
         editorFont.Size = hudFont.Size * layout.Scale;
-        filenameEditor.Bounds = new System.Drawing.RectangleF(layout.X + 12 * layout.Scale, layout.Y + 34 * layout.Scale,
+        filenameEditor.Bounds = new System.Drawing.RectangleF(layout.X + 12 * layout.Scale,
+            layout.Y + 34 * layout.Scale,
             Math.Max(1, layout.Width - 24) * layout.Scale, 24 * layout.Scale);
     }
 
@@ -66,19 +69,23 @@ public partial class Window
         for (int i = 0; i < mediaLabels.Length; i++)
         {
             var screenRect = layout.Button(i);
-            var buttonRect = new SKRect((screenRect.Left - layout.X) / layout.Scale, (screenRect.Top - layout.Y) / layout.Scale,
+            var buttonRect = new SKRect((screenRect.Left - layout.X) / layout.Scale,
+                (screenRect.Top - layout.Y) / layout.Scale,
                 (screenRect.Right - layout.X) / layout.Scale, (screenRect.Bottom - layout.Y) / layout.Scale);
             canvas.DrawRoundRect(new SKRoundRect(buttonRect, 4, 4), hudChipPaint);
             string label = i == 0 && sessions.Mode == RecordingControllerMode.Recording ? "Stop Rec" :
                 i == 6 && sessions.IsAutoplaying ? "Pause" : mediaLabels[i];
             canvas.Save();
             canvas.ClipRect(buttonRect);
-            canvas.DrawText(label, buttonRect.MidX - footerFont.MeasureText(label) / 2, buttonRect.Top + 17, footerFont, hudTextPaint);
+            canvas.DrawText(label, buttonRect.MidX - footerFont.MeasureText(label) / 2, buttonRect.Top + 17, footerFont,
+                hudTextPaint);
             canvas.Restore();
         }
+
         canvas.Save();
         canvas.ClipRect(new SKRect(8, layout.Height - 30, layout.Width - 8, layout.Height));
-        canvas.DrawText($"{sessions.Mode}  {sessions.Position}/{sessions.MoveCount}", 12, layout.Height - 18, footerFont, hudMutedPaint);
+        canvas.DrawText($"{sessions.Mode}  {sessions.Position}/{sessions.MoveCount}", 12, layout.Height - 18,
+            footerFont, hudMutedPaint);
         canvas.DrawText(sessionMessage, 12, layout.Height - 4, footerFont, hudMutedPaint);
         canvas.Restore();
         canvas.Restore();
@@ -103,18 +110,21 @@ public partial class Window
             sessionMessage = "Close grid setup before reversing";
             return;
         }
+
         if (sessions.Mode == RecordingControllerMode.Recording)
         {
             showMedia = true;
             sessionMessage = "Stop recording before reversing";
             return;
         }
+
         if (drag != null || Animations.Count != 0 || State.Mode == GameMode.Scrambling)
         {
             showMedia = true;
             sessionMessage = "Finish the current move first";
             return;
         }
+
         var source = savedSession ?? sessions.Playback;
         if (source == null)
         {
@@ -148,6 +158,7 @@ public partial class Window
             sessionMessage = "Finish the current move first";
             return;
         }
+
         try
         {
             if (index == 8 && (ShowGridSetup || popupHost.IsVisible))
@@ -165,17 +176,21 @@ public partial class Window
                         sessions.StartRecording();
                         sessionMessage = "Recording";
                     }
+
                     break;
                 case 1:
-                    if (sessions.Mode == RecordingControllerMode.Recording) throw new InvalidOperationException("Stop recording before saving.");
-                    var toSave = savedSession ?? sessions.Playback ?? throw new InvalidOperationException("No session to save.");
+                    if (sessions.Mode == RecordingControllerMode.Recording)
+                        throw new InvalidOperationException("Stop recording before saving.");
+                    var toSave = savedSession ??
+                                 sessions.Playback ?? throw new InvalidOperationException("No session to save.");
                     string savePath = SessionPath();
                     Directory.CreateDirectory(Path.GetDirectoryName(savePath)!);
                     File.WriteAllText(savePath, toSave.ToJson());
                     sessionMessage = "Session saved";
                     break;
                 case 2:
-                    if (sessions.Mode == RecordingControllerMode.Recording) throw new InvalidOperationException("Stop recording before loading.");
+                    if (sessions.Mode == RecordingControllerMode.Recording)
+                        throw new InvalidOperationException("Stop recording before loading.");
                     ShowSessionSelectionPopup();
                     break;
                 case 3:
@@ -206,7 +221,9 @@ public partial class Window
                     break;
             }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException or NotSupportedException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException
+                                       or InvalidOperationException or System.Text.Json.JsonException
+                                       or NotSupportedException)
         {
             sessionMessage = ex.Message;
         }
@@ -219,6 +236,7 @@ public partial class Window
         if (!ReferenceEquals(sessions, expectedController) ||
             sessions.Mode != RecordingControllerMode.Playback ||
             sessions.Position != expectedPosition ||
+            !sessions.IsOperationBoundary(expectedPosition) ||
             drag != null || Animations.Count != 0 || State.Mode == GameMode.Scrambling)
         {
             sessionMessage = "Recording position changed; reopen Continue.";
@@ -263,31 +281,37 @@ public partial class Window
         int length = column ? MyGrid.Height : MyGrid.Width;
         int delta = move.Delta % length;
         if (!forward) delta = -delta;
-        moveHighlight = forward ? (move.StartX, move.StartY) : column
-            ? (move.StartX, (move.StartY + delta + length) % length)
-            : ((move.StartX + delta + length) % length, move.StartY);
+        moveHighlight = forward
+            ? (move.StartX, move.StartY)
+            : column
+                ? (move.StartX, (move.StartY + delta + length) % length)
+                : ((move.StartX + delta + length) % length, move.StartY);
         animationLockHoriz = column;
         animationOrdinal = move.Index;
         animationTileOffset = 0;
         double start = -1;
         double duration = Math.Max(0.1, Math.Min(0.35, Math.Abs(delta) * 0.12));
-        Animations.Enqueue(new Animation { animation = (window, animation) =>
+        Animations.Enqueue(new Animation
         {
-            double time = wnd.uptimeSeconds();
-            if (start < 0) start = time;
-            float t = Math.Clamp((float)((time - start) / duration), 0f, 1f);
-            if (t >= 1f)
+            animation = (window, animation) =>
             {
-                if (forward) controller.Step();
-                else controller.StepBack();
-                animationLockHoriz = null;
-                animationTileOffset = 0;
-                moveHighlight = null;
-                lastPlaybackTick = time;
-                return false;
+                double time = wnd.uptimeSeconds();
+                if (start < 0) start = time;
+                float t = Math.Clamp((float)((time - start) / duration), 0f, 1f);
+                if (t >= 1f)
+                {
+                    if (forward) controller.Step();
+                    else controller.StepBack();
+                    animationLockHoriz = null;
+                    animationTileOffset = 0;
+                    moveHighlight = null;
+                    lastPlaybackTick = time;
+                    return false;
+                }
+
+                animationTileOffset = delta * (t * t * (3f - 2f * t));
+                return true;
             }
-            animationTileOffset = delta * (t * t * (3f - 2f * t));
-            return true;
-        }});
+        });
     }
 }

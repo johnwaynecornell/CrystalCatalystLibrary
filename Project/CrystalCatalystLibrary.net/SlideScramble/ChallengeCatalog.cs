@@ -28,10 +28,17 @@ public sealed class ChallengeCatalog
                 var recording = SessionRecording.FromJson(File.ReadAllText(path));
                 catalog.challenges.TryAdd(Path.GetFileNameWithoutExtension(path), recording);
             }
-            catch (IOException) { }
-            catch (UnauthorizedAccessException) { }
-            catch (JsonException) { }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+            catch (JsonException)
+            {
+            }
         }
+
         return catalog;
     }
 
@@ -52,9 +59,18 @@ public sealed class ChallengeCatalog
     public static ChallengeCatalog Load(string path)
     {
         ArgumentNullException.ThrowIfNull(path);
-        try { return FromJson(File.ReadAllText(path)); }
-        catch (IOException) { return new ChallengeCatalog(); }
-        catch (UnauthorizedAccessException) { return new ChallengeCatalog(); }
+        try
+        {
+            return FromJson(File.ReadAllText(path));
+        }
+        catch (IOException)
+        {
+            return new ChallengeCatalog();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return new ChallengeCatalog();
+        }
     }
 
     public static ChallengeCatalog FromJson(string json)
@@ -70,13 +86,26 @@ public sealed class ChallengeCatalog
                 var name = entry.Name;
                 if (string.IsNullOrWhiteSpace(name) || catalog.challenges.ContainsKey(name)) continue;
                 var jsonEntry = entry.Value.GetRawText();
-                if (entry.Value.ValueKind == JsonValueKind.Object && !entry.Value.TryGetProperty("moves", out _))
-                    jsonEntry = jsonEntry.Insert(jsonEntry.Length - 1, entry.Value.EnumerateObject().Any() ? ",\"moves\":[]" : "\"moves\":[]");
-                try { catalog.challenges.Add(name, SessionRecording.FromJson(jsonEntry)); }
-                catch (JsonException) { }
+                bool hasLegacyMoveList = entry.Value.ValueKind == JsonValueKind.Object &&
+                                         entry.Value.TryGetProperty("version", out var version) &&
+                                         version.ValueKind == JsonValueKind.Number &&
+                                         version.TryGetInt32(out int versionNumber) && versionNumber is 1 or 2;
+                if (hasLegacyMoveList && !entry.Value.TryGetProperty("moves", out _))
+                    jsonEntry = jsonEntry.Insert(jsonEntry.Length - 1,
+                        entry.Value.EnumerateObject().Any() ? ",\"moves\":[]" : "\"moves\":[]");
+                try
+                {
+                    catalog.challenges.Add(name, SessionRecording.FromJson(jsonEntry));
+                }
+                catch (JsonException)
+                {
+                }
             }
         }
-        catch (JsonException) { }
+        catch (JsonException)
+        {
+        }
+
         return catalog;
     }
 }

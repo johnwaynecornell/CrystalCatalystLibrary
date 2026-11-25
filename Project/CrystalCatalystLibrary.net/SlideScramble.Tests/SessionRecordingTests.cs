@@ -36,28 +36,32 @@ public class SessionRecordingTests
         using var json = JsonDocument.Parse(recording.ToJson());
         var root = json.RootElement;
         Assert.Equal("SlideScramble", root.GetProperty("format").GetString());
-        Assert.Equal(2, root.GetProperty("version").GetInt32());
+        Assert.Equal(3, root.GetProperty("version").GetInt32());
         Assert.Equal(3, root.GetProperty("width").GetInt32());
         Assert.Equal(2, root.GetProperty("height").GetInt32());
         Assert.Equal(new[] { 3, 2 }, root.GetProperty("initialCells")[1][2].EnumerateArray().Select(e => e.GetInt32()));
-        Assert.Equal(new[] { 3, 2 }, root.GetProperty("moves")[0].GetProperty("dragStart").EnumerateArray().Select(e => e.GetInt32()));
-        Assert.Equal(2, root.GetProperty("moves")[0].GetProperty("index").GetInt32());
+        Assert.Equal(new[] { 3, 2 },
+            root.GetProperty("operations")[0].GetProperty("moves")[0].GetProperty("dragStart").EnumerateArray()
+                .Select(e => e.GetInt32()));
+        Assert.Equal(2, root.GetProperty("operations")[0].GetProperty("moves")[0].GetProperty("index").GetInt32());
         var roundTrip = SessionRecording.FromJson(recording.ToJson());
         Assert.Equal(2, roundTrip.Moves[0].StartX);
         Assert.Equal(1, roundTrip.Moves[0].StartY);
     }
 
     [Fact]
-    public void LegacyRecordingLoadsAndResavesInVersion2()
+    public void LegacyRecordingLoadsAndResavesInVersion3()
     {
-        const string legacy = "{\"format\":\"SlideScramble\",\"version\":1,\"width\":2,\"height\":2,\"initialCells\":[[[1,1],[0,0]],[[1,0],[0,1]]],\"moves\":[{\"axis\":\"Column\",\"index\":1,\"dragStart\":[1,0],\"delta\":-1}]}";
+        const string legacy =
+            "{\"format\":\"SlideScramble\",\"version\":1,\"width\":2,\"height\":2,\"initialCells\":[[[1,1],[0,0]],[[1,0],[0,1]]],\"moves\":[{\"axis\":\"Column\",\"index\":1,\"dragStart\":[1,0],\"delta\":-1}]}";
         var recording = SessionRecording.FromJson(legacy);
         Assert.Equal(3, recording.InitialCells[0, 0]);
         Assert.Equal(new RecordedMove(RecordedMoveAxis.Column, 1, 0, -1), recording.Moves[0]);
         using var json = JsonDocument.Parse(recording.ToJson());
-        Assert.Equal(2, json.RootElement.GetProperty("version").GetInt32());
-        Assert.Equal(new[] { 2, 2 }, json.RootElement.GetProperty("initialCells")[0][0].EnumerateArray().Select(e => e.GetInt32()));
-        var move = json.RootElement.GetProperty("moves")[0];
+        Assert.Equal(3, json.RootElement.GetProperty("version").GetInt32());
+        Assert.Equal(new[] { 2, 2 },
+            json.RootElement.GetProperty("initialCells")[0][0].EnumerateArray().Select(e => e.GetInt32()));
+        var move = json.RootElement.GetProperty("operations")[0].GetProperty("moves")[0];
         Assert.Equal(2, move.GetProperty("index").GetInt32());
         Assert.Equal(new[] { 2, 1 }, move.GetProperty("dragStart").EnumerateArray().Select(e => e.GetInt32()));
         Assert.Equal(-1, move.GetProperty("delta").GetInt32());
@@ -72,7 +76,8 @@ public class SessionRecordingTests
     [InlineData("[[[1,1],[2,1]]]", "[{\"axis\":\"Column\",\"index\":2,\"dragStart\":[2,2],\"delta\":1}]")]
     public void RejectsInvalidVersion2Coordinates(string cells, string moves)
     {
-        string json = $"{{\"format\":\"SlideScramble\",\"version\":2,\"width\":2,\"height\":1,\"initialCells\":{cells},\"moves\":{moves}}}";
+        string json =
+            $"{{\"format\":\"SlideScramble\",\"version\":2,\"width\":2,\"height\":1,\"initialCells\":{cells},\"moves\":{moves}}}";
         Assert.Throws<JsonException>(() => SessionRecording.FromJson(json));
     }
 
@@ -82,15 +87,22 @@ public class SessionRecordingTests
     [InlineData("SlideScramble", 1, 3, 1, "[[[0,0],[1,0]]]", "[]")]
     [InlineData("SlideScramble", 1, 2, 1, "[[[0,0],[0,0]]]", "[]")]
     [InlineData("SlideScramble", 1, 2, 1, "[[[0,0],[2,0]]]", "[]")]
-    [InlineData("SlideScramble", 1, 2, 1, "[[[0,0],[1,0]]]", "[{\"axis\":\"Row\",\"index\":0,\"dragStart\":[2,0],\"delta\":1}]")]
-    [InlineData("SlideScramble", 1, 2, 1, "[[[0,0],[1,0]]]", "[{\"axis\":\"Row\",\"index\":0,\"dragStart\":[0],\"delta\":1}]")]
-    [InlineData("SlideScramble", 1, 2, 1, "[[[0,0],[1,0]]]", "[{\"axis\":\"Row\",\"index\":0,\"dragStart\":[0,0],\"delta\":2}]")]
-    [InlineData("SlideScramble", 1, 2, 1, "[[[0,0],[1,0]]]", "[{\"axis\":3,\"index\":0,\"dragStart\":[0,0],\"delta\":1}]")]
+    [InlineData("SlideScramble", 1, 2, 1, "[[[0,0],[1,0]]]",
+        "[{\"axis\":\"Row\",\"index\":0,\"dragStart\":[2,0],\"delta\":1}]")]
+    [InlineData("SlideScramble", 1, 2, 1, "[[[0,0],[1,0]]]",
+        "[{\"axis\":\"Row\",\"index\":0,\"dragStart\":[0],\"delta\":1}]")]
+    [InlineData("SlideScramble", 1, 2, 1, "[[[0,0],[1,0]]]",
+        "[{\"axis\":\"Row\",\"index\":0,\"dragStart\":[0,0],\"delta\":2}]")]
+    [InlineData("SlideScramble", 1, 2, 1, "[[[0,0],[1,0]]]",
+        "[{\"axis\":3,\"index\":0,\"dragStart\":[0,0],\"delta\":1}]")]
     [InlineData("SlideScramble", 1, 2, 1, "[[[0,0],[1,0]]]", "[{\"axis\":\"Row\",\"index\":0,\"dragStart\":[0,0]}]")]
-    [InlineData("SlideScramble", 1, 2, 1, "[[[0,0],[1,0]]]", "[{\"axis\":\"Row\",\"index\":1,\"dragStart\":[0,0],\"delta\":1}]")]
-    public void RejectsInvalidVersionedData(string format, int version, int width, int height, string cells, string moves)
+    [InlineData("SlideScramble", 1, 2, 1, "[[[0,0],[1,0]]]",
+        "[{\"axis\":\"Row\",\"index\":1,\"dragStart\":[0,0],\"delta\":1}]")]
+    public void RejectsInvalidVersionedData(string format, int version, int width, int height, string cells,
+        string moves)
     {
-        string json = $"{{\"format\":\"{format}\",\"version\":{version},\"width\":{width},\"height\":{height},\"initialCells\":{cells},\"moves\":{moves}}}";
+        string json =
+            $"{{\"format\":\"{format}\",\"version\":{version},\"width\":{width},\"height\":{height},\"initialCells\":{cells},\"moves\":{moves}}}";
         Assert.Throws<JsonException>(() => SessionRecording.FromJson(json));
     }
 
@@ -119,6 +131,7 @@ public class SessionRecordingTests
         Assert.True(controller.StepBack());
         Assert.Equal(start, Capture(grid));
     }
+
     [Fact]
     public void RecordingRoundTripsAndPlaybackRestoresGrid()
     {
@@ -161,7 +174,8 @@ public class SessionRecordingTests
     [InlineData("{\"initialCells\":[[0,1]],\"moves\":[{\"axis\":\"Row\",\"index\":0,\"delta\":2}]}")]
     [InlineData("{\"initialCells\":[[0,1]],\"moves\":[{\"axis\":3,\"index\":0,\"delta\":1}]}")]
     [InlineData("{\"initialCells\":[[0,1]],\"moves\":[],\"extra\":true}")]
-    public void InvalidJsonIsRejected(string json) => Assert.Throws<JsonException>(() => SessionRecording.FromJson(json));
+    public void InvalidJsonIsRejected(string json) =>
+        Assert.Throws<JsonException>(() => SessionRecording.FromJson(json));
 
     [Fact]
     public void InvalidTransitionsAndDimensionsAreRejected()
@@ -175,7 +189,8 @@ public class SessionRecordingTests
         Assert.Throws<ArgumentException>(() => controller.MoveRow(0, 1, 0, 1));
         Assert.Throws<ArgumentException>(() => controller.MoveColumn(0, 1, 2, 0));
         var recording = controller.StopRecording();
-        Assert.Throws<ArgumentException>(() => new SessionRecordingController(new Grid(3, 2, 32)).LoadPlayback(recording));
+        Assert.Throws<ArgumentException>(() =>
+            new SessionRecordingController(new Grid(3, 2, 32)).LoadPlayback(recording));
         controller.LoadPlayback(recording);
         controller.SetAutoplay(true);
         Assert.False(controller.IsAutoplaying);

@@ -12,8 +12,10 @@ public partial class Window
         if (sessions.Mode != RecordingControllerMode.Playback)
             throw new InvalidOperationException("Use Moves to inspect a recording before continuing.");
 
-        sessions.SetAutoplay(false);
         int position = sessions.Position;
+        if (!sessions.IsOperationBoundary(position))
+            throw new InvalidOperationException("Continue recording only at a complete logical-operation boundary.");
+        sessions.SetAutoplay(false);
         int discardCount = sessions.MoveCount - position;
         var controller = sessions;
         var dialog = new ContinueRecordingDialog(this, position, discardCount,
@@ -34,7 +36,10 @@ public partial class Window
         popupHost.OnDraw(canvas);
     }
 
-    private sealed class ContinueRecordingDialog(Window owner, int keepCount, int discardCount,
+    private sealed class ContinueRecordingDialog(
+        Window owner,
+        int keepCount,
+        int discardCount,
         Action confirm) : ICrystalSkia
     {
         private const float Width = 400;
@@ -52,9 +57,17 @@ public partial class Window
                 area.Y + (area.Height - Height * scale) / 2, Width * scale, Height * scale);
         }
 
-        public void SetFocus(bool focused) { }
-        public void OnIdle(double timeSeconds) { }
-        public void TextInput(string text) { }
+        public void SetFocus(bool focused)
+        {
+        }
+
+        public void OnIdle(double timeSeconds)
+        {
+        }
+
+        public void TextInput(string text)
+        {
+        }
 
         public void KeyDown(KeyCode key, bool shift, bool control)
         {
@@ -74,8 +87,13 @@ public partial class Window
             else if (CancelButton.Contains(point.X, point.Y)) owner.popupHost.Cancel();
         }
 
-        public void PointerMove(PointF position) { }
-        public void PointerUp(PointF position, CrystalMouseButton button) { }
+        public void PointerMove(PointF position)
+        {
+        }
+
+        public void PointerUp(PointF position, CrystalMouseButton button)
+        {
+        }
 
         public void OnDraw(SKCanvas canvas)
         {
