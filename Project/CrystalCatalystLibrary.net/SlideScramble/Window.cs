@@ -77,7 +77,10 @@ public partial class Window
     private int? goal;
     private double lastPlaybackTick;
     private (int X, int Y)? moveHighlight;
-    private static readonly string[] mediaLabels = { "Rec", "Save", "Load", "|<", "<", ">", "Play", "Stop" };
+    private static readonly string[] mediaLabels = { "Rec", "Save", "Load", "|<", "<", ">", "Play", "Stop", "Continue" };
+    // Two deliberate clicks: Continue at the playback index, then Confirm.
+    // A change of playback index or another session action cancels confirmation.
+    private int? pendingContinuePosition;
     private bool showMedia;
 
     internal static string FormatMovesText(int moves, int? goal) =>
@@ -172,7 +175,9 @@ public partial class Window
                 (screenRect.Right - layout.X) / layout.Scale, (screenRect.Bottom - layout.Y) / layout.Scale);
             canvas.DrawRoundRect(new SKRoundRect(buttonRect, 4, 4), hudChipPaint);
             string label = i == 0 && sessions.Mode == RecordingControllerMode.Recording ? "Stop Rec" :
-                i == 6 && sessions.IsAutoplaying ? "Pause" : mediaLabels[i];
+                i == 6 && sessions.IsAutoplaying ? "Pause" :
+                i == 8 && pendingContinuePosition == sessions.Position && sessions.Mode == RecordingControllerMode.Playback
+                    ? "Confirm" : mediaLabels[i];
             canvas.Save();
             canvas.ClipRect(buttonRect);
             canvas.DrawText(label, buttonRect.MidX - footerFont.MeasureText(label) / 2, buttonRect.Top + 17, footerFont, hudTextPaint);
@@ -243,7 +248,8 @@ public partial class Window
 
     private void MediaAction(int index)
     {
-        if (index != 2) State.TakeBackSolved(wnd.uptimeSeconds());
+        if (index != 8) pendingContinuePosition = null;
+        if (index != 2 && index != 8) State.TakeBackSolved(wnd.uptimeSeconds());
 
         if (drag != null || Animations.Count != 0 || State.Mode == GameMode.Scrambling)
         {
@@ -252,6 +258,8 @@ public partial class Window
         }
         try
         {
+            if (index == 8 && (ShowGridSetup || popupHost.IsVisible))
+                throw new InvalidOperationException("Close setup and selectors before continuing.");
             switch (index)
             {
                 case 0:
@@ -301,12 +309,41 @@ public partial class Window
                     if (sessions.Mode == RecordingControllerMode.Playback) sessions.StopPlayback();
                     moveHighlight = null;
                     break;
+                case 8:
+                    ContinueSessionFromHere();
+                    break;
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException or NotSupportedException)
         {
             sessionMessage = ex.Message;
         }
+    }
+
+    private void ContinueSessionFromHere()
+    {
+        if (sessions.Mode != RecordingControllerMode.Playback)
+            throw new InvalidOperationException("Use Moves to inspect a recording before continuing.");
+
+        // The current index is a count of already applied moves, not the
+        // one-based number of the next move.
+        if (pendingContinuePosition != sessions.Position)
+        {
+            sessions.SetAutoplay(false);
+            pendingContinuePosition = sessions.Position;
+            sessionMessage = $"Keep first {sessions.Position} moves? Click Confirm.";
+            wnd.QueueRedraw();
+            return;
+        }
+
+        int prefixCount = sessions.ContinueRecordingFromHere();
+        pendingContinuePosition = null;
+        savedSession = null; // Prevent Save from writing the old unmodified playback.
+        goal = null; // The prior solution's goal does not describe the edited run.
+        State.BeginContinuedRun(prefixCount, wnd.uptimeSeconds());
+        moveHighlight = null;
+        sessionMessage = $"Recording from move {prefixCount}. Stop Rec, then Save.";
+        wnd.QueueRedraw();
     }
 
     private void ResumePlaybackIfStopped()
