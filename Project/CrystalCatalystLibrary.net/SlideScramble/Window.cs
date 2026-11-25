@@ -85,12 +85,22 @@ public partial class Window
     private ContinueRecordingDialog? continueRecordingDialog;
     private bool showMedia;
 
-    internal static string FormatMovesText(int moves, int? goal) =>
-        goal.HasValue ? $"Moves: {moves}  Goal: {goal.Value}" : $"Moves: {moves}";
+    internal static string FormatGameScoreText(int moveCost, int? goalCost) =>
+        goalCost.HasValue ? $"Move cost: {moveCost}  Goal cost: {goalCost.Value}" : $"Move cost: {moveCost}";
 
-    private string FormatGameScoreText(int moves, int? goal) => IsShuffleLogic
-        ? goal.HasValue ? $"Logical moves: {moves}  Goal: {goal.Value}" : $"Logical moves: {moves}"
-        : FormatMovesText(moves, goal);
+    internal static string FormatRecordingStatus(RecordingControllerMode mode, int primitivePosition,
+        int primitiveCount) => mode switch
+    {
+        RecordingControllerMode.Playback => $"Primitive playback: {primitivePosition}/{primitiveCount}",
+        RecordingControllerMode.Recording => $"Recorded primitives: {primitiveCount}",
+        _ => $"Primitive position: {primitivePosition}/{primitiveCount}"
+    };
+
+    internal static string FormatPrimitivePosition(int primitivePosition, int primitiveCount) =>
+        $"Primitive position: {primitivePosition}/{primitiveCount}";
+
+    internal static string FormatContinueRecordingStatus(int primitivePosition) =>
+        $"Recording from primitive position {primitivePosition}. Stop Rec, then Save.";
 
     // Popup selection integration
     private readonly CrystalPopupHost popupHost = new();

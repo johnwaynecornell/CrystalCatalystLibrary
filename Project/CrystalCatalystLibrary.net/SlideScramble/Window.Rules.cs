@@ -100,10 +100,12 @@ public partial class Window
             return false;
         }
 
+        bool mathematicalRulesChanged = !activeRules.HasSameMathematicalPermissions(rules);
         var liveInput = sessions.RuntimeUIEnabled.ToArray();
-        savedSession ??= sessions.Playback;
+        savedSession = sessions.Playback ?? savedSession;
         activeRules = rules.Snapshot();
         sessions = new SessionRecordingController(MyGrid, activeRules);
+        if (mathematicalRulesChanged) State.Reset();
         if (preserveLiveInput)
             foreach (string id in activeRules.Registry.RegisteredOperationIds)
                 sessions.SetRuntimeUIEnabled(id, liveInput.Contains(id));
@@ -111,7 +113,9 @@ public partial class Window
         lensInteraction.Cancel();
         lensDoubleClick.Reset();
         moveHighlight = null;
-        sessionMessage = $"{rules.Name} rules selected; board unchanged";
+        sessionMessage = mathematicalRulesChanged
+            ? $"{rules.Name} rules selected; board unchanged and run reset"
+            : $"{rules.Name} rules selected; board unchanged";
         wnd.QueueRedraw();
         return true;
     }

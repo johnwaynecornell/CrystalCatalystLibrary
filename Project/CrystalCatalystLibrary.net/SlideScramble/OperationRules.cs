@@ -68,6 +68,12 @@ public sealed class PuzzleRuleSet
     public PuzzleRuleSet WithUIEnabled(IEnumerable<string> operationIds) =>
         new(Name, ScrambleAllowed, SolveAllowed, operationIds, registry);
 
+    internal bool HasSameMathematicalPermissions(PuzzleRuleSet other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+        return scrambleAllowed.SetEquals(other.scrambleAllowed) && solveAllowed.SetEquals(other.solveAllowed);
+    }
+
     internal bool AllowsScramble(string operationId) => scrambleAllowed.Contains(operationId);
     internal bool AllowsSolve(string operationId) => solveAllowed.Contains(operationId);
     internal bool AllowsUi(string operationId) => uiEnabled.Contains(operationId);

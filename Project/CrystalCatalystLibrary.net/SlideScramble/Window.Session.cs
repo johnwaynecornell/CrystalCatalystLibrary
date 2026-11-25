@@ -84,8 +84,8 @@ public partial class Window
 
         canvas.Save();
         canvas.ClipRect(new SKRect(8, layout.Height - 30, layout.Width - 8, layout.Height));
-        canvas.DrawText($"{sessions.Mode}  {sessions.Position}/{sessions.MoveCount}", 12, layout.Height - 18,
-            footerFont, hudMutedPaint);
+        canvas.DrawText($"{sessions.Mode}  {FormatPrimitivePosition(sessions.Position, sessions.MoveCount)}", 12,
+            layout.Height - 18, footerFont, hudMutedPaint);
         canvas.DrawText(sessionMessage, 12, layout.Height - 4, footerFont, hudMutedPaint);
         canvas.Restore();
         canvas.Restore();
@@ -254,9 +254,7 @@ public partial class Window
         goal = null;
         State.BeginContinuedRun(prefixCost, wnd.uptimeSeconds());
         moveHighlight = null;
-        sessionMessage = IsShuffleLogic
-            ? $"Recording from primitive {prefixCount}. Stop Rec, then Save."
-            : $"Recording from move {prefixCount}. Stop Rec, then Save.";
+        sessionMessage = FormatContinueRecordingStatus(prefixCount);
         wnd.QueueRedraw();
     }
 

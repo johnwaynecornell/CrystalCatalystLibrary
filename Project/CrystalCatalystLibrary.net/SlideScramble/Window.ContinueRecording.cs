@@ -102,8 +102,8 @@ public partial class Window
             canvas.Scale(Bounds.Width / Width, Bounds.Height / Height);
             canvas.DrawRoundRect(new SKRect(0, 0, Width, Height), 14, 14, owner.hudBarPaint);
             canvas.DrawText("Continue Recording?", 20, 34, owner.panelTitleFont, owner.hudTextPaint);
-            canvas.DrawText($"Keep the first {keepCount} recorded moves.", 20, 67, owner.hudFont, owner.hudTextPaint);
-            canvas.DrawText($"Discard {discardCount} later moves from this working copy.", 20, 93,
+            canvas.DrawText($"Keep the first {keepCount} primitive moves.", 20, 67, owner.hudFont, owner.hudTextPaint);
+            canvas.DrawText($"Discard {discardCount} later primitive moves from this working copy.", 20, 93,
                 owner.footerFont, owner.hudMutedPaint);
             canvas.DrawText("The original file is unchanged until you Save.", 20, 115,
                 owner.footerFont, owner.hudMutedPaint);

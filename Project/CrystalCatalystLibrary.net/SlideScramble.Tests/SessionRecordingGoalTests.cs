@@ -6,12 +6,12 @@ namespace SlideScramble.Tests;
 public class SessionRecordingGoalTests
 {
     [Theory]
-    [InlineData(4, null, "Moves: 4")]
-    [InlineData(4, 0, "Moves: 4  Goal: 0")]
-    [InlineData(4, 15, "Moves: 4  Goal: 15")]
+    [InlineData(4, null, "Move cost: 4")]
+    [InlineData(4, 0, "Move cost: 4  Goal cost: 0")]
+    [InlineData(4, 15, "Move cost: 4  Goal cost: 15")]
     public void HudOmitsOnlyUnknownGoals(int moves, int? goal, string expected)
     {
-        Assert.Equal(expected, Window.FormatMovesText(moves, goal));
+        Assert.Equal(expected, Window.FormatGameScoreText(moves, goal));
     }
 
     [Fact]
