@@ -75,6 +75,7 @@ public partial class Window
     private SessionRecordingController sessions;
     private PuzzleRuleSet activeRules = PuzzleRuleSet.CreateClassic();
     private readonly PortableLensInteractionController lensInteraction = new();
+    private readonly PortableLensDoubleClickTracker lensDoubleClick = new();
     private bool controlPressed;
     private SessionRecording? savedSession;
     private int? goal;

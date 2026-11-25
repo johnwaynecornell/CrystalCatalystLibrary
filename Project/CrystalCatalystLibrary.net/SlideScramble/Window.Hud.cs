@@ -281,7 +281,8 @@ public partial class Window
                 }
             }
 
-            // Center HUD: Moves & Time
+            // Center HUD: Mode, Moves & Time
+            string ruleSetText = $"Mode: {activeRules.Name}";
             string movesText = FormatGameScoreText(State.MoveCount, goal);
             string timeText = $"Time: {State.FormatTime(time)}";
             string? recordingText = null;
@@ -297,6 +298,7 @@ public partial class Window
                 recordingText = IsShuffleLogic ? $"Recorded primitives: {sessions.MoveCount}" : $"Move {sessions.MoveCount}";
             }
             
+            hudBoldFont.MeasureText(ruleSetText, out SKRect ruleSetBounds, hudMutedPaint);
             hudBoldFont.MeasureText(movesText, out SKRect movesBounds, hudTextPaint);
             hudBoldFont.MeasureText(timeText, out SKRect timeBounds, hudAccentPaint);
             SKRect? recordingBounds = null;
@@ -306,8 +308,8 @@ public partial class Window
                 recordingBounds = rb;
             }
 
-            float centerTotalWidth = movesBounds.Width + timeBounds.Width + 30;
-            if (recordingBounds.HasValue) centerTotalWidth += recordingBounds.Value.Width + 24;
+            float centerTotalWidth = ruleSetBounds.Width + movesBounds.Width + timeBounds.Width + 48;
+            if (recordingBounds.HasValue) centerTotalWidth += recordingBounds.Value.Width + 16;
             float centerAreaStart = width / 2f - centerTotalWidth / 2f;
             if (width >= 500)
             {
@@ -316,19 +318,23 @@ public partial class Window
                 canvas.Translate(width / 2f, 35);
                 canvas.Scale(hudScale);
                 canvas.Translate(-width / 2f, -35);
-                canvas.DrawText(movesText, centerAreaStart, 35, hudBoldFont, hudTextPaint);
-                float timeX = centerAreaStart + movesBounds.Width + 24;
+                canvas.DrawText(ruleSetText, centerAreaStart, 35, hudBoldFont, hudMutedPaint);
+                float movesX = centerAreaStart + ruleSetBounds.Width + 16;
+                canvas.DrawText(movesText, movesX, 35, hudBoldFont, hudTextPaint);
+                float timeX = movesX + movesBounds.Width + 16;
                 canvas.DrawText(timeText, timeX, 35, hudBoldFont, hudAccentPaint);
                 if (recordingText != null && recordingBounds.HasValue)
                 {
-                    float recX = timeX + timeBounds.Width + 24;
+                    float recX = timeX + timeBounds.Width + 16;
                     canvas.DrawText(recordingText, recX, 35, hudBoldFont, hudMutedPaint);
                 }
                 canvas.Restore();
             }
             else
             {
-                string compactStats = recordingText == null ? movesText : $"{movesText}  {recordingText}";
+                string compactStats = recordingText == null
+                    ? $"{ruleSetText}  {movesText}"
+                    : $"{ruleSetText}  {movesText}  {recordingText}";
                 float compactWidth = hudFont.MeasureText(compactStats);
                 canvas.Save();
                 canvas.Translate(width / 2f, 56);

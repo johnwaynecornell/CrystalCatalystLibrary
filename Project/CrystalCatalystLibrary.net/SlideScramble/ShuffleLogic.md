@@ -1,4 +1,4 @@
-# ShuffleLogic and the Portable Lens
+ # ShuffleLogic and the Portable Lens
 
 Classic SlideScramble is the startup preset. Open the Space command menu and select **Game Mode (Classic / ShuffleLogic)** to switch presets; switching resets the board. ShuffleLogic requires at least a 3×3 board. **Generate Challenge** retains its 1–10 scale and generates Shuffle-only scrambles with a verified inverse solution, available through the session controls.
 
