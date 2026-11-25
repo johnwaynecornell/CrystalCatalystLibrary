@@ -170,6 +170,28 @@ public sealed class SessionRecording
         return null;
     }
 
+    /// <summary>Returns the move cost at the first solved logical-operation boundary.</summary>
+    public int? GetVerifiedGoalMoveCost()
+    {
+        var session = new SlideScrambleSession(initialCells);
+        if (session.IsSolved) return 0;
+        int moveCost = 0;
+        foreach (var operation in operations)
+        {
+            foreach (var move in operation.PrimitiveMoves)
+            {
+                if (move.Axis == RecordedMoveAxis.Row) session.MoveRow(move.Index, move.Delta, 0);
+                else session.MoveColumn(move.Index, move.Delta, 0);
+            }
+
+            if (operation.Purpose == OperationPlanPurpose.Solve)
+                moveCost = checked(moveCost + (operation.MoveCost ?? 0));
+            if (session.IsSolved) return moveCost;
+        }
+
+        return null;
+    }
+
     /// <summary>Returns whether a primitive playback position lies between complete logical operations.</summary>
     public bool IsOperationBoundary(int primitivePosition)
     {

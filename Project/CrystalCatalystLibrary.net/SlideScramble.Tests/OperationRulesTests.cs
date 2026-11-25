@@ -10,10 +10,56 @@ public class OperationRulesTests
     public void DefaultRulesPermitOnlyOrdinarySlides()
     {
         var rules = new PuzzleRuleSet();
+        var registry = OperationRegistry.CreateDefault();
 
         Assert.Equal(new[] { PuzzleOperationIds.Slide }, rules.ScrambleAllowed);
         Assert.Equal(new[] { PuzzleOperationIds.Slide }, rules.SolveAllowed);
         Assert.Equal(new[] { PuzzleOperationIds.Slide }, rules.UIEnabled);
+        Assert.Contains(PuzzleOperationIds.Shuffle, registry.RegisteredOperationIds);
+    }
+
+    [Fact]
+    public void ShuffleLogicPresetAllowsOnlyShuffleAndChargesOneLogicalMove()
+    {
+        var registry = OperationRegistry.CreateDefault();
+        var rules = PuzzleRuleSet.CreateShuffleLogic(registry);
+        var intent = new ShuffleOperationIntent(2, 1, PortableLensCell.Circle, PortableLensCell.Star);
+        var result = new OperationRuleEvaluator(registry).EvaluateUiRequest(
+            new OperationBoardSnapshot(new int[3, 3]
+            {
+                { 0, 1, 2 },
+                { 3, 4, 5 },
+                { 6, 7, 8 }
+            }), intent, rules);
+
+        Assert.Equal("ShuffleLogic", rules.Name);
+        Assert.Equal(new[] { PuzzleOperationIds.Shuffle }, rules.ScrambleAllowed);
+        Assert.Equal(new[] { PuzzleOperationIds.Shuffle }, rules.SolveAllowed);
+        Assert.Equal(new[] { PuzzleOperationIds.Shuffle }, rules.UIEnabled);
+        Assert.True(result.IsAccepted, result.RejectionReason);
+        Assert.Equal(OperationMoveAccounting.LogicalOperation, result.Plan!.Accounting);
+        Assert.Equal(1, result.Plan.MoveCost);
+        Assert.Equal(4, result.Plan.Expansion.Count);
+    }
+
+    [Fact]
+    public void UiEnabledShuffleFallsBackToFourAuthorizedSlidesWhenDirectSolveIsDisallowed()
+    {
+        var registry = OperationRegistry.CreateDefault();
+        var rules = new PuzzleRuleSet("Slide fallback", new[] { PuzzleOperationIds.Slide },
+            new[] { PuzzleOperationIds.Slide }, new[] { PuzzleOperationIds.Shuffle }, registry);
+        var result = new OperationRuleEvaluator(registry).EvaluateUiRequest(
+            new OperationBoardSnapshot(new int[3, 3]
+            {
+                { 0, 1, 2 },
+                { 3, 4, 5 },
+                { 6, 7, 8 }
+            }), new ShuffleOperationIntent(0, 0, PortableLensCell.Circle, PortableLensCell.Star), rules);
+
+        Assert.True(result.IsAccepted, result.RejectionReason);
+        Assert.Equal(OperationMoveAccounting.PrimitiveMoves, result.Plan!.Accounting);
+        Assert.Equal(4, result.Plan.MoveCost);
+        Assert.Equal(4, result.Plan.Expansion.Count);
     }
 
     [Fact]
@@ -192,7 +238,7 @@ public class OperationRulesTests
     [Fact]
     public void ReservedLensIdsAreKnownButDoNotHaveDefaultResolvers()
     {
-        var registry = OperationRegistry.CreateDefault();
+        var registry = new OperationRegistry();
         Assert.Contains(PuzzleOperationIds.Shuffle, registry.KnownOperationIds);
         Assert.DoesNotContain(PuzzleOperationIds.Shuffle, registry.RegisteredOperationIds);
 

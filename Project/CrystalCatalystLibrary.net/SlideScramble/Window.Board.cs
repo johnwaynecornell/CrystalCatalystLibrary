@@ -51,14 +51,20 @@ public partial class Window
     {
         width = Math.Clamp(width, 2, 9);
         height = Math.Clamp(height, 2, 9);
+        if (activeRules.Name == "ShuffleLogic" && (width < 3 || height < 3))
+        {
+            sessionMessage = "ShuffleLogic requires at least a 3 × 3 board";
+            return;
+        }
         if (CanChangeBoard)
         {
             MyGrid = new Grid(width, height);
-            sessions = new SessionRecordingController(MyGrid);
+            sessions = new SessionRecordingController(MyGrid, activeRules);
             State.Reset();
             goal = null;
             animationLockHoriz = null;
             animationTileOffset = 0;
+            lensInteraction.Cancel();
             UpdateTileView();
         }
     }

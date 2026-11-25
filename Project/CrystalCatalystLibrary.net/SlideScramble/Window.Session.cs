@@ -134,10 +134,12 @@ public partial class Window
         }
 
         var reversed = source.Reverse();
-        int? reversedGoal = reversed.GetVerifiedGoal();
+        int? reversedGoal = reversed.GetVerifiedGoalMoveCost();
         var grid = CreateRecordingGrid(reversed, out var controller);
         MyGrid = grid;
         sessions = controller;
+        activeRules = reversed.RuleSet;
+        lensInteraction.Cancel();
         savedSession = reversed;
         goal = reversedGoal;
         State.Reset();
@@ -245,12 +247,16 @@ public partial class Window
         }
 
         popupHost.Accept();
+        int prefixCost = sessions.Playback!.Operations.Take(sessions.Playback.GetOperationCountAtBoundary(expectedPosition))
+            .Sum(operation => operation.MoveCost ?? 0);
         int prefixCount = sessions.ContinueRecordingFromHere();
         savedSession = null; // Never save an obsolete, unmodified recording.
         goal = null;
-        State.BeginContinuedRun(prefixCount, wnd.uptimeSeconds());
+        State.BeginContinuedRun(prefixCost, wnd.uptimeSeconds());
         moveHighlight = null;
-        sessionMessage = $"Recording from move {prefixCount}. Stop Rec, then Save.";
+        sessionMessage = IsShuffleLogic
+            ? $"Recording from primitive {prefixCount}. Stop Rec, then Save."
+            : $"Recording from move {prefixCount}. Stop Rec, then Save.";
         wnd.QueueRedraw();
     }
 
@@ -258,7 +264,7 @@ public partial class Window
     {
         if (sessions.Mode != RecordingControllerMode.Idle) return;
         sessions.ResumePlayback();
-        goal = sessions.Playback!.GetVerifiedGoal();
+        goal = sessions.Playback!.GetVerifiedGoalMoveCost();
     }
 
     private void QueuePlaybackAnimation(bool forward)

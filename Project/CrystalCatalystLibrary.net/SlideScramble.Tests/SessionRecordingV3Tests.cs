@@ -55,7 +55,7 @@ public class SessionRecordingV3Tests
     [Fact]
     public void KnownOperationWithoutResolverCanReplayItsSavedPrimitiveExpansion()
     {
-        var registry = OperationRegistry.CreateDefault();
+        var registry = new OperationRegistry();
         Assert.True(registry.IsKnownOperation(PuzzleOperationIds.Shuffle));
         Assert.False(registry.TryGetOperation(PuzzleOperationIds.Shuffle, out _));
         var rules = new PuzzleRuleSet("Replay only", new[] { PuzzleOperationIds.Slide },
@@ -71,7 +71,7 @@ public class SessionRecordingV3Tests
         var grid = new Grid(2, 2, 32);
         var controller = new SessionRecordingController(grid);
 
-        controller.LoadPlayback(SessionRecording.FromJson(recording.ToJson()));
+        controller.LoadPlayback(SessionRecording.FromJson(recording.ToJson(), registry));
         Assert.True(controller.Step());
         Assert.Equal(1, controller.Position);
         Assert.True(controller.Step());

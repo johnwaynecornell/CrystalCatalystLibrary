@@ -15,6 +15,11 @@ public partial class Window
 
     private void OpenBoardEditor()
     {
+        if (IsShuffleLogic)
+        {
+            sessionMessage = "Board editing is unavailable in ShuffleLogic; use Shuffle-only challenges";
+            return;
+        }
         if (sessions.Mode == RecordingControllerMode.Recording || State.Mode == GameMode.Scrambling ||
             drag != null || Animations.Count != 0 || activeSlider != ActiveSlider.None)
         {
@@ -43,7 +48,7 @@ public partial class Window
 
     private void CommitBoard()
     {
-        var controller = new SessionRecordingController(MyGrid);
+        var controller = new SessionRecordingController(MyGrid, activeRules);
         Array.Copy(boardDraft!, MyGrid.Tiles, MyGrid.Tiles.Length);
         sessions = controller;
         savedSession = null;

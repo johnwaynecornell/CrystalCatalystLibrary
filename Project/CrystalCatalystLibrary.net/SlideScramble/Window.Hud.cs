@@ -229,6 +229,8 @@ public partial class Window
                 }
             }
 
+            DrawPortableLensOverlay(canvas);
+
             if (moveHighlight is { } highlighted)
             {
                 float x = tileView.xx + tileW * highlighted.X;
@@ -280,17 +282,19 @@ public partial class Window
             }
 
             // Center HUD: Moves & Time
-            string movesText = FormatMovesText(State.MoveCount, goal);
+            string movesText = FormatGameScoreText(State.MoveCount, goal);
             string timeText = $"Time: {State.FormatTime(time)}";
             string? recordingText = null;
             if (sessions.Mode == RecordingControllerMode.Playback)
             {
-                recordingText = $"Remaining: {sessions.MoveCount - sessions.Position}";
+                recordingText = IsShuffleLogic
+                    ? $"Primitive remaining: {sessions.MoveCount - sessions.Position}"
+                    : $"Remaining: {sessions.MoveCount - sessions.Position}";
             }
             
             if (sessions.Mode == RecordingControllerMode.Recording)
             {
-                recordingText = $"Move {sessions.MoveCount}";
+                recordingText = IsShuffleLogic ? $"Recorded primitives: {sessions.MoveCount}" : $"Move {sessions.MoveCount}";
             }
             
             hudBoldFont.MeasureText(movesText, out SKRect movesBounds, hudTextPaint);

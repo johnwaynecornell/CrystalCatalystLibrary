@@ -35,7 +35,22 @@ public sealed class PuzzleRuleSet
         UIEnabled = Array.AsReadOnly(this.uiEnabled.Order(StringComparer.Ordinal).ToArray());
     }
 
-    public static PuzzleRuleSet CreateClassic() => new();
+    public static PuzzleRuleSet CreateClassic(OperationRegistry? registry = null)
+    {
+        var selectedRegistry = registry ?? OperationRegistry.CreateDefault();
+        return new PuzzleRuleSet("Classic", new[] { PuzzleOperationIds.Slide }, new[] { PuzzleOperationIds.Slide },
+            new[] { PuzzleOperationIds.Slide }, selectedRegistry);
+    }
+
+    public static PuzzleRuleSet CreateShuffleLogic(OperationRegistry? registry = null)
+    {
+        var selectedRegistry = registry ?? OperationRegistry.CreateDefault();
+        if (!selectedRegistry.TryGetOperation(PuzzleOperationIds.Shuffle, out _))
+            throw new ArgumentException("ShuffleLogic requires a registered Shuffle resolver.", nameof(registry));
+
+        return new PuzzleRuleSet("ShuffleLogic", new[] { PuzzleOperationIds.Shuffle },
+            new[] { PuzzleOperationIds.Shuffle }, new[] { PuzzleOperationIds.Shuffle }, selectedRegistry);
+    }
 
     /// <summary>Returns an independent copy of the immutable rule-set snapshot.</summary>
     public PuzzleRuleSet Snapshot() => new(Name, ScrambleAllowed, SolveAllowed, UIEnabled, registry);

@@ -25,6 +25,7 @@ public partial class Window
     private void ShowCommandMenu()
     {
         if (drag != null || activeSlider != ActiveSlider.None || Animations.Count != 0) return;
+        lensInteraction.CancelGesture();
         var menu = new CrystalCommandMenu("SlideScramble Commands", boardCommands.Select(c => c.Entry), hudFont);
         menu.Activated += ActivateMenuCommand;
         commandMenu = menu;
@@ -95,6 +96,12 @@ public partial class Window
             return;
         }
 
+        if (lensInteraction.Phase != PortableLensInteractionPhase.Inactive)
+        {
+            windowHandle.QueueRedraw();
+            return;
+        }
+
         if (drag != null && tileView != null)
         {
             int xd = x - drag.startX;
@@ -139,6 +146,31 @@ public partial class Window
         if (popupHost.IsVisible)
         {
             popupHost.PointerUp(new System.Drawing.PointF(x, y), (CrystalMouseButton)button);
+            return;
+        }
+        if (lensInteraction.Phase != PortableLensInteractionPhase.Inactive)
+        {
+            if (button == (int)CrystalMouseButton.Left &&
+                lensInteraction.Phase == PortableLensInteractionPhase.Accepted &&
+                lensInteraction.HasPendingGesture)
+            {
+                PortableLensCell? target = null;
+                if (tileView != null && x >= tileView.xx && x < tileView.xx + tileView.width &&
+                    y >= tileView.yy && y < tileView.yy + tileView.height)
+                {
+                    int cellX = (int)((x - tileView.xx) * MyGrid.Width / tileView.width);
+                    int cellY = (int)((y - tileView.yy) * MyGrid.Height / tileView.height);
+                    target = lensInteraction.CellAt(cellX, cellY);
+                }
+
+                LensGestureRequest? request = target.HasValue
+                    ? lensInteraction.CompleteGesture(target.Value)
+                    : null;
+                if (!target.HasValue) lensInteraction.CancelGesture();
+                if (request != null) CommitLensGesture(request);
+            }
+
+            windowHandle.QueueRedraw();
             return;
         }
         interaction.PointerUp(x, y, (CrystalMouseButton)button);
@@ -195,6 +227,31 @@ public partial class Window
         UpdateTileView(width, height);
         var media = GetMediaLayout(width, height);
         UpdateMediaEditorBounds(media);
+        if (lensInteraction.Phase != PortableLensInteractionPhase.Inactive)
+        {
+            if (lensInteraction.Phase == PortableLensInteractionPhase.Positioning)
+            {
+                if (tileView != null && x >= tileView.xx && x < tileView.xx + tileView.width &&
+                    y >= tileView.yy && y < tileView.yy + tileView.height)
+                {
+                    int anchorX = (int)((x - tileView.xx) * MyGrid.Width / tileView.width);
+                    int anchorY = (int)((y - tileView.yy) * MyGrid.Height / tileView.height);
+                    if (lensInteraction.SetPlacementAnchor(anchorX, anchorY))
+                        sessionMessage = $"Lens anchor: {anchorX + 1},{anchorY + 1} · press Enter to accept";
+                }
+            }
+            else if (CanHandleLensInput && tileView != null && x >= tileView.xx &&
+                     x < tileView.xx + tileView.width && y >= tileView.yy && y < tileView.yy + tileView.height)
+            {
+                int cellX = (int)((x - tileView.xx) * MyGrid.Width / tileView.width);
+                int cellY = (int)((y - tileView.yy) * MyGrid.Height / tileView.height);
+                PortableLensCell? start = lensInteraction.CellAt(cellX, cellY);
+                if (start.HasValue) lensInteraction.BeginGesture(start.Value, controlPressed);
+            }
+
+            windowHandle.QueueRedraw();
+            return;
+        }
         if (!ShowGridSetup && showMedia && filenameEditor.Bounds.Contains(x, y))
         {
             if (!filenameEditor.IsFocused) filenameBeforeEdit = filenameEditor.Text;
@@ -276,7 +333,8 @@ public partial class Window
         }
 
         // Board dragging hit test
-        if (sessions.Mode != RecordingControllerMode.Playback && State.Mode != GameMode.Scrambling && tileView != null && Animations.Count == 0 && drag == null)
+        if (sessions.Mode != RecordingControllerMode.Playback && State.Mode != GameMode.Scrambling && tileView != null && Animations.Count == 0 && drag == null &&
+            sessions.RuleSet.AllowsUi(PuzzleOperationIds.Slide) && sessions.RuleSet.AllowsSolve(PuzzleOperationIds.Slide))
         {
             // Check if mouse is inside the board bounds
             if (x >= tileView.xx && x < tileView.xx + tileView.width &&
