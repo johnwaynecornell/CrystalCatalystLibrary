@@ -170,7 +170,28 @@ and **>** reset, step backward, and step forward. **Play/Pause** advances automa
 steps animate and highlight the original drag-start cell until the transition finishes.
 During manual play, the drag-start cell is highlighted through the release or cancel snap.
 **Stop** leaves inspection and
-preserves the session for resuming. Recording,
+preserves the session for resuming.
+
+**Continue a recording from the current index:** Open a saved session or challenge
+through **Moves**, then step to the position where you want to change the solution.
+In the Session Controls panel, click **Continue**. The panel shows the number of
+moves to retain and switches the button to **Confirm**. Click **Confirm** to keep
+exactly the moves already played, crop the remaining suffix from the *working*
+recording, and start recording additional moves from the board now on screen.
+Use the ordinary board drag controls, then click **Stop Rec** and **Save**.
+The newly recorded session retains its original starting board and the selected
+prefix; the new moves are appended after that prefix. The visible move count
+begins at the selected playback index. The original file is not modified until
+you explicitly save, and Save under the same name overwrites that file. Use
+a different filename to preserve both versions. To cancel before confirming,
+navigate with the playback controls or click another session action.
+
+**Move numbering:** The recording HUD reports completed moves. When it shows
+`Move 5`, the next committed rotation becomes move 6. During inspection,
+position 5 is the state *after* five saved moves. Continuing at position 5
+preserves moves 1–5 and replaces moves 6 onward.
+
+Recording,
 loading, and playback wait until the current drag, snap, or scramble finishes. Reset,
 scramble, and grid changes are unavailable while recording or inspecting.
 
