@@ -77,7 +77,8 @@ public partial class Window
     private int? goal;
     private double lastPlaybackTick;
     private (int X, int Y)? moveHighlight;
-    private static readonly string[] mediaLabels = { "Rec", "Save", "Load", "|<", "<", ">", "Play", "Stop" };
+    private static readonly string[] mediaLabels = { "Rec", "Save", "Load", "|<", "<", ">", "Play", "Stop", "Continue" };
+    private ContinueRecordingDialog? continueRecordingDialog;
     private bool showMedia;
 
     internal static string FormatMovesText(int moves, int? goal) =>
@@ -243,7 +244,7 @@ public partial class Window
 
     private void MediaAction(int index)
     {
-        if (index != 2) State.TakeBackSolved(wnd.uptimeSeconds());
+        if (index != 2 && index != 8) State.TakeBackSolved(wnd.uptimeSeconds());
 
         if (drag != null || Animations.Count != 0 || State.Mode == GameMode.Scrambling)
         {
@@ -252,6 +253,8 @@ public partial class Window
         }
         try
         {
+            if (index == 8 && (ShowGridSetup || popupHost.IsVisible))
+                throw new InvalidOperationException("Close setup and selectors before continuing.");
             switch (index)
             {
                 case 0:
@@ -301,12 +304,39 @@ public partial class Window
                     if (sessions.Mode == RecordingControllerMode.Playback) sessions.StopPlayback();
                     moveHighlight = null;
                     break;
+                case 8:
+                    ShowContinueRecordingDialog();
+                    break;
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException or NotSupportedException)
         {
             sessionMessage = ex.Message;
         }
+    }
+
+    private void ConfirmContinueRecording(SessionRecordingController expectedController, int expectedPosition)
+    {
+        // The dialog blocks other interactions, but verify its captured context
+        // before making the one-way change to the working recording.
+        if (!ReferenceEquals(sessions, expectedController) ||
+            sessions.Mode != RecordingControllerMode.Playback ||
+            sessions.Position != expectedPosition ||
+            drag != null || Animations.Count != 0 || State.Mode == GameMode.Scrambling)
+        {
+            sessionMessage = "Recording position changed; reopen Continue.";
+            popupHost.Cancel();
+            return;
+        }
+
+        popupHost.Accept();
+        int prefixCount = sessions.ContinueRecordingFromHere();
+        savedSession = null; // Never save an obsolete, unmodified recording.
+        goal = null;
+        State.BeginContinuedRun(prefixCount, wnd.uptimeSeconds());
+        moveHighlight = null;
+        sessionMessage = $"Recording from move {prefixCount}. Stop Rec, then Save.";
+        wnd.QueueRedraw();
     }
 
     private void ResumePlaybackIfStopped()
@@ -1627,7 +1657,7 @@ public partial class Window
             if (showMedia) DrawMedia(canvas, media);
 
             // Session Selection Popup
-            if (popupHost.IsVisible && commandMenu == null && challengeGenerator == null)
+            if (popupHost.IsVisible && commandMenu == null && challengeGenerator == null && continueRecordingDialog == null)
             {
                 LayoutSelectionPopup(width, height);
                 ((ICrystalSkia)popupHost).OnDraw(canvas);
@@ -1730,6 +1760,7 @@ public partial class Window
             canvas.Restore();
 
             if (challengeGenerator != null) DrawChallengeGenerator(canvas, width, height);
+            if (continueRecordingDialog != null) DrawContinueRecordingDialog(canvas, width, height);
 
             if (commandMenu != null)
             {
@@ -1911,6 +1942,7 @@ public partial class Window
     {
         commandMenu = null;
         challengeGenerator = null;
+        continueRecordingDialog = null;
         selectionKind = SelectionKind.None;
         selectionControl = null;
         challengeCatalog = null;

@@ -35,6 +35,7 @@ public sealed class SessionRecordingController
         playback = result;
         Position = result.Moves.Count;
         Mode = RecordingControllerMode.Idle;
+        IsAutoplaying = false;
         return result;
     }
 
@@ -57,7 +58,11 @@ public sealed class SessionRecordingController
         if (delta % length == 0) return false;
         var move = new RecordedMove(axis, startX, startY, delta);
         Apply(move);
-        if (Mode == RecordingControllerMode.Recording) moves.Add(move);
+        if (Mode == RecordingControllerMode.Recording)
+        {
+            moves.Add(move);
+            Position = moves.Count;
+        }
         return true;
     }
 
@@ -108,6 +113,30 @@ public sealed class SessionRecordingController
     }
 
     public bool AutoplayTick() => IsAutoplaying && Step();
+
+    /// <summary>
+    /// Continue recording from the currently displayed playback position.
+    /// The existing source recording is immutable; only this controller's working
+    /// history is replaced by the prefix [0, Position).
+    /// </summary>
+    public int ContinueRecordingFromHere()
+    {
+        if (Mode != RecordingControllerMode.Playback || playback == null)
+            throw new InvalidOperationException("Inspect a recording before continuing from an index.");
+
+        // A position of N means exactly N moves have already been applied to grid.
+        // Capture the original initial arrangement, not the current board, so a
+        // new recording can replay the preserved prefix and any appended moves.
+        int prefixCount = Position;
+        recordingStart = playback.InitialCells;
+        moves.Clear();
+        for (int i = 0; i < prefixCount; i++) moves.Add(playback.Moves[i]);
+        playback = null;
+        Position = prefixCount;
+        IsAutoplaying = false;
+        Mode = RecordingControllerMode.Recording;
+        return prefixCount;
+    }
 
     public void StopPlayback()
     {

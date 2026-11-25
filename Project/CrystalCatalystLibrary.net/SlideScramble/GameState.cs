@@ -68,6 +68,16 @@ public class GameState
         }
     }
 
+    /// <summary>Start a new live attempt while preserving the recorded prefix's move count.</summary>
+    public void BeginContinuedRun(int completedMoves, double currentTime)
+    {
+        if (completedMoves < 0) throw new ArgumentOutOfRangeException(nameof(completedMoves));
+        MoveCount = completedMoves;
+        StartTime = currentTime;
+        FinalTime = 0;
+        Mode = GameMode.InGame;
+    }
+
     public bool CheckSolved(Grid grid, double currentTime)
     {
         if (Mode == GameMode.InGame && grid.IsSolved())
