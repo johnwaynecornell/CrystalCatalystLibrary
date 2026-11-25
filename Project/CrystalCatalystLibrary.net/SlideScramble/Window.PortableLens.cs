@@ -261,25 +261,45 @@ public partial class Window
             float length = MathF.Sqrt(deltaX * deltaX + deltaY * deltaY);
             if (length > 2)
             {
-                float unitX = deltaX / length;
-                float unitY = deltaY / length;
-                const float headLength = 14;
-                const float headHalfWidth = 6;
-                float baseX = pointer.X - unitX * headLength;
-                float baseY = pointer.Y - unitY * headLength;
-                using var arrowHead = new SKPath();
-                arrowHead.MoveTo(pointer.X, pointer.Y);
-                arrowHead.LineTo(baseX - unitY * headHalfWidth, baseY + unitX * headHalfWidth);
-                arrowHead.LineTo(baseX + unitY * headHalfWidth, baseY - unitX * headHalfWidth);
-                arrowHead.Close();
-                canvas.Save();
-                canvas.ClipRect(new SKRect(tileView.xx, tileView.yy,
-                    tileView.xx + tileView.width, tileView.yy + tileView.height));
-                canvas.DrawLine(start.X, start.Y, pointer.X - unitX * headLength * 0.6f,
-                    pointer.Y - unitY * headLength * 0.6f, lensGestureArrowPaint);
-                canvas.DrawPath(arrowHead, lensGestureArrowHeadPaint);
-                canvas.Restore();
+                DrawLensGestureArrow(canvas, start, pointer);
+
+                int pointerCellX = (int)MathF.Floor((pointer.X - tileView.xx) * MyGrid.Width / tileView.width);
+                int pointerCellY = (int)MathF.Floor((pointer.Y - tileView.yy) * MyGrid.Height / tileView.height);
+                if (lensInteraction.TryGetGestureTarget(pointerCellX, pointerCellY, out _,
+                        out int wrapOffsetX, out int wrapOffsetY) && (wrapOffsetX != 0 || wrapOffsetY != 0))
+                {
+                    DrawLensGestureArrow(canvas,
+                        (start.X + wrapOffsetX * tileW, start.Y + wrapOffsetY * tileH),
+                        (pointer.X + wrapOffsetX * tileW, pointer.Y + wrapOffsetY * tileH));
+                }
             }
         }
+    }
+
+    private void DrawLensGestureArrow(SKCanvas canvas, (float X, float Y) start, (float X, float Y) pointer)
+    {
+        float deltaX = pointer.X - start.X;
+        float deltaY = pointer.Y - start.Y;
+        float length = MathF.Sqrt(deltaX * deltaX + deltaY * deltaY);
+        if (length <= 2 || tileView == null) return;
+
+        float unitX = deltaX / length;
+        float unitY = deltaY / length;
+        const float headLength = 14;
+        const float headHalfWidth = 6;
+        float baseX = pointer.X - unitX * headLength;
+        float baseY = pointer.Y - unitY * headLength;
+        using var arrowHead = new SKPath();
+        arrowHead.MoveTo(pointer.X, pointer.Y);
+        arrowHead.LineTo(baseX - unitY * headHalfWidth, baseY + unitX * headHalfWidth);
+        arrowHead.LineTo(baseX + unitY * headHalfWidth, baseY - unitX * headHalfWidth);
+        arrowHead.Close();
+        canvas.Save();
+        canvas.ClipRect(new SKRect(tileView.xx, tileView.yy,
+            tileView.xx + tileView.width, tileView.yy + tileView.height));
+        canvas.DrawLine(start.X, start.Y, pointer.X - unitX * headLength * 0.6f,
+            pointer.Y - unitY * headLength * 0.6f, lensGestureArrowPaint);
+        canvas.DrawPath(arrowHead, lensGestureArrowHeadPaint);
+        canvas.Restore();
     }
 }

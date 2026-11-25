@@ -104,6 +104,48 @@ public sealed class PortableLensInteractionController
         };
     }
 
+    public bool TryGetGestureTarget(int x, int y, out PortableLensCell target, out int wrapOffsetX,
+        out int wrapOffsetY)
+    {
+        target = default;
+        wrapOffsetX = 0;
+        wrapOffsetY = 0;
+        if (Phase != PortableLensInteractionPhase.Accepted || !gestureStart.HasValue) return false;
+
+        int targetX = x;
+        int targetY = y;
+        bool outsideX = x < 0 || x >= boardWidth;
+        bool outsideY = y < 0 || y >= boardHeight;
+        if (outsideX && outsideY) return false;
+
+        if (outsideX)
+        {
+            if ((x != -1 && x != boardWidth) || y < 0 || y >= boardHeight || AnchorX != boardWidth - 1)
+                return false;
+            targetX = x < 0 ? boardWidth - 1 : 0;
+            wrapOffsetX = x < 0 ? boardWidth : -boardWidth;
+        }
+        else if (outsideY)
+        {
+            if ((y != -1 && y != boardHeight) || x < 0 || x >= boardWidth || AnchorY != boardHeight - 1)
+                return false;
+            targetY = y < 0 ? boardHeight - 1 : 0;
+            wrapOffsetY = y < 0 ? boardHeight : -boardHeight;
+        }
+
+        PortableLensCell? cell = CellAt(targetX, targetY);
+        if (!cell.HasValue || !LensGestureOperationMapper.TrySelectFamily(gestureStart.Value, cell.Value,
+                gestureControl, out _))
+        {
+            wrapOffsetX = 0;
+            wrapOffsetY = 0;
+            return false;
+        }
+
+        target = cell.Value;
+        return true;
+    }
+
     public bool BeginGesture(PortableLensCell start, bool control, int pointerX = 0, int pointerY = 0)
     {
         if (Phase != PortableLensInteractionPhase.Accepted || gestureStart.HasValue || !Enum.IsDefined(start))

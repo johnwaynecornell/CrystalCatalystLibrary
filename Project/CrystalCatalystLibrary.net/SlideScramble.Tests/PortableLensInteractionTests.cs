@@ -122,6 +122,63 @@ public class PortableLensInteractionTests
         Assert.Null(interaction.GesturePointer);
     }
 
+    [Theory]
+    [InlineData(PortableLensCell.Star, -1, 1, PortableLensCell.Circle, 5, 0)]
+    [InlineData(PortableLensCell.Circle, 5, 1, PortableLensCell.Star, -5, 0)]
+    public void HorizontalSplitLensMapsAdjacentOutsidePointersAcrossEitherBoardEdge(
+        PortableLensCell start, int pointerX, int pointerY, PortableLensCell expectedTarget,
+        int expectedWrapOffsetX, int expectedWrapOffsetY)
+    {
+        var interaction = AcceptedLens(5, 4, 4, 1);
+        Assert.True(interaction.BeginGesture(start, false));
+
+        Assert.True(interaction.TryGetGestureTarget(pointerX, pointerY, out PortableLensCell target,
+            out int wrapOffsetX, out int wrapOffsetY));
+
+        Assert.Equal(expectedTarget, target);
+        Assert.Equal(expectedWrapOffsetX, wrapOffsetX);
+        Assert.Equal(expectedWrapOffsetY, wrapOffsetY);
+        Assert.NotNull(interaction.CompleteGesture(target));
+    }
+
+    [Theory]
+    [InlineData(PortableLensCell.Triangle, 1, -1, PortableLensCell.Circle, 0, 4)]
+    [InlineData(PortableLensCell.Circle, 1, 4, PortableLensCell.Triangle, 0, -4)]
+    public void VerticalSplitLensMapsAdjacentOutsidePointersAcrossEitherBoardEdge(
+        PortableLensCell start, int pointerX, int pointerY, PortableLensCell expectedTarget,
+        int expectedWrapOffsetX, int expectedWrapOffsetY)
+    {
+        var interaction = AcceptedLens(5, 4, 1, 3);
+        Assert.True(interaction.BeginGesture(start, false));
+
+        Assert.True(interaction.TryGetGestureTarget(pointerX, pointerY, out PortableLensCell target,
+            out int wrapOffsetX, out int wrapOffsetY));
+
+        Assert.Equal(expectedTarget, target);
+        Assert.Equal(expectedWrapOffsetX, wrapOffsetX);
+        Assert.Equal(expectedWrapOffsetY, wrapOffsetY);
+        Assert.NotNull(interaction.CompleteGesture(target));
+    }
+
+    [Fact]
+    public void WrappedGestureRejectsCornersUnsplitEdgesAndInvalidCellPairs()
+    {
+        var horizontalSplit = AcceptedLens(5, 4, 4, 1);
+        Assert.True(horizontalSplit.BeginGesture(PortableLensCell.Circle, false));
+        Assert.False(horizontalSplit.TryGetGestureTarget(-1, -1, out _, out _, out _));
+        Assert.False(horizontalSplit.TryGetGestureTarget(-2, 1, out _, out _, out _));
+        Assert.False(horizontalSplit.TryGetGestureTarget(0, 2, out _, out _, out _));
+
+        var unsplit = AcceptedLens(5, 4, 0, 1);
+        Assert.True(unsplit.BeginGesture(PortableLensCell.Circle, false));
+        Assert.False(unsplit.TryGetGestureTarget(5, 1, out _, out _, out _));
+
+        var splitTop = AcceptedLens(5, 4, 1, 3);
+        Assert.True(splitTop.BeginGesture(PortableLensCell.Circle, false));
+        Assert.False(splitTop.TryGetGestureTarget(1, 3, out _, out _, out _));
+        Assert.False(splitTop.TryGetGestureTarget(2, 0, out _, out _, out _));
+    }
+
     [Fact]
     public void LensCannotBePositionedOnBoardSmallerThanAtlasMinimum()
     {
@@ -132,8 +189,13 @@ public class PortableLensInteractionTests
 
     private static PortableLensInteractionController AcceptedLens()
     {
+        return AcceptedLens(3, 3, 0, 0);
+    }
+
+    private static PortableLensInteractionController AcceptedLens(int width, int height, int anchorX, int anchorY)
+    {
         var interaction = new PortableLensInteractionController();
-        Assert.True(interaction.BeginPlacement(3, 3));
+        Assert.True(interaction.BeginPlacement(width, height, anchorX, anchorY));
         Assert.True(interaction.AcceptPosition());
         return interaction;
     }

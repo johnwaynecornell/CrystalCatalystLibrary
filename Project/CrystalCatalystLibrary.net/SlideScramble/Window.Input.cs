@@ -164,12 +164,13 @@ public partial class Window
                 lensInteraction.HasPendingGesture)
             {
                 PortableLensCell? target = null;
-                if (tileView != null && x >= tileView.xx && x < tileView.xx + tileView.width &&
-                    y >= tileView.yy && y < tileView.yy + tileView.height)
+                if (tileView != null)
                 {
-                    int cellX = (int)((x - tileView.xx) * MyGrid.Width / tileView.width);
-                    int cellY = (int)((y - tileView.yy) * MyGrid.Height / tileView.height);
-                    target = lensInteraction.CellAt(cellX, cellY);
+                    int cellX = (int)Math.Floor((x - tileView.xx) * (double)MyGrid.Width / tileView.width);
+                    int cellY = (int)Math.Floor((y - tileView.yy) * (double)MyGrid.Height / tileView.height);
+                    if (lensInteraction.TryGetGestureTarget(cellX, cellY, out PortableLensCell mappedTarget,
+                            out _, out _))
+                        target = mappedTarget;
                 }
 
                 LensGestureRequest? request = target.HasValue
