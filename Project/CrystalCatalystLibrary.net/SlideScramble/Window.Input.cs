@@ -240,7 +240,7 @@ public partial class Window
         bool insideBoard = tileView != null && x >= tileView.xx && x < tileView.xx + tileView.width &&
                            y >= tileView.yy && y < tileView.yy + tileView.height;
         lensDoubleClick.BeginPress(x, y, Environment.TickCount64,
-            insideBoard && CanHandleLensInput && sessions.RuleSet.AllowsUi(PuzzleOperationIds.Shuffle));
+            insideBoard && CanHandleLensInput && HasRuntimeLensOperation);
         if (lensInteraction.Phase != PortableLensInteractionPhase.Inactive)
         {
             if (lensInteraction.Phase == PortableLensInteractionPhase.Positioning)
@@ -348,7 +348,8 @@ public partial class Window
 
         // Board dragging hit test
         if (sessions.Mode != RecordingControllerMode.Playback && State.Mode != GameMode.Scrambling && tileView != null && Animations.Count == 0 && drag == null &&
-            sessions.RuleSet.AllowsUi(PuzzleOperationIds.Slide) && sessions.RuleSet.AllowsSolve(PuzzleOperationIds.Slide))
+            sessions.RuntimeUIEnabled.Contains(PuzzleOperationIds.Slide) &&
+            sessions.RuleSet.AllowsSolve(PuzzleOperationIds.Slide))
         {
             // Check if mouse is inside the board bounds
             if (x >= tileView.xx && x < tileView.xx + tileView.width &&
@@ -375,7 +376,7 @@ public partial class Window
             y < tileView.yy || y >= tileView.yy + tileView.height ||
             sessions.Mode == RecordingControllerMode.Playback || State.Mode == GameMode.Scrambling ||
             Animations.Count != 0 || popupHost.IsVisible || ShowGridSetup || boardDraft != null ||
-            !sessions.RuleSet.AllowsUi(PuzzleOperationIds.Shuffle))
+            !HasRuntimeLensOperation)
             return false;
 
         int anchorX = (int)((x - tileView.xx) * MyGrid.Width / tileView.width);

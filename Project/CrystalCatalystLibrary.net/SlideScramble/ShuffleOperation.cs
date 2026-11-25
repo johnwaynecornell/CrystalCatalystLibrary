@@ -23,6 +23,18 @@ public sealed record ShuffleOperationIntent(int AnchorX, int AnchorY, PortableLe
     });
 }
 
+public sealed record PortableLensSwapIntent(string OperationId, int AnchorX, int AnchorY,
+    PortableLensCell StartCell, PortableLensCell TargetCell, string Variant) : IOperationIntent
+{
+    public JsonElement ToRecordingParameters() => JsonSerializer.SerializeToElement(new
+    {
+        lensAnchor = new[] { AnchorX, AnchorY },
+        startCell = StartCell.ToString(),
+        targetCell = TargetCell.ToString(),
+        variant = Variant
+    });
+}
+
 public enum LensOperationFamily
 {
     Shuffle,
@@ -59,6 +71,28 @@ public static class LensGestureOperationMapper
         PortableLensCell.Square => (1, 1),
         _ => throw new ArgumentOutOfRangeException(nameof(cell))
     };
+
+    public static bool TryGetSwapVariant(PortableLensCell start, PortableLensCell target,
+        out LensOperationFamily family, out string variant)
+    {
+        family = default;
+        variant = string.Empty;
+        if (!TrySelectFamily(start, target, true, out family)) return false;
+
+        (family, variant) = (start, target) switch
+        {
+            (PortableLensCell.Circle, PortableLensCell.Star) => (LensOperationFamily.ColumnSwap, "UpLeft"),
+            (PortableLensCell.Star, PortableLensCell.Circle) => (LensOperationFamily.ColumnSwap, "UpRight"),
+            (PortableLensCell.Triangle, PortableLensCell.Square) => (LensOperationFamily.ColumnSwap, "DownLeft"),
+            (PortableLensCell.Square, PortableLensCell.Triangle) => (LensOperationFamily.ColumnSwap, "DownRight"),
+            (PortableLensCell.Circle, PortableLensCell.Triangle) => (LensOperationFamily.RowSwap, "LeftUp"),
+            (PortableLensCell.Triangle, PortableLensCell.Circle) => (LensOperationFamily.RowSwap, "LeftDown"),
+            (PortableLensCell.Star, PortableLensCell.Square) => (LensOperationFamily.RowSwap, "RightUp"),
+            (PortableLensCell.Square, PortableLensCell.Star) => (LensOperationFamily.RowSwap, "RightDown"),
+            _ => (default, string.Empty)
+        };
+        return variant.Length > 0;
+    }
 }
 
 /// <summary>Resolves each directed lens edge through its verified four-rotation Shuffle Atlas entry.</summary>
@@ -141,6 +175,116 @@ public sealed class ShuffleOperation : IPuzzleOperation
             if (cells[y, x] == tileId)
                 return (x, y);
 
+        throw new InvalidOperationException("A tracked lens tile is missing from the board.");
+    }
+
+    private static RecordedMove ToRecordedMove(char direction, int x, int y) => direction switch
+    {
+        'L' => new RecordedMove(RecordedMoveAxis.Row, x, y, 1),
+        'R' => new RecordedMove(RecordedMoveAxis.Row, x, y, -1),
+        'U' => new RecordedMove(RecordedMoveAxis.Column, x, y, 1),
+        'D' => new RecordedMove(RecordedMoveAxis.Column, x, y, -1),
+        _ => throw new ArgumentOutOfRangeException(nameof(direction))
+    };
+
+    private sealed record AtlasStep(PortableLensCell Cell, char Direction);
+}
+
+/// <summary>Resolves verified eight-rotation Portable Lens column and row swap formulas.</summary>
+public sealed class PortableLensSwapOperation : IPuzzleOperation
+{
+    private static readonly IReadOnlyDictionary<string, AtlasStep[]> ColumnFormulas = new Dictionary<string, AtlasStep[]>
+    {
+        ["UpLeft"] = Formula((PortableLensCell.Triangle, 'U'), (PortableLensCell.Square, 'U'),
+            (PortableLensCell.Square, 'L'), (PortableLensCell.Square, 'D'), (PortableLensCell.Triangle, 'R'),
+            (PortableLensCell.Triangle, 'R'), (PortableLensCell.Triangle, 'D'), (PortableLensCell.Star, 'L')),
+        ["DownLeft"] = Formula((PortableLensCell.Circle, 'D'), (PortableLensCell.Star, 'D'),
+            (PortableLensCell.Star, 'L'), (PortableLensCell.Star, 'U'), (PortableLensCell.Circle, 'R'),
+            (PortableLensCell.Circle, 'R'), (PortableLensCell.Circle, 'U'), (PortableLensCell.Square, 'L')),
+        ["UpRight"] = Formula((PortableLensCell.Square, 'U'), (PortableLensCell.Triangle, 'U'),
+            (PortableLensCell.Triangle, 'R'), (PortableLensCell.Triangle, 'D'), (PortableLensCell.Square, 'L'),
+            (PortableLensCell.Square, 'L'), (PortableLensCell.Square, 'D'), (PortableLensCell.Circle, 'R')),
+        ["DownRight"] = Formula((PortableLensCell.Star, 'D'), (PortableLensCell.Circle, 'D'),
+            (PortableLensCell.Circle, 'R'), (PortableLensCell.Circle, 'U'), (PortableLensCell.Star, 'L'),
+            (PortableLensCell.Star, 'L'), (PortableLensCell.Star, 'U'), (PortableLensCell.Triangle, 'R'))
+    };
+
+    private static readonly IReadOnlyDictionary<string, AtlasStep[]> RowFormulas = new Dictionary<string, AtlasStep[]>
+    {
+        ["LeftUp"] = Formula((PortableLensCell.Star, 'L'), (PortableLensCell.Square, 'L'),
+            (PortableLensCell.Square, 'U'), (PortableLensCell.Square, 'R'), (PortableLensCell.Star, 'D'),
+            (PortableLensCell.Star, 'D'), (PortableLensCell.Star, 'R'), (PortableLensCell.Triangle, 'U')),
+        ["RightUp"] = Formula((PortableLensCell.Circle, 'R'), (PortableLensCell.Triangle, 'R'),
+            (PortableLensCell.Triangle, 'U'), (PortableLensCell.Triangle, 'L'), (PortableLensCell.Circle, 'D'),
+            (PortableLensCell.Circle, 'D'), (PortableLensCell.Circle, 'L'), (PortableLensCell.Star, 'U')),
+        ["LeftDown"] = Formula((PortableLensCell.Square, 'L'), (PortableLensCell.Star, 'L'),
+            (PortableLensCell.Star, 'D'), (PortableLensCell.Star, 'R'), (PortableLensCell.Square, 'U'),
+            (PortableLensCell.Square, 'U'), (PortableLensCell.Square, 'R'), (PortableLensCell.Circle, 'D')),
+        ["RightDown"] = Formula((PortableLensCell.Triangle, 'R'), (PortableLensCell.Circle, 'R'),
+            (PortableLensCell.Circle, 'D'), (PortableLensCell.Circle, 'L'), (PortableLensCell.Triangle, 'U'),
+            (PortableLensCell.Triangle, 'U'), (PortableLensCell.Triangle, 'L'), (PortableLensCell.Square, 'D'))
+    };
+
+    public string Id { get; }
+
+    public PortableLensSwapOperation(string id)
+    {
+        if (id is not (PuzzleOperationIds.ColumnSwap or PuzzleOperationIds.RowSwap))
+            throw new ArgumentException("Portable Lens swap ID must be ColumnSwap or RowSwap.", nameof(id));
+        Id = id;
+    }
+
+    public OperationResolution Resolve(OperationBoardSnapshot board, IOperationIntent intent)
+    {
+        if (intent is not PortableLensSwapIntent swap || swap.OperationId != Id)
+            return OperationResolution.Rejected(Id, $"{Id} requires a lens anchor, directed cells, and formula variant.");
+        if (board.Width < 3 || board.Height < 3)
+            return OperationResolution.Rejected(Id, "Portable Lens swap formulas require board dimensions of at least 3×3.");
+        if (swap.AnchorX < 0 || swap.AnchorX >= board.Width || swap.AnchorY < 0 || swap.AnchorY >= board.Height)
+            return OperationResolution.Rejected(Id, "Lens anchor is outside the board.");
+        if (!LensGestureOperationMapper.TryGetSwapVariant(swap.StartCell, swap.TargetCell, out var family,
+                out string expectedVariant) ||
+            (Id == PuzzleOperationIds.ColumnSwap) != (family == LensOperationFamily.ColumnSwap) ||
+            !string.Equals(swap.Variant, expectedVariant, StringComparison.Ordinal))
+            return OperationResolution.Rejected(Id, "Swap formula variant does not match the directed neighboring gesture.");
+
+        IReadOnlyDictionary<string, AtlasStep[]> formulas = Id == PuzzleOperationIds.ColumnSwap
+            ? ColumnFormulas
+            : RowFormulas;
+        if (!formulas.TryGetValue(swap.Variant, out AtlasStep[]? formula))
+            return OperationResolution.Rejected(Id, "Swap formula variant is unsupported.");
+
+        int[,] cells = board.Cells;
+        var trackedTiles = new int[4];
+        foreach (PortableLensCell cell in Enum.GetValues<PortableLensCell>())
+        {
+            var (offsetX, offsetY) = LensGestureOperationMapper.Coordinates(cell);
+            trackedTiles[(int)cell] = cells[(swap.AnchorY + offsetY) % board.Height,
+                (swap.AnchorX + offsetX) % board.Width];
+        }
+
+        var expansion = new List<RecordedMove>(8);
+        foreach (var step in formula)
+        {
+            (int x, int y) = FindTile(cells, trackedTiles[(int)step.Cell]);
+            var move = ToRecordedMove(step.Direction, x, y);
+            expansion.Add(move);
+            if (move.Axis == RecordedMoveAxis.Row) LogicalMoves.MoveRow(cells, move.Index, move.Delta);
+            else LogicalMoves.MoveColumn(cells, move.Index, move.Delta);
+        }
+
+        return OperationResolution.Success(Id, expansion);
+    }
+
+    private static AtlasStep[] Formula(params (PortableLensCell Cell, char Direction)[] steps) =>
+        steps.Select(step => new AtlasStep(step.Cell, step.Direction)).ToArray();
+
+    private static (int X, int Y) FindTile(int[,] cells, int tileId)
+    {
+        for (int y = 0; y < cells.GetLength(0); y++)
+        for (int x = 0; x < cells.GetLength(1); x++)
+            if (cells[y, x] == tileId)
+                return (x, y);
         throw new InvalidOperationException("A tracked lens tile is missing from the board.");
     }
 

@@ -9,6 +9,8 @@ namespace SlideScramble;
 
 public partial class Window
 {
+    private PuzzleRuleSet? previewRules;
+
     private void ShowSessionSelectionPopup()
     {
         ShowSelectionPopup(SelectionKind.Session);
@@ -52,6 +54,7 @@ public partial class Window
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or NotSupportedException)
         {
             selectionKind = SelectionKind.None;
+            ClearPreview();
             sessionMessage = ex.Message;
             showMedia = true;
         }
@@ -87,6 +90,7 @@ public partial class Window
 
     private void ClearPreview()
     {
+        previewRules = null;
         if (previewGrid != null)
         {
             foreach (var tile in previewGrid.Tiles) tile.Image.Dispose();
@@ -107,6 +111,7 @@ public partial class Window
             {
                 var recording = ResolveSelection(control.ResultText);
                 previewGrid = CreateRecordingGrid(recording, out _);
+                previewRules = recording.RuleSet.Snapshot();
                 control.SetButtonEnabled(0, true);
                 control.SetButtonEnabled(1, recording.Moves.Count > 0);
                 selectionMessage = $"Starting board  Goal: {recording.GetVerifiedGoalMoveCost()?.ToString() ?? "?"}";
@@ -155,6 +160,7 @@ public partial class Window
     private void OnPopupClosed(PopupResult result)
     {
         commandMenu = null;
+        rulesMenuVisible = false;
         challengeGenerator = null;
         continueRecordingDialog = null;
         selectionKind = SelectionKind.None;
@@ -195,9 +201,13 @@ public partial class Window
     {
         if (previewGrid != null && previewArea.Width > 0 && previewArea.Height > 0)
         {
-            float size = Math.Min(previewArea.Width / previewGrid.Width, previewArea.Height / previewGrid.Height);
-            float left = previewArea.MidX - size * previewGrid.Width / 2;
-            float top = previewArea.MidY - size * previewGrid.Height / 2;
+            var ruleLines = SelectionPreviewRules.Format(previewRules);
+            var layout = SelectionPreviewLayout.Calculate(previewArea, previewGrid.Width, previewGrid.Height,
+                ruleLines.Count);
+            DrawPreviewRules(canvas, ruleLines, layout.RulesBounds);
+            float size = layout.BoardBounds.Width / previewGrid.Width;
+            float left = layout.BoardBounds.Left;
+            float top = layout.BoardBounds.Top;
             for (int y = 0; y < previewGrid.Height; y++)
                 for (int x = 0; x < previewGrid.Width; x++)
                 {
@@ -212,6 +222,44 @@ public partial class Window
         canvas.Translate(messageX, previewArea.Bottom + 16);
         canvas.Scale(Math.Min(1, messageWidth / Math.Max(1, footerFont.MeasureText(selectionMessage))), 1);
         canvas.DrawText(selectionMessage, 0, 0, footerFont, hudTextPaint);
+        canvas.Restore();
+    }
+
+    private void DrawPreviewRules(SKCanvas canvas, IReadOnlyList<string> lines, SKRect header)
+    {
+        if (lines.Count == 0 || header.Width <= 0 || header.Height <= 0) return;
+
+        using var glassFillPaint = new SKPaint
+        {
+            Color = new SKColor(15, 23, 42, 205),
+            Style = SKPaintStyle.Fill,
+            IsAntialias = true
+        };
+        using var glassBorderPaint = new SKPaint
+        {
+            Color = new SKColor(148, 163, 184, 110),
+            Style = SKPaintStyle.Stroke,
+            StrokeWidth = 1,
+            IsAntialias = true
+        };
+        canvas.DrawRoundRect(header, 6, 6, glassFillPaint);
+        canvas.DrawRoundRect(header, 6, 6, glassBorderPaint);
+
+        float lineHeight = header.Height / lines.Count;
+        canvas.Save();
+        canvas.ClipRoundRect(new SKRoundRect(header, 6, 6));
+        for (int i = 0; i < lines.Count; i++)
+        {
+            string line = lines[i];
+            float textWidth = Math.Max(1, footerFont.MeasureText(line));
+            float horizontalScale = Math.Min(1, Math.Max(1, header.Width - 12) / textWidth);
+            float verticalScale = Math.Min(1, lineHeight / 14);
+            canvas.Save();
+            canvas.Translate(header.Left + 6, header.Top + i * lineHeight + lineHeight * 0.85f);
+            canvas.Scale(horizontalScale, verticalScale);
+            canvas.DrawText(line, 0, 0, footerFont, hudTextPaint);
+            canvas.Restore();
+        }
         canvas.Restore();
     }
 }

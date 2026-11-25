@@ -85,12 +85,22 @@ public partial class Window
     private ContinueRecordingDialog? continueRecordingDialog;
     private bool showMedia;
 
-    internal static string FormatMovesText(int moves, int? goal) =>
-        goal.HasValue ? $"Moves: {moves}  Goal: {goal.Value}" : $"Moves: {moves}";
+    internal static string FormatGameScoreText(int moveCost, int? goalCost) =>
+        goalCost.HasValue ? $"Move cost: {moveCost}  Goal cost: {goalCost.Value}" : $"Move cost: {moveCost}";
 
-    private string FormatGameScoreText(int moves, int? goal) => IsShuffleLogic
-        ? goal.HasValue ? $"Logical moves: {moves}  Goal: {goal.Value}" : $"Logical moves: {moves}"
-        : FormatMovesText(moves, goal);
+    internal static string FormatRecordingStatus(RecordingControllerMode mode, int primitivePosition,
+        int primitiveCount) => mode switch
+    {
+        RecordingControllerMode.Playback => $"Primitive playback: {primitivePosition}/{primitiveCount}",
+        RecordingControllerMode.Recording => $"Recorded primitives: {primitiveCount}",
+        _ => $"Primitive position: {primitivePosition}/{primitiveCount}"
+    };
+
+    internal static string FormatPrimitivePosition(int primitivePosition, int primitiveCount) =>
+        $"Primitive position: {primitivePosition}/{primitiveCount}";
+
+    internal static string FormatContinueRecordingStatus(int primitivePosition) =>
+        $"Recording from primitive position {primitivePosition}. Stop Rec, then Save.";
 
     // Popup selection integration
     private readonly CrystalPopupHost popupHost = new();
@@ -392,7 +402,7 @@ public partial class Window
         boardCommands = new BoardCommand[]
         {
             new(new CrystalMenuEntry("Edit Board"), OpenBoardEditor),
-            new(new CrystalMenuEntry("Game Mode (Classic / ShuffleLogic)"), ToggleGamePreset),
+            new(new CrystalMenuEntry("Rules and Input Preferences"), ShowRulesMenu),
             new(new CrystalMenuEntry("Position Portable Lens"), BeginPortableLensPlacement),
             new(new CrystalMenuEntry("Scramble", "S"), ScrambleBoard),
             new(new CrystalMenuEntry("Generate Challenge"), ShowChallengeGenerator),
@@ -442,13 +452,14 @@ public partial class Window
             {
                 if (spaceHeld) return;
                 spaceHeld = true;
-                if (commandMenu != null) DispatchBoardCommand(modifiers, keycode);
+                if (rulesMenuVisible) popupHost.Cancel();
+                else if (commandMenu != null) DispatchBoardCommand(modifiers, keycode);
                 else ShowCommandMenu();
                 return;
             }
             if (commandMenu != null)
             {
-                if (!DispatchBoardCommand(modifiers, keycode))
+                if (rulesMenuVisible || !DispatchBoardCommand(modifiers, keycode))
                     popupHost.KeyDown((KeyCode)commandKey, shift, control);
                 return;
             }
@@ -539,12 +550,16 @@ public partial class Window
         sessions.Mode == RecordingControllerMode.Idle && State.Mode != GameMode.Scrambling &&
         drag == null && Animations.Count == 0 && lensInteraction.Phase == PortableLensInteractionPhase.Inactive;
 
+    private bool HasClassicMathRules => activeRules.Name == "Classic" &&
+        activeRules.ScrambleAllowed.SequenceEqual(new[] { PuzzleOperationIds.Slide }) &&
+        activeRules.SolveAllowed.SequenceEqual(new[] { PuzzleOperationIds.Slide });
+
     private void ScrambleBoard()
     {
         if (!CanChangeBoard) return;
-        if (activeRules.Name == "ShuffleLogic")
+        if (!HasClassicMathRules)
         {
-            BeginShuffleChallenge(SingleScrambleMoves);
+            BeginRuleAwareChallenge(1, false);
             return;
         }
         goal = null;

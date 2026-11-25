@@ -19,6 +19,18 @@ public class OperationRulesTests
     }
 
     [Fact]
+    public void HybridPresetSupportsSlideAndShuffleAndRequiresShuffleResolver()
+    {
+        var rules = PuzzleRuleSet.CreateHybrid();
+        var expected = new[] { PuzzleOperationIds.Shuffle, PuzzleOperationIds.Slide };
+        Assert.Equal("Hybrid", rules.Name);
+        Assert.Equal(expected, rules.ScrambleAllowed);
+        Assert.Equal(expected, rules.SolveAllowed);
+        Assert.Equal(expected, rules.UIEnabled);
+        Assert.Throws<ArgumentException>(() => PuzzleRuleSet.CreateHybrid(new OperationRegistry()));
+    }
+
+    [Fact]
     public void ShuffleLogicPresetAllowsOnlyShuffleAndChargesOneLogicalMove()
     {
         var registry = OperationRegistry.CreateDefault();

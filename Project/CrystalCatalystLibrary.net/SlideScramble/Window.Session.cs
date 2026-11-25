@@ -84,8 +84,8 @@ public partial class Window
 
         canvas.Save();
         canvas.ClipRect(new SKRect(8, layout.Height - 30, layout.Width - 8, layout.Height));
-        canvas.DrawText($"{sessions.Mode}  {sessions.Position}/{sessions.MoveCount}", 12, layout.Height - 18,
-            footerFont, hudMutedPaint);
+        canvas.DrawText($"{sessions.Mode}  {FormatPrimitivePosition(sessions.Position, sessions.MoveCount)}", 12,
+            layout.Height - 18, footerFont, hudMutedPaint);
         canvas.DrawText(sessionMessage, 12, layout.Height - 4, footerFont, hudMutedPaint);
         canvas.Restore();
         canvas.Restore();
@@ -254,15 +254,23 @@ public partial class Window
         goal = null;
         State.BeginContinuedRun(prefixCost, wnd.uptimeSeconds());
         moveHighlight = null;
-        sessionMessage = IsShuffleLogic
-            ? $"Recording from primitive {prefixCount}. Stop Rec, then Save."
-            : $"Recording from move {prefixCount}. Stop Rec, then Save.";
+        sessionMessage = FormatContinueRecordingStatus(prefixCount);
         wnd.QueueRedraw();
     }
 
     private void ResumePlaybackIfStopped()
     {
         if (sessions.Mode != RecordingControllerMode.Idle) return;
+        if (sessions.Playback == null && savedSession != null)
+        {
+            MyGrid = CreateRecordingGrid(savedSession, out var controller);
+            sessions = controller;
+            activeRules = savedSession.RuleSet;
+            lensInteraction.Cancel();
+            UpdateTileView();
+            goal = savedSession.GetVerifiedGoalMoveCost();
+            return;
+        }
         sessions.ResumePlayback();
         goal = sessions.Playback!.GetVerifiedGoalMoveCost();
     }

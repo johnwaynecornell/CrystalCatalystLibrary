@@ -21,7 +21,7 @@ public sealed class ShuffleChallenge
     }
 }
 
-/// <summary>Builds Shuffle-only challenges and their exact inverse operation recordings.</summary>
+/// <summary>Builds challenges and their verified inverse operation recordings.</summary>
 public static class ShuffleChallengeFactory
 {
     private static readonly (PortableLensCell Start, PortableLensCell Target)[] Gestures =
@@ -74,6 +74,153 @@ public static class ShuffleChallengeFactory
         var solution = new SessionRecording(scrambled, solutionOperations, rules, rules.Registry);
         return new ShuffleChallenge(scrambled, scrambleOperations, scrambleMoves, solution);
     }
+
+    /// <summary>Builds a challenge from supported, authorized operations with a verified player-accessible inverse.</summary>
+    public static ShuffleChallenge GenerateRuleAware(int width, int height, int operationCount, PuzzleRuleSet rules,
+        OperationRuleEvaluator evaluator, Random random)
+    {
+        ArgumentNullException.ThrowIfNull(rules);
+        ArgumentNullException.ThrowIfNull(evaluator);
+        ArgumentNullException.ThrowIfNull(random);
+        if (width < 2) throw new ArgumentOutOfRangeException(nameof(width));
+        if (height < 2) throw new ArgumentOutOfRangeException(nameof(height));
+        if (operationCount < 1) throw new ArgumentOutOfRangeException(nameof(operationCount));
+
+        var candidates = CandidateIntents(width, height, rules).ToArray();
+        var rulesEvaluator = new OperationRuleEvaluator(rules.Registry);
+        var cells = Solved(width, height);
+        var scramble = new List<RecordedOperation>(operationCount);
+        var inverses = new List<IReadOnlyList<RecordedOperation>>(operationCount);
+        for (int step = 0; step < operationCount; step++)
+        {
+            // Randomize a finite candidate set so rejection never depends on repeated random guesses.
+            for (int i = candidates.Length - 1; i > 0; i--)
+            {
+                int j = random.Next(i + 1);
+                (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
+            }
+
+            bool added = false;
+            foreach (var intent in candidates)
+            {
+                var evaluation = evaluator.EvaluateScrambleRequest(new OperationBoardSnapshot(cells), intent, rules);
+                if (!evaluation.IsAccepted) continue;
+                var registryEvaluation = rulesEvaluator.EvaluateScrambleRequest(new OperationBoardSnapshot(cells), intent, rules);
+                if (!Equivalent(evaluation, registryEvaluation)) continue;
+                var next = (int[,])cells.Clone();
+                Apply(next, evaluation.Plan!.Expansion);
+                if (SameCells(cells, next) || (step == operationCount - 1 && IsSolved(next))) continue;
+                var inverse = TryInverse(cells, next, intent, evaluation.Plan, rules, evaluator, rulesEvaluator);
+                if (inverse == null) continue;
+                scramble.Add(ToRecordedOperation(intent, evaluation.Plan));
+                inverses.Add(inverse);
+                cells = next;
+                added = true;
+                break;
+            }
+
+            if (!added)
+                throw new InvalidOperationException("No safe compatible scramble and player-accessible inverse is available for these rules and board dimensions.");
+        }
+
+        var solutionOperations = inverses.AsEnumerable().Reverse().SelectMany(operations => operations).ToArray();
+        var verified = (int[,])cells.Clone();
+        Apply(verified, solutionOperations.SelectMany(operation => operation.PrimitiveMoves));
+        if (!IsSolved(verified)) throw new InvalidOperationException("Generated inverses did not restore the solved board.");
+        var solution = new SessionRecording(cells, solutionOperations, rules, rules.Registry);
+        return new ShuffleChallenge(cells, scramble, scramble.SelectMany(operation => operation.PrimitiveMoves), solution);
+    }
+
+    private static IEnumerable<IOperationIntent> CandidateIntents(int width, int height, PuzzleRuleSet rules)
+    {
+        if (rules.ScrambleAllowed.Contains(PuzzleOperationIds.Slide) &&
+            rules.Registry.TryGetOperation(PuzzleOperationIds.Slide, out _))
+        {
+            foreach (var axis in new[] { RecordedMoveAxis.Row, RecordedMoveAxis.Column })
+            {
+                int count = axis == RecordedMoveAxis.Row ? height : width;
+                int length = axis == RecordedMoveAxis.Row ? width : height;
+                for (int index = 0; index < count; index++)
+                for (int delta = 1; delta < length; delta++)
+                {
+                    yield return new SlideOperationIntent(axis, index, delta);
+                    yield return new SlideOperationIntent(axis, index, -delta);
+                }
+            }
+        }
+
+        if (width < 3 || height < 3) yield break;
+        foreach (string id in new[] { PuzzleOperationIds.Shuffle, PuzzleOperationIds.RowSwap, PuzzleOperationIds.ColumnSwap })
+        {
+            if (!rules.ScrambleAllowed.Contains(id) || !rules.Registry.TryGetOperation(id, out _)) continue;
+            for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
+            foreach (var (start, target) in Gestures)
+            {
+                if (id == PuzzleOperationIds.Shuffle)
+                    yield return new ShuffleOperationIntent(x, y, start, target);
+                else if (LensGestureOperationMapper.TryGetSwapVariant(start, target, out var family, out string variant) &&
+                         (id == PuzzleOperationIds.RowSwap) == (family == LensOperationFamily.RowSwap))
+                    yield return new PortableLensSwapIntent(id, x, y, start, target, variant);
+            }
+        }
+    }
+
+    private static IReadOnlyList<RecordedOperation>? TryInverse(int[,] before, int[,] after, IOperationIntent intent,
+        OperationPlan scramble, PuzzleRuleSet rules, OperationRuleEvaluator evaluator, OperationRuleEvaluator rulesEvaluator)
+    {
+        IOperationIntent inverse = intent switch
+        {
+            SlideOperationIntent slide => slide with { Delta = -slide.Delta },
+            ShuffleOperationIntent shuffle => shuffle with { StartCell = shuffle.TargetCell, TargetCell = shuffle.StartCell },
+            PortableLensSwapIntent swap => swap,
+            _ => throw new InvalidOperationException("Unsupported challenge operation.")
+        };
+        var evaluation = evaluator.EvaluateUiRequest(new OperationBoardSnapshot(after), inverse, rules);
+        var registryEvaluation = rulesEvaluator.EvaluateUiRequest(new OperationBoardSnapshot(after), inverse, rules);
+        if (Equivalent(evaluation, registryEvaluation))
+        {
+            var result = (int[,])after.Clone();
+            Apply(result, evaluation.Plan!.Expansion);
+            if (SameCells(before, result)) return new[] { ToRecordedOperation(inverse, evaluation.Plan) };
+        }
+
+        var current = (int[,])after.Clone();
+        var operations = new List<RecordedOperation>();
+        foreach (var move in scramble.Expansion.Reverse())
+        {
+            int length = move.Axis == RecordedMoveAxis.Row ? current.GetLength(1) : current.GetLength(0);
+            var slide = new SlideOperationIntent(move.Axis, move.Index, -(move.Delta % length));
+            var slideEvaluation = evaluator.EvaluateUiRequest(new OperationBoardSnapshot(current), slide, rules);
+            var registrySlideEvaluation = rulesEvaluator.EvaluateUiRequest(new OperationBoardSnapshot(current), slide, rules);
+            if (!Equivalent(slideEvaluation, registrySlideEvaluation)) return null;
+            operations.Add(ToRecordedOperation(slide, slideEvaluation.Plan!));
+            Apply(current, slideEvaluation.Plan!.Expansion);
+        }
+        return SameCells(before, current) ? operations : null;
+    }
+
+    private static bool Equivalent(OperationEvaluation left, OperationEvaluation right) =>
+        left.IsAccepted && right.IsAccepted && left.Plan!.Purpose == right.Plan!.Purpose &&
+        left.Plan.Accounting == right.Plan.Accounting && left.Plan.MoveCost == right.Plan.MoveCost &&
+        left.Plan.Expansion.SequenceEqual(right.Plan.Expansion);
+
+    private static bool SameCells(int[,] left, int[,] right)
+    {
+        for (int y = 0; y < left.GetLength(0); y++)
+        for (int x = 0; x < left.GetLength(1); x++)
+            if (left[y, x] != right[y, x]) return false;
+        return true;
+    }
+
+    private static RecordedOperation ToRecordedOperation(IOperationIntent intent, OperationPlan plan) => intent switch
+    {
+        SlideOperationIntent => RecordedOperation.CreateSlide(plan.Expansion.Single(), plan.Purpose),
+        ShuffleOperationIntent shuffle => ToRecordedOperation(shuffle, plan),
+        PortableLensSwapIntent swap => new RecordedOperation(plan.OperationId, swap.ToRecordingParameters(),
+            plan.Expansion, plan.Purpose, plan.Accounting, plan.MoveCost),
+        _ => throw new InvalidOperationException("Unsupported challenge operation.")
+    };
 
     private static void AddScrambleOperation(int[,] cells, PuzzleRuleSet rules, OperationRuleEvaluator evaluator,
         Random random, ICollection<(ShuffleOperationIntent Intent, OperationPlan Plan)> operations)

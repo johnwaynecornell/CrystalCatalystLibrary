@@ -41,27 +41,65 @@ public partial class Window
     private void BeginGeneratedChallenge(int multiplier)
     {
         popupHost.Accept();
-        challengeScale = multiplier;
-        ShowGridSetup = false;
-        if (IsShuffleLogic)
+        if (HasClassicMathRules)
         {
-            BeginShuffleChallenge(SingleScrambleMoves * multiplier);
+            challengeScale = multiplier;
+            ShowGridSetup = false;
+            MyGrid.Reset();
+            sessions = new SessionRecordingController(MyGrid, activeRules.WithUIEnabled(sessions.RuntimeUIEnabled));
+            savedSession = null;
+            goal = null;
+            moveHighlight = null;
+            sessionMessage = "";
+            generationStart = new int[MyGrid.Height, MyGrid.Width];
+            for (int y = 0; y < MyGrid.Height; y++)
+                for (int x = 0; x < MyGrid.Width; x++)
+                    generationStart[y, x] = y * MyGrid.Width + x;
+            ScrambleCount = SingleScrambleMoves * multiplier;
+            generatedMoves = new List<RecordedMove>(ScrambleCount);
+            State.StartScrambling();
             return;
         }
-        MyGrid.Reset();
-        sessions = new SessionRecordingController(MyGrid, activeRules);
-        savedSession = null;
-        goal = null;
-        moveHighlight = null;
-        sessionMessage = "";
-        generationStart = new int[MyGrid.Height, MyGrid.Width];
-        for (int y = 0; y < MyGrid.Height; y++)
-            for (int x = 0; x < MyGrid.Width; x++)
-                generationStart[y, x] = y * MyGrid.Width + x;
+        BeginRuleAwareChallenge(multiplier, true);
+    }
 
-        ScrambleCount = SingleScrambleMoves * multiplier;
-        generatedMoves = new List<RecordedMove>(ScrambleCount);
-        State.StartScrambling();
+    private void BeginRuleAwareChallenge(int multiplier, bool updateScale)
+    {
+        if (!CanChangeBoard)
+        {
+            sessionMessage = "Finish the current activity before generating a challenge";
+            return;
+        }
+
+        try
+        {
+            var rules = activeRules.WithUIEnabled(sessions.RuntimeUIEnabled);
+            var challenge = ShuffleChallengeFactory.GenerateRuleAware(MyGrid.Width, MyGrid.Height,
+                checked(SingleScrambleMoves * multiplier), rules, new OperationRuleEvaluator(rules.Registry), rand);
+            var grid = new Grid(MyGrid.Width, MyGrid.Height);
+            var controller = new SessionRecordingController(grid, rules);
+            controller.LoadPlayback(challenge.Solution);
+            controller.StopPlayback();
+
+            if (updateScale) challengeScale = multiplier;
+            ShowGridSetup = false;
+            MyGrid = grid;
+            sessions = controller;
+            savedSession = challenge.Solution;
+            goal = challenge.Solution.GetVerifiedGoalMoveCost();
+            moveHighlight = null;
+            lensInteraction.Cancel();
+            State.StartScrambling();
+            State.FinishScrambling(wnd.uptimeSeconds());
+            UpdateTileView();
+            Audio.PlayGameStartChime();
+            sessionMessage = "Challenge ready. Save or replay the solution here.";
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or OverflowException)
+        {
+            showMedia = true;
+            sessionMessage = ex.Message;
+        }
     }
 
     private RecordedMove NextScrambleMove()
@@ -88,7 +126,8 @@ public partial class Window
     private void FinishGeneratedChallenge()
     {
         if (generatedMoves == null) return;
-        var solution = new SessionRecording(generationStart!, generatedMoves).Reverse();
+        var solution = new SessionRecording(generationStart!, generatedMoves.Select(move => RecordedOperation.CreateSlide(move)),
+            activeRules.WithUIEnabled(sessions.RuntimeUIEnabled)).Reverse();
         generationStart = null;
         generatedMoves = null;
         sessions.LoadPlayback(solution);
@@ -173,8 +212,7 @@ public partial class Window
             canvas.Scale(Bounds.Width / Width, Bounds.Height / Height);
             canvas.DrawRoundRect(new SKRect(0, 0, Width, Height), 14, 14, owner.hudBarPaint);
             canvas.DrawText("Generate Challenge", 22, 34, owner.panelTitleFont, owner.hudTextPaint);
-            string unit = owner.IsShuffleLogic ? "shuffles" : "slides";
-            canvas.DrawText($"{multiplier}× scramble  ·  {multiplier * owner.SingleScrambleMoves} {unit}",
+            canvas.DrawText($"{multiplier}× scramble  ·  {multiplier * owner.SingleScrambleMoves} operations",
                 22, 62, owner.hudFont, owner.hudTextPaint);
 
             float thumb = TrackLeft + (TrackRight - TrackLeft) * (multiplier - 1) / 9;

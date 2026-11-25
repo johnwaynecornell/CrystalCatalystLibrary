@@ -287,16 +287,10 @@ public partial class Window
             string timeText = $"Time: {State.FormatTime(time)}";
             string? recordingText = null;
             if (sessions.Mode == RecordingControllerMode.Playback)
-            {
-                recordingText = IsShuffleLogic
-                    ? $"Primitive remaining: {sessions.MoveCount - sessions.Position}"
-                    : $"Remaining: {sessions.MoveCount - sessions.Position}";
-            }
+                recordingText = FormatRecordingStatus(sessions.Mode, sessions.Position, sessions.MoveCount);
             
             if (sessions.Mode == RecordingControllerMode.Recording)
-            {
-                recordingText = IsShuffleLogic ? $"Recorded primitives: {sessions.MoveCount}" : $"Move {sessions.MoveCount}";
-            }
+                recordingText = FormatRecordingStatus(sessions.Mode, sessions.Position, sessions.MoveCount);
             
             hudBoldFont.MeasureText(ruleSetText, out SKRect ruleSetBounds, hudMutedPaint);
             hudBoldFont.MeasureText(movesText, out SKRect movesBounds, hudTextPaint);
@@ -388,7 +382,7 @@ public partial class Window
                 DrawStar(canvas, titleX - 22, by + 34, 9, 4f, bannerTitlePaint);
                 DrawStar(canvas, titleX + wtBounds.Width + 22, by + 34, 9, 4f, bannerTitlePaint);
 
-                string stats = $"Time: {State.FormatTime(time)}  •  Moves: {State.MoveCount}";
+                string stats = $"Time: {State.FormatTime(time)}  •  {FormatGameScoreText(State.MoveCount, goal)}";
                 bannerTextFont.MeasureText(stats, out SKRect sBounds, bannerTextPaint);
                 canvas.DrawText(stats, bx + (bannerW - sBounds.Width) / 2f, by + 74, bannerTextFont, bannerTextPaint);
 
