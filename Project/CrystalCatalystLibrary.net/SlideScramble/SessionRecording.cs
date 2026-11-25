@@ -398,23 +398,27 @@ public sealed class SessionRecording
                 throw new ArgumentException("Symbolic lens cells must be nonempty strings.", nameof(operations));
         }
 
-        if (!string.Equals(operation.OperationId, PuzzleOperationIds.Slide, StringComparison.Ordinal)) return;
-        if (operation.Parameters.EnumerateObject().Count() != 3 ||
-            !operation.Parameters.TryGetProperty("axis", out var axisValue) ||
-            axisValue.ValueKind != JsonValueKind.String ||
-            !Enum.TryParse(axisValue.GetString(), false, out RecordedMoveAxis axis) ||
-            !operation.Parameters.TryGetProperty("index", out var indexValue) ||
-            !indexValue.TryGetInt32(out int index) ||
-            !operation.Parameters.TryGetProperty("delta", out var deltaValue) || !deltaValue.TryGetInt32(out int delta))
-            throw new ArgumentException("Slide parameters require an axis, index, and displacement.",
-                nameof(operations));
+        if (string.Equals(operation.OperationId, PuzzleOperationIds.Slide, StringComparison.Ordinal))
+        {
+            if (operation.Parameters.EnumerateObject().Count() != 3 ||
+                !operation.Parameters.TryGetProperty("axis", out var axisValue) ||
+                axisValue.ValueKind != JsonValueKind.String ||
+                !Enum.TryParse(axisValue.GetString(), false, out RecordedMoveAxis axis) ||
+                !operation.Parameters.TryGetProperty("index", out var indexValue) ||
+                !indexValue.TryGetInt32(out int index) ||
+                !operation.Parameters.TryGetProperty("delta", out var deltaValue) || !deltaValue.TryGetInt32(out int delta))
+                throw new ArgumentException("Slide parameters require an axis, index, and displacement.",
+                    nameof(operations));
 
-        var move = operation.PrimitiveMoves[0];
-        int length = axis == RecordedMoveAxis.Row ? Width : Height;
-        if (operation.PrimitiveMoves.Count != 1 || !Enum.IsDefined(axis) || index != move.Index || axis != move.Axis ||
-            (operation.IsInverse ? ((long)delta + move.Delta) % length != 0 : ((long)delta - move.Delta) % length != 0))
-            throw new ArgumentException("Slide parameters do not match the recorded primitive move.",
-                nameof(operations));
+            var move = operation.PrimitiveMoves[0];
+            int length = axis == RecordedMoveAxis.Row ? Width : Height;
+            if (operation.PrimitiveMoves.Count != 1 || !Enum.IsDefined(axis) || index != move.Index || axis != move.Axis ||
+                (operation.IsInverse ? ((long)delta + move.Delta) % length != 0 : ((long)delta - move.Delta) % length != 0))
+                throw new ArgumentException("Slide parameters do not match the recorded primitive move.",
+                    nameof(operations));
+            return;
+        }
+
     }
 
     private void ValidateAccounting(RecordedOperation operation)
@@ -428,9 +432,6 @@ public sealed class SessionRecording
             return;
         }
 
-        if (!ruleSet.AllowsUi(operation.OperationId))
-            throw new ArgumentException("Recorded solve operation is not enabled in the UI rule snapshot.",
-                nameof(operations));
         if (ruleSet.AllowsSolve(operation.OperationId))
         {
             if (operation.Accounting != OperationMoveAccounting.LogicalOperation || operation.MoveCost != 1)

@@ -155,6 +155,7 @@ public partial class Window
     private void OnPopupClosed(PopupResult result)
     {
         commandMenu = null;
+        rulesMenuVisible = false;
         challengeGenerator = null;
         continueRecordingDialog = null;
         selectionKind = SelectionKind.None;

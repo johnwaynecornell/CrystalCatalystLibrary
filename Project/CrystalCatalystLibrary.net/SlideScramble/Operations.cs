@@ -211,7 +211,12 @@ public sealed class OperationRegistry
         knownIds = Array.AsReadOnly(knownOperationIds.Order(StringComparer.Ordinal).ToArray());
     }
 
-    public static OperationRegistry CreateDefault() => new(new IPuzzleOperation[] { new ShuffleOperation() });
+    public static OperationRegistry CreateDefault() => new(new IPuzzleOperation[]
+    {
+        new ShuffleOperation(),
+        new PortableLensSwapOperation(PuzzleOperationIds.ColumnSwap),
+        new PortableLensSwapOperation(PuzzleOperationIds.RowSwap)
+    });
 
     public bool IsKnownOperation(string operationId) => knownOperationIds.Contains(operationId);
 

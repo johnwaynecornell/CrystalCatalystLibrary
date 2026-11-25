@@ -52,8 +52,21 @@ public sealed class PuzzleRuleSet
             new[] { PuzzleOperationIds.Shuffle }, new[] { PuzzleOperationIds.Shuffle }, selectedRegistry);
     }
 
+    public static PuzzleRuleSet CreateHybrid(OperationRegistry? registry = null)
+    {
+        var selectedRegistry = registry ?? OperationRegistry.CreateDefault();
+        if (!selectedRegistry.TryGetOperation(PuzzleOperationIds.Shuffle, out _))
+            throw new ArgumentException("Hybrid requires a registered Shuffle resolver.", nameof(registry));
+        var operations = new[] { PuzzleOperationIds.Slide, PuzzleOperationIds.Shuffle };
+        return new PuzzleRuleSet("Hybrid", operations, operations, operations, selectedRegistry);
+    }
+
     /// <summary>Returns an independent copy of the immutable rule-set snapshot.</summary>
     public PuzzleRuleSet Snapshot() => new(Name, ScrambleAllowed, SolveAllowed, UIEnabled, registry);
+
+    /// <summary>Copies the mathematical rule set with a different saved initial UI configuration.</summary>
+    public PuzzleRuleSet WithUIEnabled(IEnumerable<string> operationIds) =>
+        new(Name, ScrambleAllowed, SolveAllowed, operationIds, registry);
 
     internal bool AllowsScramble(string operationId) => scrambleAllowed.Contains(operationId);
     internal bool AllowsSolve(string operationId) => solveAllowed.Contains(operationId);
@@ -143,13 +156,16 @@ public sealed class OperationRuleEvaluator
     }
 
     public OperationEvaluation EvaluateUiRequest(OperationBoardSnapshot board, IOperationIntent? intent,
-        PuzzleRuleSet rules)
+        PuzzleRuleSet rules, IReadOnlyCollection<string>? runtimeUiEnabled = null)
     {
         ArgumentNullException.ThrowIfNull(board);
         ArgumentNullException.ThrowIfNull(rules);
         string? error = ValidateIntent(intent);
         if (error != null) return OperationEvaluation.Reject(error);
-        if (!rules.AllowsUi(intent!.OperationId))
+        bool uiEnabled = runtimeUiEnabled == null
+            ? rules.AllowsUi(intent!.OperationId)
+            : runtimeUiEnabled.Contains(intent!.OperationId, StringComparer.Ordinal);
+        if (!uiEnabled)
             return OperationEvaluation.Reject($"Operation '{intent.OperationId}' is not enabled in the UI.");
         error = Resolve(board, intent, out var resolution);
         if (error != null) return OperationEvaluation.Reject(error);

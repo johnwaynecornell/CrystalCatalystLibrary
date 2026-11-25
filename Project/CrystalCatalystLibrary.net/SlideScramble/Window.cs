@@ -392,7 +392,7 @@ public partial class Window
         boardCommands = new BoardCommand[]
         {
             new(new CrystalMenuEntry("Edit Board"), OpenBoardEditor),
-            new(new CrystalMenuEntry("Game Mode (Classic / ShuffleLogic)"), ToggleGamePreset),
+            new(new CrystalMenuEntry("Rules and Input Preferences"), ShowRulesMenu),
             new(new CrystalMenuEntry("Position Portable Lens"), BeginPortableLensPlacement),
             new(new CrystalMenuEntry("Scramble", "S"), ScrambleBoard),
             new(new CrystalMenuEntry("Generate Challenge"), ShowChallengeGenerator),
@@ -442,13 +442,14 @@ public partial class Window
             {
                 if (spaceHeld) return;
                 spaceHeld = true;
-                if (commandMenu != null) DispatchBoardCommand(modifiers, keycode);
+                if (rulesMenuVisible) popupHost.Cancel();
+                else if (commandMenu != null) DispatchBoardCommand(modifiers, keycode);
                 else ShowCommandMenu();
                 return;
             }
             if (commandMenu != null)
             {
-                if (!DispatchBoardCommand(modifiers, keycode))
+                if (rulesMenuVisible || !DispatchBoardCommand(modifiers, keycode))
                     popupHost.KeyDown((KeyCode)commandKey, shift, control);
                 return;
             }
@@ -539,12 +540,16 @@ public partial class Window
         sessions.Mode == RecordingControllerMode.Idle && State.Mode != GameMode.Scrambling &&
         drag == null && Animations.Count == 0 && lensInteraction.Phase == PortableLensInteractionPhase.Inactive;
 
+    private bool HasClassicMathRules => activeRules.Name == "Classic" &&
+        activeRules.ScrambleAllowed.SequenceEqual(new[] { PuzzleOperationIds.Slide }) &&
+        activeRules.SolveAllowed.SequenceEqual(new[] { PuzzleOperationIds.Slide });
+
     private void ScrambleBoard()
     {
         if (!CanChangeBoard) return;
-        if (activeRules.Name == "ShuffleLogic")
+        if (!HasClassicMathRules)
         {
-            BeginShuffleChallenge(SingleScrambleMoves);
+            BeginRuleAwareChallenge(1, false);
             return;
         }
         goal = null;

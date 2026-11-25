@@ -1,3 +1,4 @@
+using System.Text.Json;
 using SkiaSharp;
 
 namespace SlideScramble;
@@ -82,9 +83,9 @@ public partial class Window
     private void BeginPortableLensPlacement()
     {
         lensDoubleClick.Reset();
-        if (!activeRules.AllowsUi(PuzzleOperationIds.Shuffle))
+        if (!HasRuntimeLensOperation)
         {
-            sessionMessage = "Portable Lens Shuffle is not enabled in the current rules";
+            sessionMessage = "No Portable Lens operation is enabled in the current input preferences";
             return;
         }
         if (sessions.Mode == RecordingControllerMode.Playback || State.Mode == GameMode.Scrambling ||
@@ -107,6 +108,11 @@ public partial class Window
         sessions.Mode != RecordingControllerMode.Playback && State.Mode != GameMode.Scrambling &&
         drag == null && Animations.Count == 0 && !popupHost.IsVisible && !ShowGridSetup && boardDraft == null;
 
+    private bool HasRuntimeLensOperation =>
+        sessions.RuntimeUIEnabled.Contains(PuzzleOperationIds.Shuffle) ||
+        sessions.RuntimeUIEnabled.Contains(PuzzleOperationIds.ColumnSwap) ||
+        sessions.RuntimeUIEnabled.Contains(PuzzleOperationIds.RowSwap);
+
     private void CommitLensGesture(LensGestureRequest request)
     {
         if (!CanHandleLensInput)
@@ -115,28 +121,32 @@ public partial class Window
             return;
         }
 
-        if (request.Family != LensOperationFamily.Shuffle)
+        IOperationIntent? intent = request.Intent;
+        if (intent == null)
         {
-            sessionMessage = activeRules.AllowsUi(request.OperationId)
-                ? $"{request.OperationId} has no installed resolver yet"
-                : $"{request.OperationId} is not enabled by the current rules";
+            sessionMessage = "The lens gesture does not select a supported operation";
             return;
         }
-
-        ShuffleOperationIntent intent = request.ShuffleIntent!;
         var rules = sessions.RuleSet;
         var evaluator = new OperationRuleEvaluator(rules.Registry);
-        var evaluation = evaluator.EvaluateUiRequest(new OperationBoardSnapshot(CaptureBoardCells()), intent, rules);
+        var evaluation = evaluator.EvaluateUiRequest(new OperationBoardSnapshot(CaptureBoardCells()), intent, rules,
+            sessions.RuntimeUIEnabled);
         if (!evaluation.IsAccepted)
         {
-            sessionMessage = evaluation.RejectionReason ?? "Shuffle operation was rejected";
+            sessionMessage = evaluation.RejectionReason ?? $"{request.OperationId} operation was rejected";
             return;
         }
 
         OperationPlan plan = evaluation.Plan!;
+        JsonElement recordingParameters = intent switch
+        {
+            ShuffleOperationIntent shuffleIntent => shuffleIntent.ToRecordingParameters(),
+            PortableLensSwapIntent swapIntent => swapIntent.ToRecordingParameters(),
+            _ => throw new InvalidOperationException("The lens operation has no recording parameter serializer.")
+        };
         try
         {
-            sessions.ApplyOperation(plan, intent.ToRecordingParameters());
+            sessions.ApplyOperation(plan, recordingParameters);
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
@@ -147,9 +157,11 @@ public partial class Window
         State.TakeBackSolved(wnd.uptimeSeconds());
         for (int i = 0; i < (plan.MoveCost ?? 0); i++) State.RecordMove(wnd.uptimeSeconds());
         if (State.CheckSolved(MyGrid, wnd.uptimeSeconds())) Audio.PlayVictoryChime();
+        string operationName = request.OperationId;
+        int primitiveCount = plan.Expansion.Count;
         sessionMessage = plan.Accounting == OperationMoveAccounting.LogicalOperation
-            ? "Shuffle committed · 1 logical move · 4 primitive rotations"
-            : $"Shuffle committed · {plan.MoveCost} primitive moves";
+            ? $"{operationName} committed · 1 logical move · {primitiveCount} primitive rotations"
+            : $"{operationName} committed · {plan.MoveCost} primitive moves";
     }
 
     private int[,] CaptureBoardCells()

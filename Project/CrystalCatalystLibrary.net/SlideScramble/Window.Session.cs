@@ -263,6 +263,16 @@ public partial class Window
     private void ResumePlaybackIfStopped()
     {
         if (sessions.Mode != RecordingControllerMode.Idle) return;
+        if (sessions.Playback == null && savedSession != null)
+        {
+            MyGrid = CreateRecordingGrid(savedSession, out var controller);
+            sessions = controller;
+            activeRules = savedSession.RuleSet;
+            lensInteraction.Cancel();
+            UpdateTileView();
+            goal = savedSession.GetVerifiedGoalMoveCost();
+            return;
+        }
         sessions.ResumePlayback();
         goal = sessions.Playback!.GetVerifiedGoalMoveCost();
     }

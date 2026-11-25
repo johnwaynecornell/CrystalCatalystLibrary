@@ -14,6 +14,7 @@ public sealed class SessionRecordingController
 {
     private readonly Grid grid;
     private readonly List<RecordedOperation> operations = new();
+    private readonly HashSet<string> runtimeUiEnabled = new(StringComparer.Ordinal);
     private PuzzleRuleSet configuredRules;
     private PuzzleRuleSet? recordingRules;
     private int[,]? recordingStart;
@@ -28,20 +29,37 @@ public sealed class SessionRecordingController
     public int MoveCount => playback?.Moves.Count ?? operations.Sum(operation => operation.PrimitiveMoves.Count);
     public SessionRecording? Playback => playback;
     public PuzzleRuleSet RuleSet => (recordingRules ?? playback?.RuleSet ?? configuredRules).Snapshot();
+    public IReadOnlyCollection<string> RuntimeUIEnabled => runtimeUiEnabled.Order(StringComparer.Ordinal).ToArray();
 
     public SessionRecordingController(Grid grid, PuzzleRuleSet? rules = null)
     {
         this.grid = grid ?? throw new ArgumentNullException(nameof(grid));
         configuredRules = (rules ?? new PuzzleRuleSet()).Snapshot();
+        runtimeUiEnabled.UnionWith(configuredRules.UIEnabled);
     }
 
-    /// <summary>Changes rules only for a future recording; an existing playback keeps its saved snapshot.</summary>
+    /// <summary>Starts a new idle rules context without changing the board.</summary>
     public void ConfigureRules(PuzzleRuleSet rules)
     {
         ArgumentNullException.ThrowIfNull(rules);
         if (Mode != RecordingControllerMode.Idle)
             throw new InvalidOperationException("Rules can only change while idle.");
         configuredRules = rules.Snapshot();
+        playback = null;
+        recordingRules = null;
+        operations.Clear();
+        Position = 0;
+        runtimeUiEnabled.Clear();
+        runtimeUiEnabled.UnionWith(configuredRules.UIEnabled);
+    }
+
+    /// <summary>Changes live input availability without changing the saved rule snapshot or recording history.</summary>
+    public bool SetRuntimeUIEnabled(string operationId, bool enabled)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(operationId);
+        var rules = recordingRules ?? playback?.RuleSet ?? configuredRules;
+        if (!rules.Registry.TryGetOperation(operationId, out _)) return false;
+        return enabled ? runtimeUiEnabled.Add(operationId) : runtimeUiEnabled.Remove(operationId);
     }
 
     public void StartRecording()
@@ -50,7 +68,7 @@ public sealed class SessionRecordingController
         recordingStart = Capture();
         operations.Clear();
         playback = null;
-        recordingRules = configuredRules.Snapshot();
+        recordingRules = configuredRules.WithUIEnabled(runtimeUiEnabled).Snapshot();
         Position = 0;
         Mode = RecordingControllerMode.Recording;
     }
@@ -91,6 +109,23 @@ public sealed class SessionRecordingController
         if (plan.Intent == null || !string.Equals(plan.Intent.OperationId, plan.OperationId, StringComparison.Ordinal))
             throw new ArgumentException("Operation plan identity does not match its intent.", nameof(plan));
 
+        var evaluator = new OperationRuleEvaluator(rules.Registry);
+        var evaluation = plan.Purpose == OperationPlanPurpose.Solve
+            ? evaluator.EvaluateUiRequest(new OperationBoardSnapshot(before), plan.Intent, rules, RuntimeUIEnabled)
+            : evaluator.EvaluateScrambleRequest(new OperationBoardSnapshot(before), plan.Intent, rules);
+        var currentPlan = evaluation.Plan;
+        if (currentPlan == null || currentPlan.Accounting != plan.Accounting || currentPlan.MoveCost != plan.MoveCost ||
+            !currentPlan.Expansion.SequenceEqual(plan.Expansion))
+            throw new InvalidOperationException(evaluation.RejectionReason ?? "Operation plan is no longer authorized.");
+        JsonElement? expectedParameters = plan.Intent switch
+        {
+            ShuffleOperationIntent shuffle => shuffle.ToRecordingParameters(),
+            PortableLensSwapIntent swap => swap.ToRecordingParameters(),
+            _ => null
+        };
+        if (expectedParameters.HasValue && !JsonElement.DeepEquals(expectedParameters.Value, parameters))
+            throw new ArgumentException("Recording parameters do not match the operation intent.", nameof(parameters));
+
         var operation = new RecordedOperation(plan.OperationId, parameters, plan.Expansion, plan.Purpose,
             plan.Accounting, plan.MoveCost);
         _ = new SessionRecording(before, new[] { operation }, rules);
@@ -124,8 +159,8 @@ public sealed class SessionRecordingController
             throw new ArgumentException("Drag start must be on the moved line and within the grid.");
         if (delta % length == 0) return false;
         if (Mode == RecordingControllerMode.Recording &&
-            (!recordingRules!.AllowsUi(PuzzleOperationIds.Slide) ||
-             !recordingRules.AllowsSolve(PuzzleOperationIds.Slide)))
+            (!runtimeUiEnabled.Contains(PuzzleOperationIds.Slide) ||
+             !recordingRules!.AllowsSolve(PuzzleOperationIds.Slide)))
             throw new InvalidOperationException("Slide is not enabled and solve-allowed by the recording rules.");
 
         var move = new RecordedMove(axis, startX, startY, delta);
@@ -147,6 +182,9 @@ public sealed class SessionRecordingController
             throw new ArgumentException("Recording dimensions must match the grid.", nameof(recording));
         Restore(recording.InitialCells);
         playback = recording;
+        configuredRules = recording.RuleSet.Snapshot();
+        runtimeUiEnabled.Clear();
+        runtimeUiEnabled.UnionWith(recording.RuleSet.UIEnabled);
         recordingRules = null;
         Position = 0;
         IsAutoplaying = false;

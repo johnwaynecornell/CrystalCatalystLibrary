@@ -21,6 +21,19 @@ public sealed record LensGestureRequest(int AnchorX, int AnchorY, PortableLensCe
     public ShuffleOperationIntent? ShuffleIntent => Family == LensOperationFamily.Shuffle
         ? new ShuffleOperationIntent(AnchorX, AnchorY, StartCell, TargetCell)
         : null;
+
+    public PortableLensSwapIntent? SwapIntent
+    {
+        get
+        {
+            if (Family == LensOperationFamily.Shuffle ||
+                !LensGestureOperationMapper.TryGetSwapVariant(StartCell, TargetCell, out _, out string variant))
+                return null;
+            return new PortableLensSwapIntent(OperationId, AnchorX, AnchorY, StartCell, TargetCell, variant);
+        }
+    }
+
+    public IOperationIntent? Intent => Family == LensOperationFamily.Shuffle ? ShuffleIntent : SwapIntent;
 }
 
 /// <summary>State machine for lens placement and completed directed-cell gestures.</summary>
