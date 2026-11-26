@@ -21,15 +21,34 @@ public readonly record struct OperationAnimationFrame(int PrimitiveIndex, float 
 
 public readonly record struct OperationTilePose(float CenterX, float CenterY, float Scale);
 
-/// <summary>Immutable visual snapshots derived from an authorized operation's exact primitive expansion.</summary>
+/// <summary>Immutable visual snapshots derived from an operation's exact primitive expansion.</summary>
 public sealed class OperationAnimationPlan
 {
+    private readonly record struct LensEdgeRoute(
+        float SourceX,
+        float SourceY,
+        float ExitX,
+        float ExitY,
+        float EntryX,
+        float EntryY,
+        float DestinationX,
+        float DestinationY);
+
+    private enum LensSide
+    {
+        Top,
+        Right,
+        Bottom,
+        Left
+    }
+
     private readonly int[,] startingCells;
     private readonly int[,] finalCells;
     private readonly int[][,] primitiveBoundaries;
     private readonly IReadOnlyList<RecordedMove> primitiveMoves;
     private readonly IReadOnlyList<OperationTileMotion>[] primitiveMotions;
     private readonly IReadOnlyList<OperationTileMotion> logicalMotions;
+    private readonly Dictionary<int, LensEdgeRoute> lensEdgeRoutes = new();
 
     public string OperationId { get; }
     public int Width { get; }
@@ -39,14 +58,14 @@ public sealed class OperationAnimationPlan
     public IReadOnlyList<OperationTileMotion> LogicalMotions => logicalMotions;
     public bool SupportsLogicalAnimation => logicalMotions.Count > 0;
     public int? CenterBypassTileId { get; }
+    public int? LensAnchorX { get; }
+    public int? LensAnchorY { get; }
+    public IReadOnlyList<(int X, int Y)> LensCells { get; }
 
     public OperationAnimationPlan(OperationBoardSnapshot board, OperationPlan operation)
     {
         ArgumentNullException.ThrowIfNull(board);
         ArgumentNullException.ThrowIfNull(operation);
-        if (operation.Purpose != OperationPlanPurpose.Solve)
-            throw new ArgumentException("Only authorized solve operations can be animated as player moves.",
-                nameof(operation));
         if (operation.SourceBoard.Width != board.Width || operation.SourceBoard.Height != board.Height ||
             !BoardsEqual(operation.SourceBoard.Cells, board.Cells))
             throw new ArgumentException("The operation was resolved for a different starting board.",
@@ -82,8 +101,25 @@ public sealed class OperationAnimationPlan
         logicalMotions = Array.AsReadOnly(logical.Length == expectedLogicalTiles
             ? logical.OrderBy(motion => motion.TileId).ToArray()
             : Array.Empty<OperationTileMotion>());
+
+        if (OperationId == PuzzleOperationIds.Shuffle && operation.Intent is ShuffleOperationIntent shuffle)
+        {
+            LensAnchorX = shuffle.AnchorX;
+            LensAnchorY = shuffle.AnchorY;
+            var lensCells = Enum.GetValues<PortableLensCell>()
+                .Select(cell => LensBoardPosition(shuffle, cell, Width, Height)).ToArray();
+            LensCells = Array.AsReadOnly(lensCells);
+            BuildLensEdgeRoute(shuffle, lensCells);
+        }
+        else
+        {
+            LensCells = Array.Empty<(int X, int Y)>();
+        }
+
+        int? diagonalTileId = lensEdgeRoutes.Keys.Select(tileId => (int?)tileId).FirstOrDefault();
         CenterBypassTileId = OperationId == PuzzleOperationIds.Shuffle
-            ? logicalMotions.OrderByDescending(motion => motion.DeltaX * motion.DeltaX + motion.DeltaY * motion.DeltaY)
+            ? logicalMotions.Where(motion => motion.TileId != diagonalTileId)
+                .OrderByDescending(motion => motion.DeltaX * motion.DeltaX + motion.DeltaY * motion.DeltaY)
                 .ThenBy(motion => motion.TileId).Select(motion => (int?)motion.TileId).FirstOrDefault()
             : null;
     }
@@ -176,6 +212,41 @@ public sealed class OperationAnimationPlan
         return new OperationTilePose(centerX, centerY, scale);
     }
 
+    public IReadOnlyList<OperationTilePose> GetLogicalPoses(int tileId, float progress)
+    {
+        int poseCount = GetLogicalPoseCount(tileId);
+        var poses = new OperationTilePose[poseCount];
+        for (int i = 0; i < poseCount; i++) poses[i] = GetLogicalPose(tileId, progress, i);
+        return Array.AsReadOnly(poses);
+    }
+
+    public int GetLogicalPoseCount(int tileId)
+    {
+        if (!logicalMotions.Any(motion => motion.TileId == tileId))
+            throw new ArgumentOutOfRangeException(nameof(tileId), "The tile does not move in this operation.");
+        return lensEdgeRoutes.ContainsKey(tileId) ? 2 : 1;
+    }
+
+    public OperationTilePose GetLogicalPose(int tileId, float progress, int poseIndex)
+    {
+        if (!lensEdgeRoutes.TryGetValue(tileId, out LensEdgeRoute route))
+        {
+            if (poseIndex != 0) throw new ArgumentOutOfRangeException(nameof(poseIndex));
+            return GetLogicalPose(tileId, progress);
+        }
+
+        if (poseIndex is < 0 or > 1) throw new ArgumentOutOfRangeException(nameof(poseIndex));
+
+        float eased = Ease(progress);
+        return poseIndex == 0
+            ? new OperationTilePose(
+                route.SourceX + (route.ExitX - route.SourceX) * eased,
+                route.SourceY + (route.ExitY - route.SourceY) * eased, 1)
+            : new OperationTilePose(
+                route.EntryX + (route.DestinationX - route.EntryX) * eased,
+                route.EntryY + (route.DestinationY - route.EntryY) * eased, 1);
+    }
+
     internal static float Ease(float progress)
     {
         float value = Math.Clamp(progress, 0, 1);
@@ -220,6 +291,104 @@ public sealed class OperationAnimationPlan
         }).ToArray();
     }
 
+    private void BuildLensEdgeRoute(ShuffleOperationIntent intent, IReadOnlyList<(int X, int Y)> lensCells)
+    {
+        if (lensCells.Count != 4 || logicalMotions.Count != 3) return;
+
+        var symbols = Enum.GetValues<PortableLensCell>();
+        PortableLensCell[] fixedCells = symbols.Where((_, index) =>
+        {
+            var position = lensCells[index];
+            return startingCells[position.Y, position.X] == finalCells[position.Y, position.X];
+        }).ToArray();
+        if (fixedCells.Length != 1) return;
+
+        var positions = symbols.Select((cell, index) => (cell, position: lensCells[index]))
+            .ToDictionary(entry => entry.cell, entry => entry.position);
+        OperationTileMotion[] diagonalMotions = logicalMotions.Where(motion =>
+            positions.Any(entry => entry.Value == (motion.SourceX, motion.SourceY)) &&
+            positions.Any(entry => entry.Value == (motion.DestinationX, motion.DestinationY)) &&
+            motion.SourceX != motion.DestinationX && motion.SourceY != motion.DestinationY).ToArray();
+        if (diagonalMotions.Length != 1) return;
+
+        OperationTileMotion diagonal = diagonalMotions[0];
+        PortableLensCell source = positions.Single(entry => entry.Value == (diagonal.SourceX, diagonal.SourceY)).Key;
+        PortableLensCell destination = positions.Single(entry => entry.Value ==
+                                                                 (diagonal.DestinationX, diagonal.DestinationY)).Key;
+        int sourceIndex = RingIndex(source);
+        int destinationIndex = RingIndex(destination);
+        int fixedIndex = RingIndex(fixedCells[0]);
+        LensSide exitSide;
+        LensSide entrySide;
+        if (fixedIndex == (sourceIndex + 1) % 4 && destinationIndex == (sourceIndex + 2) % 4)
+        {
+            (exitSide, entrySide) = ClockwiseEdgeSides(sourceIndex);
+        }
+        else if (fixedIndex == (sourceIndex + 3) % 4 && destinationIndex == (sourceIndex + 2) % 4)
+        {
+            (exitSide, entrySide) = CounterClockwiseEdgeSides(sourceIndex);
+        }
+        else
+        {
+            return;
+        }
+
+        var sourceOffset = LensGestureOperationMapper.Coordinates(source);
+        var destinationOffset = LensGestureOperationMapper.Coordinates(destination);
+        float sourceX = intent.AnchorX + sourceOffset.X + 0.5f;
+        float sourceY = intent.AnchorY + sourceOffset.Y + 0.5f;
+        float destinationX = intent.AnchorX + destinationOffset.X + 0.5f;
+        float destinationY = intent.AnchorY + destinationOffset.Y + 0.5f;
+        var exit = OutsideCenter(intent.AnchorX, intent.AnchorY, sourceOffset, exitSide);
+        var entry = OutsideCenter(intent.AnchorX, intent.AnchorY, destinationOffset, entrySide);
+        lensEdgeRoutes[diagonal.TileId] = new LensEdgeRoute(
+            sourceX, sourceY, exit.X, exit.Y, entry.X, entry.Y, destinationX, destinationY);
+    }
+
+    private static (int X, int Y) LensBoardPosition(ShuffleOperationIntent intent, PortableLensCell cell,
+        int width, int height)
+    {
+        var offset = LensGestureOperationMapper.Coordinates(cell);
+        return ((intent.AnchorX + offset.X) % width, (intent.AnchorY + offset.Y) % height);
+    }
+
+    private static int RingIndex(PortableLensCell cell) => cell switch
+    {
+        PortableLensCell.Circle => 0,
+        PortableLensCell.Star => 1,
+        PortableLensCell.Square => 2,
+        PortableLensCell.Triangle => 3,
+        _ => throw new ArgumentOutOfRangeException(nameof(cell))
+    };
+
+    private static (LensSide Exit, LensSide Entry) ClockwiseEdgeSides(int sourceIndex) => sourceIndex switch
+    {
+        0 => (LensSide.Top, LensSide.Right),
+        1 => (LensSide.Right, LensSide.Bottom),
+        2 => (LensSide.Bottom, LensSide.Left),
+        3 => (LensSide.Left, LensSide.Top),
+        _ => throw new ArgumentOutOfRangeException(nameof(sourceIndex))
+    };
+
+    private static (LensSide Exit, LensSide Entry) CounterClockwiseEdgeSides(int sourceIndex) => sourceIndex switch
+    {
+        0 => (LensSide.Left, LensSide.Bottom),
+        1 => (LensSide.Top, LensSide.Left),
+        2 => (LensSide.Right, LensSide.Top),
+        3 => (LensSide.Bottom, LensSide.Right),
+        _ => throw new ArgumentOutOfRangeException(nameof(sourceIndex))
+    };
+
+    private static (float X, float Y) OutsideCenter(int anchorX, int anchorY, (int X, int Y) cell,
+        LensSide side) => side switch
+    {
+        LensSide.Top => (anchorX + cell.X + 0.5f, anchorY - 0.5f),
+        LensSide.Right => (anchorX + 2.5f, anchorY + cell.Y + 0.5f),
+        LensSide.Bottom => (anchorX + cell.X + 0.5f, anchorY + 2.5f),
+        LensSide.Left => (anchorX - 0.5f, anchorY + cell.Y + 0.5f),
+        _ => throw new ArgumentOutOfRangeException(nameof(side))
+    };
+
     private static void Apply(int[,] cells, RecordedMove move)
     {
         int lineCount = move.Axis == RecordedMoveAxis.Row ? cells.GetLength(0) : cells.GetLength(1);
@@ -244,7 +413,7 @@ public sealed class OperationAnimationPlan
 public static class OperationAnimationPolicy
 {
     public static OperationAnimationStyle Select(OperationPlan operation, bool logicalAnimationAvailable,
-        OperationAnimationStyle? preference = null)
+        OperationAnimationStyle? preference = null, bool preferLogicalForScramble = false)
     {
         ArgumentNullException.ThrowIfNull(operation);
         if (preference == OperationAnimationStyle.Instant) return OperationAnimationStyle.Instant;
@@ -252,7 +421,9 @@ public static class OperationAnimationPolicy
         if (preference == OperationAnimationStyle.Logical)
             return logicalAnimationAvailable ? OperationAnimationStyle.Logical : OperationAnimationStyle.Primitive;
 
-        return operation.Accounting == OperationMoveAccounting.LogicalOperation && logicalAnimationAvailable
+        bool preferLogical = operation.Accounting == OperationMoveAccounting.LogicalOperation ||
+                             (preferLogicalForScramble && operation.Purpose == OperationPlanPurpose.Scramble);
+        return preferLogical && logicalAnimationAvailable
             ? OperationAnimationStyle.Logical
             : OperationAnimationStyle.Primitive;
     }

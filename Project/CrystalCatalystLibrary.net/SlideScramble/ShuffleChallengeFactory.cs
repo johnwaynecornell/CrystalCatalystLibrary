@@ -4,18 +4,22 @@ public sealed class ShuffleChallenge
 {
     private readonly int[,] scrambledCells;
     private readonly RecordedOperation[] scrambleOperations;
+    private readonly OperationPlan[] scramblePlans;
     private readonly RecordedMove[] scrambleMoves;
 
     public int[,] ScrambledCells => (int[,])scrambledCells.Clone();
     public IReadOnlyList<RecordedOperation> ScrambleOperations => Array.AsReadOnly(scrambleOperations);
+    public IReadOnlyList<OperationPlan> ScramblePlans => Array.AsReadOnly(scramblePlans);
     public IReadOnlyList<RecordedMove> ScrambleMoves => Array.AsReadOnly(scrambleMoves);
     public SessionRecording Solution { get; }
 
     internal ShuffleChallenge(int[,] scrambledCells, IEnumerable<RecordedOperation> scrambleOperations,
-        IEnumerable<RecordedMove> scrambleMoves, SessionRecording solution)
+        IEnumerable<OperationPlan> scramblePlans, IEnumerable<RecordedMove> scrambleMoves,
+        SessionRecording solution)
     {
         this.scrambledCells = (int[,])scrambledCells.Clone();
         this.scrambleOperations = scrambleOperations.ToArray();
+        this.scramblePlans = scramblePlans.ToArray();
         this.scrambleMoves = scrambleMoves.ToArray();
         Solution = solution;
     }
@@ -72,7 +76,8 @@ public static class ShuffleChallengeFactory
             throw new InvalidOperationException("Generated Shuffle inverses did not restore the solved board.");
 
         var solution = new SessionRecording(scrambled, solutionOperations, rules, rules.Registry);
-        return new ShuffleChallenge(scrambled, scrambleOperations, scrambleMoves, solution);
+        return new ShuffleChallenge(scrambled, scrambleOperations, scramblePlans.Select(entry => entry.Plan),
+            scrambleMoves, solution);
     }
 
     /// <summary>Builds a challenge from supported, authorized operations with a verified player-accessible inverse.</summary>
@@ -90,6 +95,7 @@ public static class ShuffleChallengeFactory
         var rulesEvaluator = new OperationRuleEvaluator(rules.Registry);
         var cells = Solved(width, height);
         var scramble = new List<RecordedOperation>(operationCount);
+        var scramblePlans = new List<OperationPlan>(operationCount);
         var inverses = new List<IReadOnlyList<RecordedOperation>>(operationCount);
         for (int step = 0; step < operationCount; step++)
         {
@@ -113,6 +119,7 @@ public static class ShuffleChallengeFactory
                 var inverse = TryInverse(cells, next, intent, evaluation.Plan, rules, evaluator, rulesEvaluator);
                 if (inverse == null) continue;
                 scramble.Add(ToRecordedOperation(intent, evaluation.Plan));
+                scramblePlans.Add(evaluation.Plan!);
                 inverses.Add(inverse);
                 cells = next;
                 added = true;
@@ -128,7 +135,8 @@ public static class ShuffleChallengeFactory
         Apply(verified, solutionOperations.SelectMany(operation => operation.PrimitiveMoves));
         if (!IsSolved(verified)) throw new InvalidOperationException("Generated inverses did not restore the solved board.");
         var solution = new SessionRecording(cells, solutionOperations, rules, rules.Registry);
-        return new ShuffleChallenge(cells, scramble, scramble.SelectMany(operation => operation.PrimitiveMoves), solution);
+        return new ShuffleChallenge(cells, scramble, scramblePlans,
+            scramble.SelectMany(operation => operation.PrimitiveMoves), solution);
     }
 
     private static IEnumerable<IOperationIntent> CandidateIntents(int width, int height, PuzzleRuleSet rules)

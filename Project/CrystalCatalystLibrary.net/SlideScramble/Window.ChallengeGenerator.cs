@@ -10,6 +10,8 @@ public partial class Window
     private ChallengeGenerator? challengeGenerator;
     private int[,]? generationStart;
     private List<RecordedMove>? generatedMoves;
+    private Queue<OperationPlan>? pendingGeneratedOperations;
+    private SessionRecording? generatedChallengeSolution;
     private int challengeScale = 1;
     private int SingleScrambleMoves => 2 * (MyGrid.Width + MyGrid.Height);
 
@@ -44,6 +46,8 @@ public partial class Window
         if (HasClassicMathRules)
         {
             challengeScale = multiplier;
+            pendingGeneratedOperations = null;
+            generatedChallengeSolution = null;
             ShowGridSetup = false;
             MyGrid.Reset();
             sessions = new SessionRecordingController(MyGrid, activeRules.WithUIEnabled(sessions.RuntimeUIEnabled));
@@ -60,6 +64,7 @@ public partial class Window
             State.StartScrambling();
             return;
         }
+
         BeginRuleAwareChallenge(multiplier, true);
     }
 
@@ -78,22 +83,24 @@ public partial class Window
                 checked(SingleScrambleMoves * multiplier), rules, new OperationRuleEvaluator(rules.Registry), rand);
             var grid = new Grid(MyGrid.Width, MyGrid.Height);
             var controller = new SessionRecordingController(grid, rules);
-            controller.LoadPlayback(challenge.Solution);
-            controller.StopPlayback();
-
             if (updateScale) challengeScale = multiplier;
             ShowGridSetup = false;
             MyGrid = grid;
             sessions = controller;
-            savedSession = challenge.Solution;
-            goal = challenge.Solution.GetVerifiedGoalMoveCost();
+            savedSession = null;
+            goal = null;
             moveHighlight = null;
+            generationStart = null;
+            generatedMoves = null;
+            pendingGeneratedOperations = new Queue<OperationPlan>(challenge.ScramblePlans);
+            generatedChallengeSolution = challenge.Solution;
+            ScrambleCount = challenge.ScramblePlans.Sum(plan => plan.Expansion.Count);
+            animationLockHoriz = null;
+            animationTileOffset = 0;
             lensInteraction.Cancel();
             State.StartScrambling();
-            State.FinishScrambling(wnd.uptimeSeconds());
             UpdateTileView();
-            Audio.PlayGameStartChime();
-            sessionMessage = "Challenge ready. Save or replay the solution here.";
+            sessionMessage = "Generating a verified challenge…";
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or OverflowException)
         {
@@ -125,8 +132,31 @@ public partial class Window
 
     private void FinishGeneratedChallenge()
     {
+        if (generatedChallengeSolution is { } generatedSolution)
+        {
+            generatedChallengeSolution = null;
+            pendingGeneratedOperations = null;
+            generatedMoves = null;
+            int[,] currentCells = OperationBoardSnapshot.FromGrid(MyGrid).Cells;
+            if (!ChallengeBoardsEqual(currentCells, generatedSolution.InitialCells))
+            {
+                sessionMessage =
+                    "The animated scramble did not match its verified challenge; no solution was attached";
+                return;
+            }
+
+            sessions.LoadPlayback(generatedSolution);
+            sessions.StopPlayback();
+            savedSession = generatedSolution;
+            goal = generatedSolution.GetVerifiedGoalMoveCost();
+            sessionMessage = "Challenge ready. Save or replay the solution here.";
+            return;
+        }
+
         if (generatedMoves == null) return;
-        var solution = new SessionRecording(generationStart!, generatedMoves.Select(move => RecordedOperation.CreateSlide(move)),
+        pendingGeneratedOperations = null;
+        var solution = new SessionRecording(generationStart!,
+            generatedMoves.Select(move => RecordedOperation.CreateSlide(move)),
             activeRules.WithUIEnabled(sessions.RuntimeUIEnabled)).Reverse();
         generationStart = null;
         generatedMoves = null;
@@ -135,6 +165,16 @@ public partial class Window
         savedSession = solution;
         goal = solution.GetVerifiedGoal();
         sessionMessage = "Challenge ready. Save or replay the solution here.";
+    }
+
+    private static bool ChallengeBoardsEqual(int[,] left, int[,] right)
+    {
+        if (left.GetLength(0) != right.GetLength(0) || left.GetLength(1) != right.GetLength(1)) return false;
+        for (int y = 0; y < left.GetLength(0); y++)
+        for (int x = 0; x < left.GetLength(1); x++)
+            if (left[y, x] != right[y, x])
+                return false;
+        return true;
     }
 
     private sealed class ChallengeGenerator(Window owner, int value) : ICrystalSkia
@@ -160,6 +200,7 @@ public partial class Window
         }
 
         public void SetFocus(bool focused) => dragging = false;
+
         public void OnIdle(double timeSeconds) { }
         public void TextInput(string text) { }
 

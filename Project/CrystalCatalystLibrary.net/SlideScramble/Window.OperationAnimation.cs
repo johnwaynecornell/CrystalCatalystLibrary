@@ -8,14 +8,16 @@ public partial class Window
     private sealed class ActiveOperationAnimation(
         OperationAnimationTimeline timeline,
         OperationPlan operationPlan,
-        JsonElement recordingParameters,
+        JsonElement? recordingParameters,
+        bool isScramble,
         SKImage[] tileImages,
         Grid grid,
         SessionRecordingController controller)
     {
         public OperationAnimationTimeline Timeline { get; } = timeline;
         public OperationPlan OperationPlan { get; } = operationPlan;
-        public JsonElement RecordingParameters { get; } = recordingParameters;
+        public JsonElement? RecordingParameters { get; } = recordingParameters;
+        public bool IsScramble { get; } = isScramble;
         public SKImage[] TileImages { get; } = tileImages;
         public Grid Grid { get; } = grid;
         public SessionRecordingController Controller { get; } = controller;
@@ -61,13 +63,29 @@ public partial class Window
 
     private void BeginOperationAnimation(OperationPlan plan, JsonElement recordingParameters)
     {
+        BeginOperationAnimation(plan, recordingParameters, false);
+    }
+
+    private void BeginScrambleOperationAnimation(OperationPlan plan)
+    {
+        if (plan.Purpose != OperationPlanPurpose.Scramble)
+            throw new ArgumentException("Only scramble operations can use generated-challenge animation.", nameof(plan));
+        BeginOperationAnimation(plan, null, true);
+    }
+
+    private void BeginOperationAnimation(OperationPlan plan, JsonElement? recordingParameters, bool isScramble)
+    {
+        if (isScramble != (plan.Purpose == OperationPlanPurpose.Scramble))
+            throw new ArgumentException("The operation purpose does not match its animation context.", nameof(plan));
+
         var board = new OperationBoardSnapshot(CaptureBoardCells());
         var visualPlan = new OperationAnimationPlan(board, plan);
         OperationAnimationStyle style = OperationAnimationPolicy.Select(plan,
-            visualPlan.SupportsLogicalAnimation, operationAnimationPreference);
+            visualPlan.SupportsLogicalAnimation, operationAnimationPreference, isScramble);
         if (style == OperationAnimationStyle.Instant)
         {
-            CommitLensOperation(plan, recordingParameters);
+            if (isScramble) CommitScrambleOperation(plan);
+            else CommitLensOperation(plan, recordingParameters!.Value);
             return;
         }
 
@@ -76,8 +94,8 @@ public partial class Window
             tileImages[tile.OriginY * MyGrid.Width + tile.OriginX] = tile.Image;
 
         var active = new ActiveOperationAnimation(
-            new OperationAnimationTimeline(visualPlan, style), plan, recordingParameters.Clone(), tileImages,
-            MyGrid, sessions);
+            new OperationAnimationTimeline(visualPlan, style), plan, recordingParameters?.Clone(), isScramble,
+            tileImages, MyGrid, sessions);
         activeOperationAnimation = active;
         animationLockHoriz = null;
         animationTileOffset = 0;
@@ -106,7 +124,10 @@ public partial class Window
                 sessionMessage = "The board or session changed; operation animation was cancelled";
             }
             else if (active.Timeline.TryCommit(() =>
-                         CommitLensOperation(active.OperationPlan, active.RecordingParameters)))
+                     {
+                         if (active.IsScramble) CommitScrambleOperation(active.OperationPlan);
+                         else CommitLensOperation(active.OperationPlan, active.RecordingParameters!.Value);
+                     }))
             {
                 return FinishOperationAnimation(active);
             }
@@ -123,6 +144,7 @@ public partial class Window
     {
         if (!ReferenceEquals(MyGrid, active.Grid) || !ReferenceEquals(sessions, active.Controller) ||
             sessions.Mode != active.Mode || sessions.Position != active.Position ||
+            (State.Mode == GameMode.Scrambling) != active.IsScramble ||
             MyGrid.Width != active.Timeline.Plan.Width || MyGrid.Height != active.Timeline.Plan.Height)
             return false;
 
@@ -162,6 +184,15 @@ public partial class Window
             : $"{plan.OperationId} committed · {plan.MoveCost} primitive moves";
     }
 
+    private void CommitScrambleOperation(OperationPlan plan)
+    {
+        foreach (RecordedMove move in plan.Expansion)
+        {
+            if (move.Axis == RecordedMoveAxis.Row) MyGrid.MoveRow(move.Index, move.Delta);
+            else MyGrid.MoveColumn(move.Index, move.Delta);
+        }
+    }
+
     private void DrawOperationAnimation(SKCanvas canvas, ActiveOperationAnimation active, float tileWidth,
         float tileHeight)
     {
@@ -199,29 +230,22 @@ public partial class Window
         RecordedMove? primitiveMove = active.Timeline.Style == OperationAnimationStyle.Primitive
             ? plan.PrimitiveMoves[active.Frame.PrimitiveIndex]
             : null;
-        foreach (OperationTileMotion motion in motions)
+        if (active.Timeline.Style == OperationAnimationStyle.Logical &&
+            plan.OperationId == PuzzleOperationIds.Shuffle && plan.LensCells.Count == 4)
         {
-            float centerX;
-            float centerY;
-            float scale;
-            if (active.Timeline.Style == OperationAnimationStyle.Logical)
+            foreach (var cell in plan.LensCells)
             {
-                OperationTilePose pose = plan.GetLogicalPose(motion.TileId, progress);
-                centerX = tileView.xx + pose.CenterX * tileWidth;
-                centerY = tileView.yy + pose.CenterY * tileHeight;
-                scale = pose.Scale;
+                canvas.Save();
+                canvas.ClipRect(new SKRect(tileView.xx + cell.X * tileWidth,
+                    tileView.yy + cell.Y * tileHeight, tileView.xx + (cell.X + 1) * tileWidth,
+                    tileView.yy + (cell.Y + 1) * tileHeight));
+                DrawOperationMotions(canvas, active, motions, primitiveMove, progress, tileWidth, tileHeight);
+                canvas.Restore();
             }
-            else
-            {
-                centerX = tileView.xx + (motion.SourceX + 0.5f + motion.DeltaX * progress) * tileWidth;
-                centerY = tileView.yy + (motion.SourceY + 0.5f + motion.DeltaY * progress) * tileHeight;
-                scale = 1;
-            }
-
-            bool highlight = primitiveMove is not null && motion.SourceX == primitiveMove.StartX &&
-                             motion.SourceY == primitiveMove.StartY;
-            DrawOperationTile(canvas, active.TileImages[motion.TileId], centerX, centerY, scale,
-                tileWidth, tileHeight, highlight);
+        }
+        else
+        {
+            DrawOperationMotions(canvas, active, motions, primitiveMove, progress, tileWidth, tileHeight);
         }
 
         if (primitiveMove is not null)
@@ -235,6 +259,42 @@ public partial class Window
         }
 
         canvas.Restore();
+    }
+
+    private void DrawOperationMotions(SKCanvas canvas, ActiveOperationAnimation active,
+        IReadOnlyList<OperationTileMotion> motions, RecordedMove? primitiveMove, float progress, float tileWidth,
+        float tileHeight)
+    {
+        foreach (OperationTileMotion motion in motions)
+        {
+            bool highlight = primitiveMove is not null && motion.SourceX == primitiveMove.StartX &&
+                             motion.SourceY == primitiveMove.StartY;
+            int poseCount = active.Timeline.Style == OperationAnimationStyle.Logical
+                ? active.Timeline.Plan.GetLogicalPoseCount(motion.TileId)
+                : 1;
+            for (int poseIndex = 0; poseIndex < poseCount; poseIndex++)
+            {
+                float centerX;
+                float centerY;
+                float scale;
+                if (active.Timeline.Style == OperationAnimationStyle.Logical)
+                {
+                    OperationTilePose pose = active.Timeline.Plan.GetLogicalPose(motion.TileId, progress, poseIndex);
+                    centerX = tileView!.xx + pose.CenterX * tileWidth;
+                    centerY = tileView.yy + pose.CenterY * tileHeight;
+                    scale = pose.Scale;
+                }
+                else
+                {
+                    centerX = tileView!.xx + (motion.SourceX + 0.5f + motion.DeltaX * progress) * tileWidth;
+                    centerY = tileView.yy + (motion.SourceY + 0.5f + motion.DeltaY * progress) * tileHeight;
+                    scale = 1;
+                }
+
+                DrawOperationTile(canvas, active.TileImages[motion.TileId], centerX, centerY, scale,
+                    tileWidth, tileHeight, highlight);
+            }
+        }
     }
 
     private void DrawOperationTile(SKCanvas canvas, SKImage image, float centerX, float centerY, float scale,

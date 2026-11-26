@@ -61,12 +61,100 @@ public class OperationAnimationTests
     }
 
     [Fact]
+    public void CircleToStarShuffleUsesFullSizeLensEdgeWrapForTheDiagonalTile()
+    {
+        var (grid, plan, _) = CreateOperation(PuzzleOperationIds.Shuffle);
+        var visual = new OperationAnimationPlan(OperationBoardSnapshot.FromGrid(grid), plan);
+        OperationTileMotion diagonal = visual.LogicalMotions.Single(motion => motion.SourceX == 0 &&
+            motion.SourceY == 2 && motion.DestinationX == 4 && motion.DestinationY == 0);
+
+        IReadOnlyList<OperationTilePose> start = visual.GetLogicalPoses(diagonal.TileId, 0);
+        IReadOnlyList<OperationTilePose> middle = visual.GetLogicalPoses(diagonal.TileId, 0.5f);
+        IReadOnlyList<OperationTilePose> end = visual.GetLogicalPoses(diagonal.TileId, 1);
+
+        Assert.Equal(2, start.Count);
+        Assert.Equal(2, middle.Count);
+        Assert.Equal(2, end.Count);
+        Assert.Equal(new OperationTilePose(5.5f, 2.5f, 1), start[0]);
+        Assert.Equal(new OperationTilePose(4.5f, 4.5f, 1), start[1]);
+        Assert.Equal(new OperationTilePose(6.5f, 2.5f, 1), end[0]);
+        Assert.Equal(new OperationTilePose(4.5f, 3.5f, 1), end[1]);
+        Assert.Equal(new[] { (4, 2), (0, 2), (4, 0), (0, 0) }, visual.LensCells);
+        Assert.NotEqual(diagonal.TileId, visual.CenterBypassTileId);
+        Assert.All(middle, pose => Assert.Equal(1, pose.Scale, 4));
+    }
+
+    [Theory]
+    [InlineData(PortableLensCell.Circle, PortableLensCell.Star)]
+    [InlineData(PortableLensCell.Star, PortableLensCell.Circle)]
+    [InlineData(PortableLensCell.Star, PortableLensCell.Square)]
+    [InlineData(PortableLensCell.Square, PortableLensCell.Star)]
+    [InlineData(PortableLensCell.Circle, PortableLensCell.Triangle)]
+    [InlineData(PortableLensCell.Triangle, PortableLensCell.Circle)]
+    [InlineData(PortableLensCell.Triangle, PortableLensCell.Square)]
+    [InlineData(PortableLensCell.Square, PortableLensCell.Triangle)]
+    public void EveryShuffleGestureHasOneFullSizeLensEdgeWrapAndSeparateBypass(
+        PortableLensCell start, PortableLensCell target)
+    {
+        var (grid, plan, _) = CreateOperation(PuzzleOperationIds.Shuffle, startCell: start, targetCell: target);
+        var visual = new OperationAnimationPlan(OperationBoardSnapshot.FromGrid(grid), plan);
+        OperationTileMotion diagonal = visual.LogicalMotions.Single(motion =>
+            motion.SourceX != motion.DestinationX && motion.SourceY != motion.DestinationY);
+
+        Assert.Equal(2, visual.GetLogicalPoses(diagonal.TileId, 0.5f).Count);
+        Assert.NotEqual(diagonal.TileId, visual.CenterBypassTileId);
+        Assert.All(visual.GetLogicalPoses(diagonal.TileId, 0.5f), pose => Assert.Equal(1, pose.Scale, 4));
+        Assert.Equal(4, visual.LensCells.Count);
+    }
+
+    [Fact]
+    public void ShuffleLensEdgeRoutesRemainCorrectAtEveryWrappedBoardPlacement()
+    {
+        (PortableLensCell Start, PortableLensCell Target)[] gestures =
+        [
+            (PortableLensCell.Circle, PortableLensCell.Star),
+            (PortableLensCell.Star, PortableLensCell.Circle),
+            (PortableLensCell.Star, PortableLensCell.Square),
+            (PortableLensCell.Square, PortableLensCell.Star),
+            (PortableLensCell.Circle, PortableLensCell.Triangle),
+            (PortableLensCell.Triangle, PortableLensCell.Circle),
+            (PortableLensCell.Triangle, PortableLensCell.Square),
+            (PortableLensCell.Square, PortableLensCell.Triangle)
+        ];
+
+        for (int anchorY = 0; anchorY < 3; anchorY++)
+        for (int anchorX = 0; anchorX < 5; anchorX++)
+        foreach (var gesture in gestures)
+        {
+            var (grid, operation, _) = CreateOperation(PuzzleOperationIds.Shuffle, startCell: gesture.Start,
+                targetCell: gesture.Target, anchorX: anchorX, anchorY: anchorY);
+            var visual = new OperationAnimationPlan(OperationBoardSnapshot.FromGrid(grid), operation);
+            OperationTileMotion diagonal = visual.LogicalMotions.Single(motion =>
+                motion.SourceX != motion.DestinationX && motion.SourceY != motion.DestinationY);
+            IReadOnlyList<OperationTilePose> beginning = visual.GetLogicalPoses(diagonal.TileId, 0);
+            IReadOnlyList<OperationTilePose> ending = visual.GetLogicalPoses(diagonal.TileId, 1);
+
+            Assert.Equal(4, visual.LensCells.Count);
+            Assert.Equal(2, beginning.Count);
+            Assert.Equal(diagonal.SourceX, WrapCell(beginning[0].CenterX, visual.Width));
+            Assert.Equal(diagonal.SourceY, WrapCell(beginning[0].CenterY, visual.Height));
+            Assert.Equal(diagonal.DestinationX, WrapCell(ending[1].CenterX, visual.Width));
+            Assert.Equal(diagonal.DestinationY, WrapCell(ending[1].CenterY, visual.Height));
+            Assert.All(beginning, pose => Assert.Equal(1, pose.Scale));
+            Assert.All(ending, pose => Assert.Equal(1, pose.Scale));
+        }
+    }
+
+    [Fact]
     public void ShuffleCenterBypassAndSwapCenterConsumptionShrinkWholeTileFrames()
     {
         var (shuffleGrid, shufflePlan, _) = CreateOperation(PuzzleOperationIds.Shuffle);
         var shuffle = new OperationAnimationPlan(OperationBoardSnapshot.FromGrid(shuffleGrid), shufflePlan);
         int bypassId = shuffle.CenterBypassTileId!.Value;
         Assert.True(shuffle.GetLogicalPose(bypassId, 0.5f).Scale < 1);
+        OperationTileMotion diagonal = shuffle.LogicalMotions.Single(motion =>
+            motion.SourceX != motion.DestinationX && motion.SourceY != motion.DestinationY);
+        Assert.NotEqual(diagonal.TileId, bypassId);
         Assert.All(shuffle.LogicalMotions.Where(motion => motion.TileId != bypassId), motion =>
             Assert.Equal(1, shuffle.GetLogicalPose(motion.TileId, 0.5f).Scale, 4));
 
@@ -166,6 +254,36 @@ public class OperationAnimationTests
     }
 
     [Fact]
+    public void GeneratedLensScramblesPreferLogicalAnimationAndRespectExplicitStyle()
+    {
+        var registry = OperationRegistry.CreateDefault();
+        var rules = new PuzzleRuleSet("Hybrid", new[] { PuzzleOperationIds.Slide, PuzzleOperationIds.Shuffle },
+            new[] { PuzzleOperationIds.Slide, PuzzleOperationIds.Shuffle },
+            new[] { PuzzleOperationIds.Slide, PuzzleOperationIds.Shuffle }, registry);
+        var board = OperationBoardSnapshot.FromGrid(new Grid(5, 3));
+        var evaluator = new OperationRuleEvaluator(registry);
+        OperationEvaluation shuffleEvaluation = evaluator.EvaluateScrambleRequest(board,
+            new ShuffleOperationIntent(4, 2, PortableLensCell.Circle, PortableLensCell.Star), rules);
+        OperationEvaluation slideEvaluation = evaluator.EvaluateScrambleRequest(board,
+            new SlideOperationIntent(RecordedMoveAxis.Row, 0, 1), rules);
+        Assert.True(shuffleEvaluation.IsAccepted, shuffleEvaluation.RejectionReason);
+        Assert.True(slideEvaluation.IsAccepted, slideEvaluation.RejectionReason);
+
+        var shufflePlan = new OperationAnimationPlan(board, shuffleEvaluation.Plan!);
+        var slidePlan = new OperationAnimationPlan(board, slideEvaluation.Plan!);
+
+        Assert.Equal(OperationAnimationStyle.Logical, OperationAnimationPolicy.Select(shuffleEvaluation.Plan!,
+            shufflePlan.SupportsLogicalAnimation, preferLogicalForScramble: true));
+        Assert.Equal(OperationAnimationStyle.Primitive, OperationAnimationPolicy.Select(slideEvaluation.Plan!,
+            slidePlan.SupportsLogicalAnimation, preferLogicalForScramble: true));
+        Assert.Equal(OperationAnimationStyle.Primitive, OperationAnimationPolicy.Select(shuffleEvaluation.Plan!,
+            shufflePlan.SupportsLogicalAnimation, OperationAnimationStyle.Primitive, preferLogicalForScramble: true));
+        Assert.Equal(shuffleEvaluation.Plan!.Expansion, shufflePlan.PrimitiveMoves);
+        Assert.Equal(OperationAnimationStyle.Primitive, OperationAnimationPolicy.Select(slideEvaluation.Plan!,
+            slidePlan.SupportsLogicalAnimation, OperationAnimationStyle.Logical, preferLogicalForScramble: true));
+    }
+
+    [Fact]
     public void RecordingReceivesOneCompleteOperationOnlyAfterAnimationCompletes()
     {
         var (grid, plan, parameters) = CreateOperation(PuzzleOperationIds.Shuffle);
@@ -192,17 +310,18 @@ public class OperationAnimationTests
     }
 
     private static (Grid Grid, OperationPlan Plan, JsonElement Parameters) CreateOperation(
-        string operationId, OperationMoveAccounting? requestedAccounting = null)
+        string operationId, OperationMoveAccounting? requestedAccounting = null,
+        PortableLensCell startCell = PortableLensCell.Circle, PortableLensCell targetCell = PortableLensCell.Star,
+        int anchorX = 4, int anchorY = 2)
     {
         var registry = OperationRegistry.CreateDefault();
         var grid = new Grid(5, 3);
         IOperationIntent intent = operationId switch
         {
-            PuzzleOperationIds.Shuffle => new ShuffleOperationIntent(4, 2,
-                PortableLensCell.Circle, PortableLensCell.Star),
-            PuzzleOperationIds.ColumnSwap => new PortableLensSwapIntent(operationId, 4, 2,
+            PuzzleOperationIds.Shuffle => new ShuffleOperationIntent(anchorX, anchorY, startCell, targetCell),
+            PuzzleOperationIds.ColumnSwap => new PortableLensSwapIntent(operationId, anchorX, anchorY,
                 PortableLensCell.Circle, PortableLensCell.Star, "UpLeft"),
-            PuzzleOperationIds.RowSwap => new PortableLensSwapIntent(operationId, 4, 2,
+            PuzzleOperationIds.RowSwap => new PortableLensSwapIntent(operationId, anchorX, anchorY,
                 PortableLensCell.Circle, PortableLensCell.Triangle, "LeftUp"),
             _ => throw new ArgumentOutOfRangeException(nameof(operationId))
         };
@@ -233,4 +352,7 @@ public class OperationAnimationTests
                 count++;
         return count;
     }
+
+    private static int WrapCell(float center, int length) =>
+        ((int)MathF.Floor(center - 0.5f) % length + length) % length;
 }

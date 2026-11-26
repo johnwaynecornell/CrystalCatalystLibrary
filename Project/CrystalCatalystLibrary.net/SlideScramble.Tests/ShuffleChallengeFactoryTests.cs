@@ -23,6 +23,25 @@ public class ShuffleChallengeFactoryTests
         Assert.Equal(challenge.ScrambleMoves, repeated.ScrambleMoves);
         Assert.NotEqual(Solved(width, height), challenge.ScrambledCells);
         Assert.Equal(operationCount, challenge.ScrambleOperations.Count);
+        Assert.Equal(challenge.ScrambleOperations.Count, challenge.ScramblePlans.Count);
+        Assert.Equal(challenge.ScrambleOperations.SelectMany(operation => operation.PrimitiveMoves),
+            challenge.ScrambleMoves);
+        int[,] animatedSequenceResult = Solved(width, height);
+        for (int i = 0; i < challenge.ScramblePlans.Count; i++)
+        {
+            OperationPlan plan = challenge.ScramblePlans[i];
+            Assert.Equal(animatedSequenceResult, plan.SourceBoard.Cells);
+            Assert.Equal(OperationPlanPurpose.Scramble, plan.Purpose);
+            Assert.Equal(challenge.ScrambleOperations[i].PrimitiveMoves, plan.Expansion);
+            var visual = new OperationAnimationPlan(plan.SourceBoard, plan);
+            Assert.True(visual.SupportsLogicalAnimation);
+            Assert.Equal(OperationAnimationStyle.Logical,
+                OperationAnimationPolicy.Select(plan, visual.SupportsLogicalAnimation,
+                    preferLogicalForScramble: true));
+            Apply(animatedSequenceResult, plan.Expansion);
+        }
+        Assert.Equal(challenge.ScrambledCells, animatedSequenceResult);
+        Assert.Equal(challenge.ScrambledCells, challenge.Solution.InitialCells);
         Assert.All(challenge.ScrambleOperations, operation =>
         {
             Assert.Equal(PuzzleOperationIds.Shuffle, operation.OperationId);
@@ -56,7 +75,10 @@ public class ShuffleChallengeFactoryTests
         var grid = new Grid(width, height, 32);
         var controller = new SessionRecordingController(grid);
         controller.LoadPlayback(roundTrip);
-        while (controller.Step()) { }
+        while (controller.Step())
+        {
+        }
+
         Assert.Equal(Solved(width, height), Capture(grid));
         Assert.True(controller.IsOperationBoundary(controller.Position));
     }
@@ -85,5 +107,24 @@ public class ShuffleChallengeFactoryTests
         for (int x = 0; x < grid.Width; x++)
             cells[y, x] = grid.Tiles[y, x].OriginY * grid.Width + grid.Tiles[y, x].OriginX;
         return cells;
+    }
+
+    private static void Apply(int[,] cells, IEnumerable<RecordedMove> moves)
+    {
+        foreach (RecordedMove move in moves)
+        {
+            int length = move.Axis == RecordedMoveAxis.Row ? cells.GetLength(1) : cells.GetLength(0);
+            int[] line = new int[length];
+            for (int i = 0; i < length; i++)
+                line[i] = move.Axis == RecordedMoveAxis.Row ? cells[move.Index, i] : cells[i, move.Index];
+
+            int shift = (move.Delta % length + length) % length;
+            for (int i = 0; i < length; i++)
+            {
+                int value = line[(i + shift) % length];
+                if (move.Axis == RecordedMoveAxis.Row) cells[move.Index, i] = value;
+                else cells[i, move.Index] = value;
+            }
+        }
     }
 }
