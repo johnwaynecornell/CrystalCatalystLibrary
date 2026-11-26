@@ -6,6 +6,8 @@ Animation is presentation-only. `OperationAnimationPlan` captures the starting b
 
 Logical wrapped paths use the shortest toroidal displacement; primitive paths follow the recorded rotation direction. Both render clipped copies at the opposite board edge. Tile images and borders scale as one rounded visual frame; the lens symbols remain in the overlay above the moving tiles. Primitive playback and classic row/column drag animations continue using their existing presentation paths.
 
+Standalone generated Slide rotations use the same `0.62` second cadence as logical Portable Lens animations. Multi-step operations retain their `0.16` seconds per primitive step, and user drag snapping and recording playback keep their existing timing.
+
 For logical Shuffle, the diagonal mover stays full-size: one copy exits a lens edge while another enters simultaneously from another edge. Both are clipped to the lens cells, including when the lens wraps around the board; a different tile shrinks to bypass the center. Rule-aware generated challenges retain each verified operation plan and animate supported Shuffle and Swap operations as one logical transformation by default. Each completed animation commits the plan's exact stored primitive expansion, without scoring or recording the scramble, and the inverse solution is attached only after verifying the resulting board. Explicit Instant and Primitive preferences remain available.
 
 The verified `ColumnSwap` and `RowSwap` expansions produce two simultaneous tile exchanges (four moving tile identities). Logical motion partners are derived from the actual permutation, rather than assuming an unverified single pair or substituting a simplified transformation.

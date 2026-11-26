@@ -179,7 +179,7 @@ public partial class Window
 
                     Animation anim = new Animation();
                     double start = -1;
-                    double duration = Math.Max(0.1, Math.Abs(delta) * 0.12);
+                    double duration = OperationAnimationTimeline.LogicalDurationSeconds;
                     anim.animation = (window, animation1) =>
                     {
                         double time = wnd.uptimeSeconds();

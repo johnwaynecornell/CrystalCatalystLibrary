@@ -196,6 +196,31 @@ public class OperationAnimationTests
         Assert.Equal(original, OperationBoardSnapshot.FromGrid(grid).Cells);
     }
 
+    [Fact]
+    public void StandaloneSlideUsesLogicalCadenceWhileMultiPrimitiveOperationsKeepPerStepTiming()
+    {
+        var grid = new Grid(4, 4);
+        var board = OperationBoardSnapshot.FromGrid(grid);
+        var registry = OperationRegistry.CreateDefault();
+        OperationEvaluation evaluation = new OperationRuleEvaluator(registry).EvaluateUiRequest(board,
+            new SlideOperationIntent(RecordedMoveAxis.Row, 0, 2), PuzzleRuleSet.CreateClassic());
+        Assert.True(evaluation.IsAccepted, evaluation.RejectionReason);
+
+        var slidePlan = new OperationAnimationPlan(board, evaluation.Plan!);
+        var slideTimeline = new OperationAnimationTimeline(slidePlan, OperationAnimationStyle.Primitive);
+        Assert.Equal(OperationAnimationTimeline.LogicalDurationSeconds, slideTimeline.DurationSeconds);
+
+        OperationAnimationFrame halfway = slideTimeline.GetFrame(slideTimeline.DurationSeconds / 2);
+        Assert.False(halfway.IsComplete);
+        Assert.Equal(0, halfway.PrimitiveIndex);
+        Assert.Equal(0.5f, halfway.Progress, 4);
+
+        var (_, shufflePlan, _) = CreateOperation(PuzzleOperationIds.Shuffle);
+        var shuffleVisual = new OperationAnimationPlan(OperationBoardSnapshot.FromGrid(new Grid(5, 3)), shufflePlan);
+        var shuffleTimeline = new OperationAnimationTimeline(shuffleVisual, OperationAnimationStyle.Primitive);
+        Assert.Equal(4 * OperationAnimationTimeline.PrimitiveStepDurationSeconds, shuffleTimeline.DurationSeconds);
+    }
+
     [Theory]
     [InlineData(RecordedMoveAxis.Row, 2)]
     [InlineData(RecordedMoveAxis.Row, -2)]

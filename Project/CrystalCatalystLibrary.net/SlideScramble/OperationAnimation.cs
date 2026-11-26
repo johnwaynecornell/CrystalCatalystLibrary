@@ -473,7 +473,9 @@ public sealed class OperationAnimationTimeline
 
     public double DurationSeconds => Style switch
     {
-        OperationAnimationStyle.Primitive => Plan.PrimitiveCount * PrimitiveStepDurationSeconds,
+        OperationAnimationStyle.Primitive => Plan.OperationId == PuzzleOperationIds.Slide && Plan.PrimitiveCount == 1
+            ? LogicalDurationSeconds
+            : Plan.PrimitiveCount * PrimitiveStepDurationSeconds,
         OperationAnimationStyle.Logical => LogicalDurationSeconds,
         _ => 0
     };
@@ -503,9 +505,9 @@ public sealed class OperationAnimationTimeline
 
         if (Style == OperationAnimationStyle.Primitive)
         {
-            int index = Math.Min(Plan.PrimitiveCount - 1, (int)(elapsedSeconds / PrimitiveStepDurationSeconds));
-            float progress = (float)((elapsedSeconds - index * PrimitiveStepDurationSeconds) /
-                                     PrimitiveStepDurationSeconds);
+            double stepDuration = DurationSeconds / Plan.PrimitiveCount;
+            int index = Math.Min(Plan.PrimitiveCount - 1, (int)(elapsedSeconds / stepDuration));
+            float progress = (float)((elapsedSeconds - index * stepDuration) / stepDuration);
             return new OperationAnimationFrame(index, OperationAnimationPlan.Ease(progress), false);
         }
 
