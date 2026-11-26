@@ -434,6 +434,11 @@ public partial class Window
             lensInteraction.CancelGesture();
             CancelOperationAnimation();
             spaceHeld = false;
+            if (inputHelpPreview != null)
+            {
+                popupHost.Cancel();
+                handle.QueueRedraw();
+            }
         };
         wnd.OnKeyDown = (handle, keycode) =>
         {

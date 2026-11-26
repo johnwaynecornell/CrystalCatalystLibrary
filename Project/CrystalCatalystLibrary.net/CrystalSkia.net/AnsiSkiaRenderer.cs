@@ -226,35 +226,68 @@ public class AnsiSkiaRenderer
         };
     }
 
-    private SKSize Measure(ParsedContent content)
+    internal const float DefaultPadding = 20;
+    private const float LineSpacing = 5;
+
+    private SKSize Measure(ParsedContent content, float padding = DefaultPadding)
     {
         float maxWidth = 0;
         float height = 0;
-        float lineSpacing = 5;
 
         foreach (var line in content.Lines)
         {
             float lineWidth = 0;
             foreach (var sc in line)
             {
-                var typeface = TypefaceForGlyph(sc.Glyph);
-                var font = GetFont(typeface, FontSize, sc.Bold, sc.Italic);
-                
-                lineWidth += font.MeasureText(sc.Glyph.ToString());
+                lineWidth += MeasureGlyph(sc);
             }
             maxWidth = Math.Max(maxWidth, lineWidth);
-            height += FontSize + lineSpacing;
+            height += FontSize + LineSpacing;
         }
 
-        return new SKSize(maxWidth + 40, height + 40); // Add padding (20 on each side)
+        return new SKSize(maxWidth + 2 * padding, height + 2 * padding);
     }
 
-    public void Render(ParsedContent content, SKCanvas canvas, bool blinkState)
-    {
-        float x = 20;
-        float y = 40;
-        float lineSpacing = 5;
+    private float MeasureGlyph(StyledChar glyph) =>
+        GetFont(TypefaceForGlyph(glyph.Glyph), FontSize, glyph.Bold, glyph.Italic).MeasureText(glyph.Glyph);
 
+    internal ParsedContent Wrap(ParsedContent source, float maxWidth, float padding)
+    {
+        var wrapped = new ParsedContent();
+        float lineLimit = Math.Max(1, maxWidth - 2 * padding);
+        foreach (var line in source.Lines)
+        {
+            if (line.Count == 0) wrapped.Lines.Add(new List<StyledChar>());
+            var widths = line.ConvertAll(MeasureGlyph);
+            int start = 0;
+            while (start < line.Count)
+            {
+                int end = start;
+                int wordBreak = -1;
+                float width = 0;
+                while (end < line.Count && (end == start || width + widths[end] <= lineLimit))
+                {
+                    if (end > start && line[end].Glyph == " ") wordBreak = end;
+                    width += widths[end++];
+                }
+
+                // Break at the last space when a word would otherwise be split.
+                if (end < line.Count && line[end].Glyph != " " && wordBreak > start)
+                    end = wordBreak;
+                wrapped.Lines.Add(line.GetRange(start, end - start));
+                start = end;
+                while (start < line.Count && line[start].Glyph == " ") start++;
+            }
+        }
+        wrapped.PixelSize = Measure(wrapped, padding);
+        return wrapped;
+    }
+
+    public void Render(ParsedContent content, SKCanvas canvas, bool blinkState) =>
+        Render(content, canvas, blinkState, DefaultPadding, 40);
+
+    internal void Render(ParsedContent content, SKCanvas canvas, bool blinkState, float x, float y)
+    {
         using var paint = new SKPaint { IsAntialias = true };
 
         foreach (var line in content.Lines)
@@ -283,7 +316,7 @@ public class AnsiSkiaRenderer
                     if (bg != SKColors.Transparent)
                     {
                         using var bgPaint = new SKPaint { Color = bg };
-                        canvas.DrawRect(curX, y - FontSize, charWidth, FontSize + lineSpacing, bgPaint);
+                        canvas.DrawRect(curX, y - FontSize, charWidth, FontSize + LineSpacing, bgPaint);
                     }
 
                     canvas.DrawText(sc.Glyph.ToString(), curX, y, font, paint);
@@ -294,7 +327,7 @@ public class AnsiSkiaRenderer
                 }
                 curX += font.MeasureText(sc.Glyph.ToString());
             }
-            y += FontSize + lineSpacing;
+            y += FontSize + LineSpacing;
         }
     }
 

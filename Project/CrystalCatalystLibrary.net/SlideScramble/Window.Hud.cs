@@ -561,7 +561,13 @@ public partial class Window
             if (commandMenu != null)
             {
                 var area = new System.Drawing.RectangleF(0, 0, width, height);
-                if (presetMenuVisible)
+                if (inputHelpPreview != null)
+                {
+                    popupHost.SetLayout(area, inputHelpPreview.Layout(area, commandMenu));
+                    popupHost.OnDraw(canvas);
+                    inputHelpPreview.Current?.OnDraw(canvas);
+                }
+                else if (presetMenuVisible)
                 {
                     var layout = PresetMenuPreviewLayout.Calculate(new SKRect(0, 0, width, height),
                         commandMenu.PreferredWidth, commandMenu.PreferredHeight,
