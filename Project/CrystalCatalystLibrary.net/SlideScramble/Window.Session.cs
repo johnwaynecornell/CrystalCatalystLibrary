@@ -41,7 +41,7 @@ public partial class Window
         float panelWidth = Math.Min(320, Math.Max(40, w - 16));
         if (gutter.Width >= 160) panelWidth = Math.Min(panelWidth, gutter.Width - 8);
         int columns = Math.Clamp((int)((panelWidth - 24) / 65), 1, mediaLabels.Length);
-        float panelHeight = 68 + (float)Math.Ceiling((double)mediaLabels.Length / columns) * 30 + 34;
+        float panelHeight = 68 + (float)Math.Ceiling((double)mediaLabels.Length / columns) * 30 + 48;
         float scale = Math.Min(1, Math.Min(w / panelWidth, Math.Max(1, bottom - top) / panelHeight));
         float x = Math.Clamp(gutter.MidX - panelWidth * scale / 2, 0, Math.Max(0, w - panelWidth * scale));
         float y = Math.Clamp(gutter.MidY - panelHeight * scale / 2, top, Math.Max(top, bottom - panelHeight * scale));
@@ -83,13 +83,24 @@ public partial class Window
         }
 
         canvas.Save();
-        canvas.ClipRect(new SKRect(8, layout.Height - 30, layout.Width - 8, layout.Height));
+        canvas.ClipRect(new SKRect(8, layout.Height - 44, layout.Width - 8, layout.Height));
+        canvas.DrawText(FormatOperationPosition(sessions.Mode, sessions.CompletedOperationCount,
+                sessions.OperationCount, sessions.CurrentOperationIndex), 12,
+            layout.Height - 32, footerFont, hudMutedPaint);
         canvas.DrawText($"{sessions.Mode}  {FormatPrimitivePosition(sessions.Position, sessions.MoveCount)}", 12,
             layout.Height - 18, footerFont, hudMutedPaint);
         canvas.DrawText(sessionMessage, 12, layout.Height - 4, footerFont, hudMutedPaint);
         canvas.Restore();
         canvas.Restore();
         if ((ICrystal)filenameEditor is ICrystalSkia drawable) drawable.OnDraw(canvas);
+    }
+
+    internal static string FormatOperationPosition(RecordingControllerMode mode, int completedOperations,
+        int operationCount, int? currentOperationIndex)
+    {
+        if (mode == RecordingControllerMode.Recording) return $"Operations recorded: {operationCount}";
+        string position = $"Operations: {completedOperations}/{operationCount} complete";
+        return currentOperationIndex.HasValue ? $"{position} · #{currentOperationIndex.Value} active" : position;
     }
 
     private string SessionPath()
@@ -280,52 +291,13 @@ public partial class Window
         if (sessions.Mode != RecordingControllerMode.Playback)
             throw new InvalidOperationException("Not in playback.");
         if (!forward) sessions.SetAutoplay(false);
-        var playback = sessions.Playback!;
-        int index = forward ? sessions.Position : sessions.Position - 1;
-        if (index < 0 || index >= playback.Moves.Count)
+        var step = sessions.GetPlaybackOperationStep(forward);
+        if (step == null)
         {
             if (forward) sessions.SetAutoplay(false);
             return;
         }
 
-        State.TakeBackSolved(wnd.uptimeSeconds());
-        var controller = sessions;
-        var move = playback.Moves[index];
-        bool column = move.Axis == RecordedMoveAxis.Column;
-        int length = column ? MyGrid.Height : MyGrid.Width;
-        int delta = move.Delta % length;
-        if (!forward) delta = -delta;
-        moveHighlight = forward
-            ? (move.StartX, move.StartY)
-            : column
-                ? (move.StartX, (move.StartY + delta + length) % length)
-                : ((move.StartX + delta + length) % length, move.StartY);
-        animationLockHoriz = column;
-        animationOrdinal = move.Index;
-        animationTileOffset = 0;
-        double start = -1;
-        double duration = Math.Max(0.1, Math.Min(0.35, Math.Abs(delta) * 0.12));
-        Animations.Enqueue(new Animation
-        {
-            animation = (window, animation) =>
-            {
-                double time = wnd.uptimeSeconds();
-                if (start < 0) start = time;
-                float t = Math.Clamp((float)((time - start) / duration), 0f, 1f);
-                if (t >= 1f)
-                {
-                    if (forward) controller.Step();
-                    else controller.StepBack();
-                    animationLockHoriz = null;
-                    animationTileOffset = 0;
-                    moveHighlight = null;
-                    lastPlaybackTick = time;
-                    return false;
-                }
-
-                animationTileOffset = delta * (t * t * (3f - 2f * t));
-                return true;
-            }
-        });
+        BeginPlaybackOperationAnimation(step);
     }
 }

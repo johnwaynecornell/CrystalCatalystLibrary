@@ -124,24 +124,31 @@ public partial class Window
             float tileW = tileView.width / MyGrid.Width;
             float tileH = tileView.height / MyGrid.Height;
 
-            // Draw Static Grid Tiles
-            for (int y = 0; y < MyGrid.Height; y++)
+            if (activeOperationAnimation is { } operationAnimation)
             {
-                if (animationLockHoriz != null && animationLockHoriz.Value == false && animationOrdinal == y) continue; 
-                
-                for (int x = 0; x < MyGrid.Width; x++)
+                DrawOperationAnimation(canvas, operationAnimation, tileW, tileH);
+            }
+            else
+            {
+                // Draw Static Grid Tiles
+                for (int y = 0; y < MyGrid.Height; y++)
                 {
-                    if (animationLockHoriz != null && animationLockHoriz.Value == true && animationOrdinal == x) continue;
-                    
-                    SKImage image = (boardDraft ?? MyGrid.Tiles)[y, x].Image;
+                    if (animationLockHoriz != null && animationLockHoriz.Value == false && animationOrdinal == y) continue;
 
-                    float _x = tileView.xx + tileW * x;
-                    float _y = tileView.yy + tileH * y;
+                    for (int x = 0; x < MyGrid.Width; x++)
+                    {
+                        if (animationLockHoriz != null && animationLockHoriz.Value == true && animationOrdinal == x) continue;
 
-                    var dest = new SKRect(_x, _y, _x + tileW, _y + tileH);
-                    var src = new SKRect(0, 0, image.Width, image.Height);
-                    
-                    canvas.DrawImage(image, src, dest, paint: tilePaint);
+                        SKImage image = (boardDraft ?? MyGrid.Tiles)[y, x].Image;
+
+                        float _x = tileView.xx + tileW * x;
+                        float _y = tileView.yy + tileH * y;
+
+                        var dest = new SKRect(_x, _y, _x + tileW, _y + tileH);
+                        var src = new SKRect(0, 0, image.Width, image.Height);
+
+                        canvas.DrawImage(image, src, dest, paint: tilePaint);
+                    }
                 }
             }
 
@@ -152,7 +159,7 @@ public partial class Window
             }
 
             // Draw Active Animated Row / Column
-            if (animationLockHoriz != null)
+            if (activeOperationAnimation == null && animationLockHoriz != null)
             {
                 bool horiz = animationLockHoriz.Value;
                 if (!horiz)

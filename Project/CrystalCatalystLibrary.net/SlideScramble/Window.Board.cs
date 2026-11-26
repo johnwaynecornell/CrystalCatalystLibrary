@@ -156,45 +156,56 @@ public partial class Window
                 State.FinishScrambling(wnd.uptimeSeconds());
                 Audio.PlayGameStartChime();
             }
-            
             if (State.Mode == GameMode.Scrambling)
             {
-                var move = NextScrambleMove();
-                bool column = move.Axis == RecordedMoveAxis.Column;
-                int ordinal = move.Index;
-                int delta = move.Delta;
-
-                Animation anim = new Animation();
-                double start = -1;
-                double duration = Math.Max(0.1, Math.Abs(delta) * 0.12);
-                anim.animation = (window, animation1) =>
+                if (pendingGeneratedOperations is { } pending)
                 {
-                    double time = wnd.uptimeSeconds();
-
-                    if (start == -1) start = time;
-                    double elapsed = time - start;
-
-                    if (elapsed >= duration)
+                    if (pending.Count == 0)
                     {
-                        animationLockHoriz = null;
-                        animationTileOffset = 0;
-                        if (column) MyGrid.MoveColumn(ordinal, delta);
-                        else MyGrid.MoveRow(ordinal, delta);
-                        generatedMoves?.Add(move);
-                        return false;
+                        ScrambleCount = 0;
+                        windowHandle.QueueRedraw();
+                        return;
                     }
-                    
-                    animationLockHoriz = column;
-                    animationOrdinal = ordinal;
-                    float t = Math.Clamp((float)(elapsed / duration), 0f, 1f);
-                    float progress = t * t * (3f - 2f * t); // smoothstep
-                    animationTileOffset = delta * progress;
-                    
-                    return true;
-                };
-                
-                Animations.Enqueue(anim);
-                ScrambleCount--;
+                    OperationPlan operation = pending.Dequeue();
+                    ScrambleCount -= operation.Expansion.Count;
+                    BeginScrambleOperationAnimation(operation);
+                }
+                else
+                {
+                    RecordedMove move = NextScrambleMove();
+                    bool column = move.Axis == RecordedMoveAxis.Column;
+                    int ordinal = move.Index;
+                    int delta = move.Delta;
+
+                    Animation anim = new Animation();
+                    double start = -1;
+                    double duration = OperationAnimationTimeline.LogicalDurationSeconds;
+                    anim.animation = (window, animation1) =>
+                    {
+                        double time = wnd.uptimeSeconds();
+
+                        if (start == -1) start = time;
+                        double elapsed = time - start;
+
+                        if (elapsed >= duration)
+                        {
+                            animationLockHoriz = null;
+                            animationTileOffset = 0;
+                            if (column) MyGrid.MoveColumn(ordinal, delta);
+                            else MyGrid.MoveRow(ordinal, delta);
+                            generatedMoves?.Add(move);
+                            return false;
+                        }
+                        animationLockHoriz = column;
+                        animationOrdinal = ordinal;
+                        float t = Math.Clamp((float)(elapsed / duration), 0f, 1f);
+                        float progress = t * t * (3f - 2f * t); // smoothstep
+                        animationTileOffset = delta * progress;
+                        return true;
+                    };
+                    Animations.Enqueue(anim);
+                    ScrambleCount--;
+                }
             }
         }
 

@@ -9,6 +9,93 @@ public enum RecordingControllerMode
     Playback
 }
 
+/// <summary>A saved operation's primitive slice that can be replayed as one playback action.</summary>
+public sealed class RecordedOperationPlaybackStep
+{
+    internal SessionRecording Recording { get; }
+    internal int OperationStartPosition { get; }
+    internal int OperationEndPosition { get; }
+    internal OperationBoardSnapshot SourceBoard { get; }
+    internal bool IsCommitted { get; set; }
+
+    public RecordedOperation Operation { get; }
+    public int StartPosition { get; }
+    public int TargetPosition { get; }
+    public bool IsForward { get; }
+    public bool IsCompleteOperation => IsForward
+        ? StartPosition == OperationStartPosition && TargetPosition == OperationEndPosition
+        : StartPosition == OperationEndPosition && TargetPosition == OperationStartPosition;
+    public IReadOnlyList<RecordedMove> Moves { get; }
+
+    internal RecordedOperationPlaybackStep(SessionRecording recording, RecordedOperation operation,
+        int operationStartPosition, int operationEndPosition, int startPosition, int targetPosition, bool isForward,
+        IEnumerable<RecordedMove> moves, OperationBoardSnapshot sourceBoard)
+    {
+        Recording = recording;
+        Operation = operation;
+        OperationStartPosition = operationStartPosition;
+        OperationEndPosition = operationEndPosition;
+        StartPosition = startPosition;
+        TargetPosition = targetPosition;
+        IsForward = isForward;
+        Moves = Array.AsReadOnly(moves.ToArray());
+        SourceBoard = sourceBoard.Copy();
+    }
+
+    /// <summary>Creates visual snapshots from saved primitives, without invoking an operation resolver.</summary>
+    public OperationAnimationPlan CreateAnimationPlan(OperationBoardSnapshot board)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        if (board.Width != SourceBoard.Width || board.Height != SourceBoard.Height ||
+            !BoardsEqual(board.Cells, SourceBoard.Cells))
+            throw new InvalidOperationException("Playback board changed before the operation could be animated.");
+        IOperationIntent intent = new PlaybackIntent(Operation.OperationId);
+        var parameters = Operation.Parameters;
+        bool hasAnchor = parameters.TryGetProperty("lensAnchor", out var anchor) &&
+                         anchor.ValueKind == JsonValueKind.Array && anchor.GetArrayLength() == 2 &&
+                         anchor[0].TryGetInt32(out _) && anchor[1].TryGetInt32(out _);
+        int x = hasAnchor ? anchor[0].GetInt32() : 0;
+        int y = hasAnchor ? anchor[1].GetInt32() : 0;
+        bool validAnchor = hasAnchor && x >= 0 && x < board.Width && y >= 0 && y < board.Height &&
+                           board.Width >= 2 && board.Height >= 2;
+        if (Operation.OperationId == PuzzleOperationIds.Shuffle && validAnchor &&
+            parameters.TryGetProperty("startCell", out var start) && start.ValueKind == JsonValueKind.String &&
+            parameters.TryGetProperty("targetCell", out var target) && target.ValueKind == JsonValueKind.String &&
+            Enum.TryParse(start.GetString(), false, out PortableLensCell startCell) && Enum.IsDefined(startCell) &&
+            Enum.TryParse(target.GetString(), false, out PortableLensCell targetCell) && Enum.IsDefined(targetCell))
+            intent = new ShuffleOperationIntent(x, y, startCell, targetCell);
+
+        var plan = new OperationPlan(Operation.OperationId, intent, board, Operation.Purpose, Moves,
+            Operation.Accounting, Operation.MoveCost);
+        bool lensMetadata = validAnchor && (Operation.OperationId != PuzzleOperationIds.Shuffle ||
+                                             intent is ShuffleOperationIntent);
+        var visual = new OperationAnimationPlan(board, plan, IsCompleteOperation && lensMetadata);
+        var lensCells = new HashSet<(int, int)>
+        {
+            (x, y), ((x + 1) % board.Width, y), (x, (y + 1) % board.Height),
+            ((x + 1) % board.Width, (y + 1) % board.Height)
+        };
+        bool local = visual.LogicalMotions.All(motion => lensCells.Contains((motion.SourceX, motion.SourceY)) &&
+                                                          lensCells.Contains((motion.DestinationX, motion.DestinationY)));
+        bool paired = Operation.OperationId is not (PuzzleOperationIds.ColumnSwap or PuzzleOperationIds.RowSwap) ||
+                      visual.LogicalMotions.All(motion => visual.LogicalMotions.Any(other =>
+                          other.SourceX == motion.DestinationX && other.SourceY == motion.DestinationY &&
+                          other.DestinationX == motion.SourceX && other.DestinationY == motion.SourceY));
+        return local && paired ? visual : new OperationAnimationPlan(board, plan, false);
+    }
+
+    private sealed record PlaybackIntent(string OperationId) : IOperationIntent;
+
+    internal static bool BoardsEqual(int[,] left, int[,] right)
+    {
+        if (left.GetLength(0) != right.GetLength(0) || left.GetLength(1) != right.GetLength(1)) return false;
+        for (int y = 0; y < left.GetLength(0); y++)
+        for (int x = 0; x < left.GetLength(1); x++)
+            if (left[y, x] != right[y, x]) return false;
+        return true;
+    }
+}
+
 /// <summary>Controls recording and caller-driven primitive playback against an existing grid.</summary>
 public sealed class SessionRecordingController
 {
@@ -27,9 +114,47 @@ public sealed class SessionRecordingController
     public int Position { get; private set; }
 
     public int MoveCount => playback?.Moves.Count ?? operations.Sum(operation => operation.PrimitiveMoves.Count);
+    public int OperationCount => CurrentOperations.Count;
+    public int CompletedOperationCount
+    {
+        get
+        {
+            int position = Math.Clamp(Position, 0, MoveCount);
+            int boundary = 0;
+            int completed = 0;
+            foreach (RecordedOperation operation in CurrentOperations)
+            {
+                boundary += operation.PrimitiveMoves.Count;
+                if (boundary > position) break;
+                completed++;
+            }
+
+            return completed;
+        }
+    }
+
+    /// <summary>One-based operation index when the primitive position is inside an operation.</summary>
+    public int? CurrentOperationIndex
+    {
+        get
+        {
+            int start = 0;
+            for (int i = 0; i < CurrentOperations.Count; i++)
+            {
+                int end = start + CurrentOperations[i].PrimitiveMoves.Count;
+                if (Position > start && Position < end) return i + 1;
+                start = end;
+            }
+
+            return null;
+        }
+    }
+
     public SessionRecording? Playback => playback;
     public PuzzleRuleSet RuleSet => (recordingRules ?? playback?.RuleSet ?? configuredRules).Snapshot();
     public IReadOnlyCollection<string> RuntimeUIEnabled => runtimeUiEnabled.Order(StringComparer.Ordinal).ToArray();
+
+    private IReadOnlyList<RecordedOperation> CurrentOperations => playback?.Operations ?? operations;
 
     public SessionRecordingController(Grid grid, PuzzleRuleSet? rules = null)
     {
@@ -224,6 +349,62 @@ public sealed class SessionRecordingController
         return true;
     }
 
+    /// <summary>Gets the remaining part of the next operation in the requested playback direction.</summary>
+    public RecordedOperationPlaybackStep? GetPlaybackOperationStep(bool forward)
+    {
+        if (Mode != RecordingControllerMode.Playback || playback == null)
+            throw new InvalidOperationException("Not in playback.");
+
+        int operationStart = 0;
+        foreach (RecordedOperation operation in playback.Operations)
+        {
+            int operationEnd = operationStart + operation.PrimitiveMoves.Count;
+            if (forward && Position >= operationStart && Position < operationEnd)
+            {
+                RecordedMove[] moves = operation.PrimitiveMoves.Skip(Position - operationStart).ToArray();
+                return new RecordedOperationPlaybackStep(playback, operation, operationStart, operationEnd,
+                    Position, operationEnd, true, moves, new OperationBoardSnapshot(Capture()));
+            }
+
+            if (!forward && Position > operationStart && Position <= operationEnd)
+            {
+                RecordedMove[] moves = operation.PrimitiveMoves.Take(Position - operationStart)
+                    .Reverse().Select(InvertPlaybackMove).ToArray();
+                return new RecordedOperationPlaybackStep(playback, operation, operationStart, operationEnd,
+                    Position, operationStart, false, moves, new OperationBoardSnapshot(Capture()));
+            }
+
+            operationStart = operationEnd;
+        }
+
+        return null;
+    }
+
+    /// <summary>Commits an operation playback slice once, restoring the board if applying any primitive fails.</summary>
+    public void CommitPlaybackOperationStep(RecordedOperationPlaybackStep step)
+    {
+        ArgumentNullException.ThrowIfNull(step);
+        if (step.IsCommitted || Mode != RecordingControllerMode.Playback || !ReferenceEquals(playback, step.Recording) ||
+            Position != step.StartPosition)
+            throw new InvalidOperationException("Playback changed before the operation could be committed.");
+
+        int[,] before = Capture();
+        if (!RecordedOperationPlaybackStep.BoardsEqual(before, step.SourceBoard.Cells))
+            throw new InvalidOperationException("Playback board changed before the operation could be committed.");
+        try
+        {
+            foreach (RecordedMove move in step.Moves) Apply(move);
+            Position = step.TargetPosition;
+            step.IsCommitted = true;
+            if (!step.IsForward || Position == playback!.Moves.Count) IsAutoplaying = false;
+        }
+        catch
+        {
+            Restore(before);
+            throw;
+        }
+    }
+
     public void SetAutoplay(bool enabled)
     {
         if (Mode != RecordingControllerMode.Playback) throw new InvalidOperationException("Not in playback.");
@@ -292,6 +473,19 @@ public sealed class SessionRecordingController
     {
         if (move.Axis == RecordedMoveAxis.Row) grid.MoveRow(move.Index, move.Delta);
         else grid.MoveColumn(move.Index, move.Delta);
+    }
+
+    private RecordedMove InvertPlaybackMove(RecordedMove move)
+    {
+        int length = move.Axis == RecordedMoveAxis.Row ? grid.Width : grid.Height;
+        int delta = -(move.Delta % length);
+        int startX = move.StartX;
+        int startY = move.StartY;
+        if (move.Axis == RecordedMoveAxis.Row)
+            startX = (startX + delta + length) % length;
+        else
+            startY = (startY + delta + length) % length;
+        return move with { StartX = startX, StartY = startY, Delta = delta };
     }
 
     private int[,] Capture()

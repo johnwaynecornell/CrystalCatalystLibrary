@@ -4,18 +4,22 @@ public sealed class ShuffleChallenge
 {
     private readonly int[,] scrambledCells;
     private readonly RecordedOperation[] scrambleOperations;
+    private readonly OperationPlan[] scramblePlans;
     private readonly RecordedMove[] scrambleMoves;
 
     public int[,] ScrambledCells => (int[,])scrambledCells.Clone();
     public IReadOnlyList<RecordedOperation> ScrambleOperations => Array.AsReadOnly(scrambleOperations);
+    public IReadOnlyList<OperationPlan> ScramblePlans => Array.AsReadOnly(scramblePlans);
     public IReadOnlyList<RecordedMove> ScrambleMoves => Array.AsReadOnly(scrambleMoves);
     public SessionRecording Solution { get; }
 
     internal ShuffleChallenge(int[,] scrambledCells, IEnumerable<RecordedOperation> scrambleOperations,
-        IEnumerable<RecordedMove> scrambleMoves, SessionRecording solution)
+        IEnumerable<OperationPlan> scramblePlans, IEnumerable<RecordedMove> scrambleMoves,
+        SessionRecording solution)
     {
         this.scrambledCells = (int[,])scrambledCells.Clone();
         this.scrambleOperations = scrambleOperations.ToArray();
+        this.scramblePlans = scramblePlans.ToArray();
         this.scrambleMoves = scrambleMoves.ToArray();
         Solution = solution;
     }
@@ -24,6 +28,13 @@ public sealed class ShuffleChallenge
 /// <summary>Builds challenges and their verified inverse operation recordings.</summary>
 public static class ShuffleChallengeFactory
 {
+    private readonly record struct CandidateGroupKey(
+        string OperationId,
+        PortableLensCell? StartCell,
+        PortableLensCell? TargetCell);
+
+    private sealed record CandidateGroup(CandidateGroupKey Key, IOperationIntent[] Intents);
+
     private static readonly (PortableLensCell Start, PortableLensCell Target)[] Gestures =
     {
         (PortableLensCell.Circle, PortableLensCell.Star),
@@ -72,7 +83,8 @@ public static class ShuffleChallengeFactory
             throw new InvalidOperationException("Generated Shuffle inverses did not restore the solved board.");
 
         var solution = new SessionRecording(scrambled, solutionOperations, rules, rules.Registry);
-        return new ShuffleChallenge(scrambled, scrambleOperations, scrambleMoves, solution);
+        return new ShuffleChallenge(scrambled, scrambleOperations, scramblePlans.Select(entry => entry.Plan),
+            scrambleMoves, solution);
     }
 
     /// <summary>Builds a challenge from supported, authorized operations with a verified player-accessible inverse.</summary>
@@ -86,37 +98,55 @@ public static class ShuffleChallengeFactory
         if (height < 2) throw new ArgumentOutOfRangeException(nameof(height));
         if (operationCount < 1) throw new ArgumentOutOfRangeException(nameof(operationCount));
 
-        var candidates = CandidateIntents(width, height, rules).ToArray();
+        var candidateGroups = CandidateIntents(width, height, rules)
+            .GroupBy(GetCandidateGroupKey)
+            .Select(group => new CandidateGroup(group.Key, group.ToArray()))
+            .ToArray();
         var rulesEvaluator = new OperationRuleEvaluator(rules.Registry);
         var cells = Solved(width, height);
         var scramble = new List<RecordedOperation>(operationCount);
+        var scramblePlans = new List<OperationPlan>(operationCount);
         var inverses = new List<IReadOnlyList<RecordedOperation>>(operationCount);
+        var usedGroups = new HashSet<CandidateGroupKey>();
         for (int step = 0; step < operationCount; step++)
         {
-            // Randomize a finite candidate set so rejection never depends on repeated random guesses.
-            for (int i = candidates.Length - 1; i > 0; i--)
+            CandidateGroup[] unvisitedGroups =
+                candidateGroups.Where(group => !usedGroups.Contains(group.Key)).ToArray();
+            if (unvisitedGroups.Length == 0)
             {
-                int j = random.Next(i + 1);
-                (candidates[i], candidates[j]) = (candidates[j], candidates[i]);
+                usedGroups.Clear();
+                unvisitedGroups = candidateGroups;
             }
 
+            var groupsToTry = Shuffle(unvisitedGroups, random)
+                .Concat(Shuffle(candidateGroups.Where(group => usedGroups.Contains(group.Key)), random));
+
             bool added = false;
-            foreach (var intent in candidates)
+            foreach (CandidateGroup group in groupsToTry)
             {
-                var evaluation = evaluator.EvaluateScrambleRequest(new OperationBoardSnapshot(cells), intent, rules);
-                if (!evaluation.IsAccepted) continue;
-                var registryEvaluation = rulesEvaluator.EvaluateScrambleRequest(new OperationBoardSnapshot(cells), intent, rules);
-                if (!Equivalent(evaluation, registryEvaluation)) continue;
-                var next = (int[,])cells.Clone();
-                Apply(next, evaluation.Plan!.Expansion);
-                if (SameCells(cells, next) || (step == operationCount - 1 && IsSolved(next))) continue;
-                var inverse = TryInverse(cells, next, intent, evaluation.Plan, rules, evaluator, rulesEvaluator);
-                if (inverse == null) continue;
-                scramble.Add(ToRecordedOperation(intent, evaluation.Plan));
-                inverses.Add(inverse);
-                cells = next;
-                added = true;
-                break;
+                foreach (IOperationIntent intent in Shuffle(group.Intents, random))
+                {
+                    var evaluation =
+                        evaluator.EvaluateScrambleRequest(new OperationBoardSnapshot(cells), intent, rules);
+                    if (!evaluation.IsAccepted) continue;
+                    var registryEvaluation =
+                        rulesEvaluator.EvaluateScrambleRequest(new OperationBoardSnapshot(cells), intent, rules);
+                    if (!Equivalent(evaluation, registryEvaluation)) continue;
+                    var next = (int[,])cells.Clone();
+                    Apply(next, evaluation.Plan!.Expansion);
+                    if (SameCells(cells, next) || (step == operationCount - 1 && IsSolved(next))) continue;
+                    var inverse = TryInverse(cells, next, intent, evaluation.Plan, rules, evaluator, rulesEvaluator);
+                    if (inverse == null) continue;
+                    scramble.Add(ToRecordedOperation(intent, evaluation.Plan));
+                    scramblePlans.Add(evaluation.Plan!);
+                    inverses.Add(inverse);
+                    cells = next;
+                    usedGroups.Add(group.Key);
+                    added = true;
+                    break;
+                }
+
+                if (added) break;
             }
 
             if (!added)
@@ -128,7 +158,8 @@ public static class ShuffleChallengeFactory
         Apply(verified, solutionOperations.SelectMany(operation => operation.PrimitiveMoves));
         if (!IsSolved(verified)) throw new InvalidOperationException("Generated inverses did not restore the solved board.");
         var solution = new SessionRecording(cells, solutionOperations, rules, rules.Registry);
-        return new ShuffleChallenge(cells, scramble, scramble.SelectMany(operation => operation.PrimitiveMoves), solution);
+        return new ShuffleChallenge(cells, scramble, scramblePlans,
+            scramble.SelectMany(operation => operation.PrimitiveMoves), solution);
     }
 
     private static IEnumerable<IOperationIntent> CandidateIntents(int width, int height, PuzzleRuleSet rules)
@@ -164,6 +195,27 @@ public static class ShuffleChallengeFactory
                     yield return new PortableLensSwapIntent(id, x, y, start, target, variant);
             }
         }
+    }
+
+    private static CandidateGroupKey GetCandidateGroupKey(IOperationIntent intent) => intent switch
+    {
+        ShuffleOperationIntent shuffle => new CandidateGroupKey(PuzzleOperationIds.Shuffle, shuffle.StartCell,
+            shuffle.TargetCell),
+        SlideOperationIntent => new CandidateGroupKey(PuzzleOperationIds.Slide, null, null),
+        PortableLensSwapIntent swap => new CandidateGroupKey(swap.OperationId, null, null),
+        _ => throw new InvalidOperationException("Unsupported challenge operation.")
+    };
+
+    private static T[] Shuffle<T>(IEnumerable<T> values, Random random)
+    {
+        T[] result = values.ToArray();
+        for (int i = result.Length - 1; i > 0; i--)
+        {
+            int j = random.Next(i + 1);
+            (result[i], result[j]) = (result[j], result[i]);
+        }
+
+        return result;
     }
 
     private static IReadOnlyList<RecordedOperation>? TryInverse(int[,] before, int[,] after, IOperationIntent intent,
