@@ -1,10 +1,13 @@
 using CrystalSkia.net;
+using SkiaSharp;
 
 namespace SlideScramble;
 
 public partial class Window
 {
     private bool rulesMenuVisible;
+    private bool presetMenuVisible;
+    private PuzzleRuleSet? presetPreviewRules;
 
     private void ShowRulesMenu()
     {
@@ -21,17 +24,13 @@ public partial class Window
 
     private void ShowPresetMenu()
     {
-        ShowRulesList("Rule presets", new[]
+        var presets = SelectionPreviewRules.CreatePresets(activeRules.Registry);
+        var entries = presets.Select(preset => (preset.Name, (Action)(() => SelectPreset(preset)))).ToList();
+        entries.Add(("Back", ShowRulesMenu));
+        ShowRulesList("Rule presets", entries, index =>
         {
-            ("Classic", (Action)(() => SelectPreset(PuzzleRuleSet.CreateClassic(activeRules.Registry)))),
-            ("ShuffleLogic", (Action)(() => SelectPreset(PuzzleRuleSet.CreateShuffleLogic(activeRules.Registry)))),
-            ("SwapLogic", (Action)(() => SelectPreset(PuzzleRuleSet.CreateSwapLogic(activeRules.Registry)))),
-            ("TwoWide", (Action)(() => SelectPreset(PuzzleRuleSet.CreateTwoWide(activeRules.Registry)))),
-            ("TwoTall", (Action)(() => SelectPreset(PuzzleRuleSet.CreateTwoTall(activeRules.Registry)))),
-            ("Hybrid", (Action)(() => SelectPreset(PuzzleRuleSet.CreateHybrid(activeRules.Registry)))),
-            ("ZeroSlide", (Action)(() => SelectPreset(PuzzleRuleSet.CreateZeroSlide(activeRules.Registry)))),
-            ("FreeStyle", (Action)(() => SelectPreset(PuzzleRuleSet.CreateFreeStyle(activeRules.Registry)))),
-            ("Back", (Action)ShowRulesMenu)
+            presetPreviewRules = index >= 0 && index < presets.Count ? presets[index] : null;
+            wnd.QueueRedraw();
         });
     }
 
@@ -66,6 +65,7 @@ public partial class Window
                     ShowInitialInputMenu();
                     return;
                 }
+
                 var ids = new HashSet<string>(activeRules.UIEnabled, StringComparer.Ordinal);
                 if (!ids.Add(id)) ids.Remove(id);
                 if (ApplyConfiguredRules(activeRules.WithUIEnabled(ids), false)) ShowInitialInputMenu();
@@ -86,6 +86,7 @@ public partial class Window
                     ShowLiveInputMenu();
                     return;
                 }
+
                 bool enabled = !sessions.RuntimeUIEnabled.Contains(id);
                 if (sessions.SetRuntimeUIEnabled(id, enabled))
                 {
@@ -95,6 +96,7 @@ public partial class Window
                     sessionMessage = $"{id} input {(enabled ? "enabled" : "disabled")}";
                 }
                 else sessionMessage = $"Could not change {id} input";
+
                 ShowLiveInputMenu();
             }))).ToList();
         entries.Add(("Back", ShowRulesMenu));
@@ -142,12 +144,16 @@ public partial class Window
     }
 
     private bool IsLensOperationUnavailable(string operationId) => operationId != PuzzleOperationIds.Slide &&
-        (MyGrid.Width < 3 || MyGrid.Height < 3);
+                                                                   (MyGrid.Width < 3 || MyGrid.Height < 3);
 
-    private void ShowRulesList(string title, IEnumerable<(string Label, Action Execute)> commands)
+    private void ShowRulesList(string title, IEnumerable<(string Label, Action Execute)> commands,
+        Action<int>? selectionChanged = null)
     {
         var items = commands.ToArray();
         var menu = new CrystalCommandMenu(title, items.Select(item => new CrystalMenuEntry(item.Label)), hudFont);
+        presetMenuVisible = selectionChanged != null;
+        presetPreviewRules = null;
+        if (selectionChanged != null) menu.SelectionChanged += selectionChanged;
         menu.Activated += index =>
         {
             popupHost.Accept(selectedIndex: index);
@@ -158,7 +164,17 @@ public partial class Window
         wnd.GetSize(out int width, out int height);
         var area = new System.Drawing.RectangleF(0, 0, width, height);
         popupHost.Show(menu, area);
-        popupHost.SetLayout(area, menu.GetCenteredBounds(area));
+        var menuBounds = presetMenuVisible
+            ? PresetMenuPreviewLayout.Calculate(new SKRect(0, 0, width, height), menu.PreferredWidth,
+                menu.PreferredHeight, SelectionPreviewRules.PresetPreviewLineCount).MenuBounds
+            : menu.GetCenteredBounds(area);
+        popupHost.SetLayout(area, menuBounds);
         wnd.QueueRedraw();
+    }
+
+    private void ClearPresetRulesPreview()
+    {
+        presetMenuVisible = false;
+        presetPreviewRules = null;
     }
 }

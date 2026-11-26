@@ -37,6 +37,64 @@ public class SelectionPreviewRulesTests
     }
 
     [Fact]
+    public void PresetPreviewCandidatesContainAllEightExpectedRuleSetsInMenuOrder()
+    {
+        var activeRules = PuzzleRuleSet.CreateClassic();
+        var candidates = SelectionPreviewRules.CreatePresets(activeRules.Registry);
+
+        Assert.Equal(new[]
+        {
+            "Classic", "ShuffleLogic", "SwapLogic", "TwoWide", "TwoTall", "Hybrid", "ZeroSlide", "FreeStyle"
+        }, candidates.Select(rules => rules.Name));
+
+        var expected = new Dictionary<string, string[]>(StringComparer.Ordinal)
+        {
+            ["Classic"] = [PuzzleOperationIds.Slide],
+            ["ShuffleLogic"] = [PuzzleOperationIds.Shuffle],
+            ["SwapLogic"] = [PuzzleOperationIds.ColumnSwap, PuzzleOperationIds.RowSwap],
+            ["TwoWide"] = [PuzzleOperationIds.ColumnSwap, PuzzleOperationIds.Slide],
+            ["TwoTall"] = [PuzzleOperationIds.RowSwap, PuzzleOperationIds.Slide],
+            ["Hybrid"] = [PuzzleOperationIds.Shuffle, PuzzleOperationIds.Slide],
+            ["ZeroSlide"] = [PuzzleOperationIds.ColumnSwap, PuzzleOperationIds.RowSwap, PuzzleOperationIds.Shuffle],
+            ["FreeStyle"] =
+            [
+                PuzzleOperationIds.ColumnSwap, PuzzleOperationIds.RowSwap, PuzzleOperationIds.Shuffle,
+                PuzzleOperationIds.Slide
+            ]
+        };
+
+        foreach (var candidate in candidates)
+        {
+            Assert.Equal(expected[candidate.Name], candidate.ScrambleAllowed);
+            Assert.Equal(expected[candidate.Name], candidate.SolveAllowed);
+            Assert.Equal(expected[candidate.Name], candidate.UIEnabled);
+            Assert.Equal($"Rules: {candidate.Name}", SelectionPreviewRules.Format(candidate)[0]);
+        }
+
+        Assert.Equal(new[] { PuzzleOperationIds.Slide }, activeRules.ScrambleAllowed);
+        Assert.Equal(new[] { PuzzleOperationIds.Slide }, activeRules.SolveAllowed);
+        Assert.Equal(new[] { PuzzleOperationIds.Slide }, activeRules.UIEnabled);
+    }
+
+    [Fact]
+    public void PresetPreviewIncludesBoardCompatibilityWithoutHidingPermissions()
+    {
+        var twoWide = PuzzleRuleSet.CreateTwoWide();
+        var swapLogic = PuzzleRuleSet.CreateSwapLogic();
+
+        var twoWideLines = SelectionPreviewRules.Format(twoWide, 2, 2);
+        var swapLogicLines = SelectionPreviewRules.Format(swapLogic, 2, 2);
+
+        Assert.Contains("Scramble: ColumnSwap, Slide", twoWideLines);
+        Assert.Contains("Solve: ColumnSwap, Slide", twoWideLines);
+        Assert.Contains("Input (initial): ColumnSwap, Slide", twoWideLines);
+        Assert.Contains("Board: Portable Lens operations require a 3 × 3 board; Slide remains available.",
+            twoWideLines);
+        Assert.Contains("Board: SwapLogic requires a 3 × 3 board for its configured Portable Lens operations.",
+            swapLogicLines);
+    }
+
+    [Fact]
     public void LegacyRecordingPreviewUsesClassicRules()
     {
         var recording = new SessionRecording(new[,] { { 0, 1 }, { 2, 3 } }, Array.Empty<RecordedOperation>(),
@@ -98,5 +156,37 @@ public class SelectionPreviewRulesTests
         Assert.Equal(0, layout.RulesBounds.Width);
         Assert.Equal(previewArea.MidX, layout.BoardBounds.MidX, 3);
         Assert.Equal(previewArea.MidY, layout.BoardBounds.MidY, 3);
+    }
+
+    [Theory]
+    [InlineData(1200, 800, false)]
+    [InlineData(320, 900, true)]
+    [InlineData(240, 180, true)]
+    [InlineData(420, 160, true)]
+    public void PresetMenuPreviewLayoutKeepsMenuAndBubbleInsideConstrainedWindows(int width, int height,
+        bool expectedStacked)
+    {
+        var window = new SKRect(13, 17, 13 + width, 17 + height);
+
+        var layout = PresetMenuPreviewLayout.Calculate(window, 340, 331,
+            SelectionPreviewRules.PresetPreviewLineCount);
+
+        Assert.Equal(expectedStacked, layout.IsStacked);
+        Assert.True(layout.MenuBounds.Width > 0);
+        Assert.True(layout.MenuBounds.Height > 0);
+        Assert.True(layout.PreviewBounds.Width > 0);
+        Assert.True(layout.PreviewBounds.Height > 0);
+        Assert.InRange(layout.MenuBounds.Left, window.Left, window.Right);
+        Assert.InRange(layout.MenuBounds.Right, window.Left, window.Right);
+        Assert.InRange(layout.MenuBounds.Top, window.Top, window.Bottom);
+        Assert.InRange(layout.MenuBounds.Bottom, window.Top, window.Bottom);
+        Assert.InRange(layout.PreviewBounds.Left, window.Left, window.Right);
+        Assert.InRange(layout.PreviewBounds.Right, window.Left, window.Right);
+        Assert.InRange(layout.PreviewBounds.Top, window.Top, window.Bottom);
+        Assert.InRange(layout.PreviewBounds.Bottom, window.Top, window.Bottom);
+        Assert.False(layout.MenuBounds.Right > layout.PreviewBounds.Left &&
+                     layout.MenuBounds.Left < layout.PreviewBounds.Right &&
+                     layout.MenuBounds.Bottom > layout.PreviewBounds.Top &&
+                     layout.MenuBounds.Top < layout.PreviewBounds.Bottom);
     }
 }
