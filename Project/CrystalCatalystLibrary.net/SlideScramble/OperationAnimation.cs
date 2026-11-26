@@ -62,7 +62,7 @@ public sealed class OperationAnimationPlan
     public int? LensAnchorY { get; }
     public IReadOnlyList<(int X, int Y)> LensCells { get; }
 
-    public OperationAnimationPlan(OperationBoardSnapshot board, OperationPlan operation)
+    public OperationAnimationPlan(OperationBoardSnapshot board, OperationPlan operation, bool allowLogicalAnimation = true)
     {
         ArgumentNullException.ThrowIfNull(board);
         ArgumentNullException.ThrowIfNull(operation);
@@ -98,7 +98,7 @@ public sealed class OperationAnimationPlan
             PuzzleOperationIds.ColumnSwap or PuzzleOperationIds.RowSwap => 4,
             _ => 0
         };
-        logicalMotions = Array.AsReadOnly(logical.Length == expectedLogicalTiles
+        logicalMotions = Array.AsReadOnly(allowLogicalAnimation && logical.Length == expectedLogicalTiles
             ? logical.OrderBy(motion => motion.TileId).ToArray()
             : Array.Empty<OperationTileMotion>());
 
@@ -416,13 +416,20 @@ public static class OperationAnimationPolicy
         OperationAnimationStyle? preference = null, bool preferLogicalForScramble = false)
     {
         ArgumentNullException.ThrowIfNull(operation);
+        return Select(operation.Accounting, operation.Purpose, logicalAnimationAvailable, preference,
+            preferLogicalForScramble);
+    }
+
+    public static OperationAnimationStyle Select(OperationMoveAccounting accounting, OperationPlanPurpose purpose,
+        bool logicalAnimationAvailable, OperationAnimationStyle? preference = null, bool preferLogicalForScramble = false)
+    {
         if (preference == OperationAnimationStyle.Instant) return OperationAnimationStyle.Instant;
         if (preference == OperationAnimationStyle.Primitive) return OperationAnimationStyle.Primitive;
         if (preference == OperationAnimationStyle.Logical)
             return logicalAnimationAvailable ? OperationAnimationStyle.Logical : OperationAnimationStyle.Primitive;
 
-        bool preferLogical = operation.Accounting == OperationMoveAccounting.LogicalOperation ||
-                             (preferLogicalForScramble && operation.Purpose == OperationPlanPurpose.Scramble);
+        bool preferLogical = accounting == OperationMoveAccounting.LogicalOperation ||
+                             (preferLogicalForScramble && purpose == OperationPlanPurpose.Scramble);
         return preferLogical && logicalAnimationAvailable
             ? OperationAnimationStyle.Logical
             : OperationAnimationStyle.Primitive;

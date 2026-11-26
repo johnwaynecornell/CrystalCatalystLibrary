@@ -7,17 +7,19 @@ public partial class Window
 {
     private sealed class ActiveOperationAnimation(
         OperationAnimationTimeline timeline,
-        OperationPlan operationPlan,
+        OperationPlan? operationPlan,
         JsonElement? recordingParameters,
         bool isScramble,
+        RecordedOperationPlaybackStep? playbackStep,
         SKImage[] tileImages,
         Grid grid,
         SessionRecordingController controller)
     {
         public OperationAnimationTimeline Timeline { get; } = timeline;
-        public OperationPlan OperationPlan { get; } = operationPlan;
+        public OperationPlan? OperationPlan { get; } = operationPlan;
         public JsonElement? RecordingParameters { get; } = recordingParameters;
         public bool IsScramble { get; } = isScramble;
+        public RecordedOperationPlaybackStep? PlaybackStep { get; } = playbackStep;
         public SKImage[] TileImages { get; } = tileImages;
         public Grid Grid { get; } = grid;
         public SessionRecordingController Controller { get; } = controller;
@@ -89,19 +91,42 @@ public partial class Window
             return;
         }
 
+        QueueOperationAnimation(visualPlan, style, plan, recordingParameters, isScramble, null);
+    }
+
+    private void BeginPlaybackOperationAnimation(RecordedOperationPlaybackStep step)
+    {
+        var visualPlan = step.CreateAnimationPlan(new OperationBoardSnapshot(CaptureBoardCells()));
+        var style = OperationAnimationPolicy.Select(step.Operation.Accounting, step.Operation.Purpose,
+            visualPlan.SupportsLogicalAnimation, operationAnimationPreference, true);
+        if (style == OperationAnimationStyle.Instant)
+        {
+            sessions.CommitPlaybackOperationStep(step);
+            lastPlaybackTick = wnd.uptimeSeconds();
+            State.TakeBackSolved(lastPlaybackTick);
+            return;
+        }
+
+        QueueOperationAnimation(visualPlan, style, null, null, false, step);
+    }
+
+    private void QueueOperationAnimation(OperationAnimationPlan visualPlan, OperationAnimationStyle style,
+        OperationPlan? plan, JsonElement? recordingParameters, bool isScramble,
+        RecordedOperationPlaybackStep? playbackStep)
+    {
         var tileImages = new SKImage[MyGrid.Width * MyGrid.Height];
         foreach (Tile tile in MyGrid.Tiles)
             tileImages[tile.OriginY * MyGrid.Width + tile.OriginX] = tile.Image;
 
         var active = new ActiveOperationAnimation(
-            new OperationAnimationTimeline(visualPlan, style), plan, recordingParameters?.Clone(), isScramble,
+            new OperationAnimationTimeline(visualPlan, style), plan, recordingParameters?.Clone(), isScramble, playbackStep,
             tileImages, MyGrid, sessions);
         activeOperationAnimation = active;
         animationLockHoriz = null;
         animationTileOffset = 0;
         moveHighlight = null;
         lensInteraction.CancelGesture();
-        sessionMessage = $"{plan.OperationId} · {style} animation · Esc cancels";
+        sessionMessage = $"{visualPlan.OperationId} · {style} animation · Esc cancels";
 
         var animation = new Animation();
         animation.animation = (_, _) => AdvanceOperationAnimation(active);
@@ -125,8 +150,15 @@ public partial class Window
             }
             else if (active.Timeline.TryCommit(() =>
                      {
-                         if (active.IsScramble) CommitScrambleOperation(active.OperationPlan);
-                         else CommitLensOperation(active.OperationPlan, active.RecordingParameters!.Value);
+                         if (active.PlaybackStep != null)
+                         {
+                             sessions.CommitPlaybackOperationStep(active.PlaybackStep);
+                             lastPlaybackTick = wnd.uptimeSeconds();
+                             State.TakeBackSolved(lastPlaybackTick);
+                             sessionMessage = $"Playback · {active.PlaybackStep.Operation.OperationId}";
+                         }
+                         else if (active.IsScramble) CommitScrambleOperation(active.OperationPlan!);
+                         else CommitLensOperation(active.OperationPlan!, active.RecordingParameters!.Value);
                      }))
             {
                 return FinishOperationAnimation(active);
@@ -137,6 +169,9 @@ public partial class Window
             sessionMessage = ex.Message;
         }
 
+        if (active.PlaybackStep != null && ReferenceEquals(sessions, active.Controller) &&
+            sessions.Mode == RecordingControllerMode.Playback)
+            sessions.SetAutoplay(false);
         return FinishOperationAnimation(active);
     }
 
@@ -168,7 +203,10 @@ public partial class Window
         if (activeOperationAnimation is not { } active) return;
         active.Timeline.Cancel();
         activeOperationAnimation = null;
-        sessionMessage = "Portable Lens animation cancelled; board and recording unchanged";
+        if (active.PlaybackStep != null && ReferenceEquals(sessions, active.Controller) &&
+            sessions.Mode == RecordingControllerMode.Playback)
+            sessions.SetAutoplay(false);
+        sessionMessage = "Operation animation cancelled; board and recording unchanged";
         wnd.QueueRedraw();
     }
 

@@ -242,6 +242,15 @@ public partial class Window
         UpdateMediaEditorBounds(media);
         bool insideBoard = tileView != null && x >= tileView.xx && x < tileView.xx + tileView.width &&
                            y >= tileView.yy && y < tileView.yy + tileView.height;
+        if (!ShowGridSetup && showMedia)
+        {
+            for (int i = 0; i < mediaLabels.Length; i++)
+            {
+                if (!media.Button(i).Contains(x, y)) continue;
+                MediaAction(i);
+                return;
+            }
+        }
         lensDoubleClick.BeginPress(x, y, Environment.TickCount64,
             insideBoard && CanHandleLensInput && HasRuntimeLensOperation);
         if (lensInteraction.Phase != PortableLensInteractionPhase.Inactive)
@@ -278,12 +287,6 @@ public partial class Window
         interaction.SetFocus(null);
         if (!ShowGridSetup && showMedia)
         {
-            for (int i = 0; i < mediaLabels.Length; i++)
-            {
-                if (!media.Button(i).Contains(x, y)) continue;
-                MediaAction(i);
-                return;
-            }
             if (new SKRect(media.X, media.Y, media.X + media.Width * media.Scale, media.Y + media.Height * media.Scale).Contains(x, y)) return;
         }
 

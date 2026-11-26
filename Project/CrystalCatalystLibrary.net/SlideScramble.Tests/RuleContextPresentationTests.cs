@@ -36,4 +36,17 @@ public class RuleContextPresentationTests
         Assert.Equal("Recording from primitive position 3. Stop Rec, then Save.",
             Window.FormatContinueRecordingStatus(3));
     }
+
+    [Fact]
+    public void OperationPositionShowsCompletedAndInProgressOperations()
+    {
+        Assert.Equal("Operations: 0/3 complete",
+            Window.FormatOperationPosition(RecordingControllerMode.Playback, 0, 3, null));
+        Assert.Equal("Operations: 1/3 complete · #2 active",
+            Window.FormatOperationPosition(RecordingControllerMode.Playback, 1, 3, 2));
+        Assert.Equal("Operations: 3/3 complete",
+            Window.FormatOperationPosition(RecordingControllerMode.Idle, 3, 3, null));
+        Assert.Equal("Operations recorded: 2",
+            Window.FormatOperationPosition(RecordingControllerMode.Recording, 2, 2, null));
+    }
 }
