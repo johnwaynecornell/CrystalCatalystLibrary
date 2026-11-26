@@ -29,7 +29,11 @@ public sealed class CrystalCommandMenu : ICrystalSkia
     }
 
     public RectangleF Bounds { get; set; }
+    public float PreferredWidth => Width;
+    public float PreferredHeight => Height;
+    public int SelectedIndex => selected;
     public event Action<int>? Activated;
+    public event Action<int>? SelectionChanged;
     public SKColor ShortcutColor { get; set; } = new SKColor(147, 197, 253);
 
     public RectangleF GetCenteredBounds(RectangleF area)
@@ -48,11 +52,16 @@ public sealed class CrystalCommandMenu : ICrystalSkia
     public void SetFocus(bool focused)
     {
         pressed = -1;
-        selected = focused ? Array.FindIndex(entries, entry => entry.Enabled) : -1;
+        SetSelected(focused ? Array.FindIndex(entries, entry => entry.Enabled) : -1);
     }
 
-    public void OnIdle(double timeSeconds) { }
-    public void TextInput(string text) { }
+    public void OnIdle(double timeSeconds)
+    {
+    }
+
+    public void TextInput(string text)
+    {
+    }
 
     public void KeyDown(KeyCode key, bool shift, bool control)
     {
@@ -75,7 +84,8 @@ public sealed class CrystalCommandMenu : ICrystalSkia
         {
             next = (next + direction + entries.Length) % entries.Length;
         } while (!entries[next].Enabled);
-        selected = next;
+
+        SetSelected(next);
     }
 
     private int HitTest(PointF position)
@@ -88,17 +98,24 @@ public sealed class CrystalCommandMenu : ICrystalSkia
         return index < entries.Length && entries[index].Enabled ? index : -1;
     }
 
+    private void SetSelected(int index)
+    {
+        if (selected == index) return;
+        selected = index;
+        SelectionChanged?.Invoke(selected);
+    }
+
     public void PointerDown(PointF position, CrystalMouseButton button)
     {
         if (button != CrystalMouseButton.Left) return;
         pressed = HitTest(position);
-        if (pressed >= 0) selected = pressed;
+        if (pressed >= 0) SetSelected(pressed);
     }
 
     public void PointerMove(PointF position)
     {
         int index = HitTest(position);
-        if (index >= 0) selected = index;
+        if (index >= 0) SetSelected(index);
     }
 
     public void PointerUp(PointF position, CrystalMouseButton button)
@@ -134,6 +151,7 @@ public sealed class CrystalCommandMenu : ICrystalSkia
                 paint.Color = new SKColor(63, 107, 155, 225);
                 canvas.DrawRoundRect(new SKRect(Padding, top, Width - Padding, top + RowHeight - 2), 7, 7, paint);
             }
+
             paint.Color = entry.Enabled ? new SKColor(246, 249, 255) : new SKColor(165, 177, 196);
             float baseline = top + 20;
             float shortcutWidth = entry.Shortcut == null ? 0 : font.MeasureText(entry.Shortcut);
@@ -147,6 +165,7 @@ public sealed class CrystalCommandMenu : ICrystalSkia
                 canvas.DrawText(entry.Shortcut, Width - 20 - shortcutWidth, baseline, font, paint);
             }
         }
+
         canvas.Restore();
     }
 }

@@ -32,6 +32,54 @@ public class RuleAwareChallengeTests
         Assert.NotNull(recording.GetVerifiedGoalMoveCost());
     }
 
+    [Theory]
+    [InlineData("Classic")]
+    [InlineData("ShuffleLogic")]
+    [InlineData("SwapLogic")]
+    [InlineData("TwoWide")]
+    [InlineData("TwoTall")]
+    [InlineData("Hybrid")]
+    [InlineData("ZeroSlide")]
+    [InlineData("FreeStyle")]
+    public void EveryPresetGeneratesOnlyAllowedScramblesAndAReplayableSolution(string presetName)
+    {
+        var registry = OperationRegistry.CreateDefault();
+        var rules = CreatePreset(presetName, registry);
+        var evaluator = new OperationRuleEvaluator(registry);
+        var challenge = ShuffleChallengeFactory.GenerateRuleAware(4, 4, 8, rules, evaluator, new Random(87));
+
+        Assert.All(challenge.ScrambleOperations,
+            operation => Assert.Contains(operation.OperationId, rules.ScrambleAllowed));
+        VerifyOperations(Solved(4, 4), challenge.ScrambleOperations, rules, evaluator, challenge.ScrambledCells);
+        VerifyOperations(challenge.ScrambledCells, challenge.Solution.Operations, rules, evaluator, Solved(4, 4));
+        Assert.NotNull(challenge.Solution.GetVerifiedGoalMoveCost());
+
+        var restored = SessionRecording.FromJson(challenge.Solution.ToJson());
+        Assert.Equal(rules.Name, restored.RuleSet.Name);
+        Assert.Equal(rules.ScrambleAllowed, restored.RuleSet.ScrambleAllowed);
+        Assert.Equal(rules.SolveAllowed, restored.RuleSet.SolveAllowed);
+        Assert.Equal(rules.UIEnabled, restored.RuleSet.UIEnabled);
+        Assert.Equal(8, restored.Operations.Count);
+
+        var grid = new Grid(4, 4, 32);
+        var controller = new SessionRecordingController(grid);
+        controller.LoadPlayback(restored);
+        while (controller.Step()) { }
+        Assert.Equal(Solved(4, 4), OperationBoardSnapshot.FromGrid(grid).Cells);
+    }
+
+    [Fact]
+    public void SwapLabyrinthCatalogEntriesKeepTheirSwapRulesAndReplayToIdentity()
+    {
+        string catalogPath = FindCatalogPath();
+        var catalog = ChallengeCatalog.FromJson(File.ReadAllText(catalogPath));
+        Assert.Contains("Swap Labyrinth - Full", catalog.Names);
+        Assert.Contains("Swap Labyrinth - 3 cycle Finish", catalog.Names);
+
+        VerifySwapLabyrinth(catalog, "Swap Labyrinth - Full", 12);
+        VerifySwapLabyrinth(catalog, "Swap Labyrinth - 3 cycle Finish", 4);
+    }
+
     [Fact]
     public void SlideFallbackIsIndividuallyEvaluatedAndRecorded()
     {
@@ -121,6 +169,60 @@ public class RuleAwareChallengeTests
             int delta = shuffle.StartCell < shuffle.TargetCell ? 1 : -1;
             return OperationResolution.Success(Id, new[] { new RecordedMove(RecordedMoveAxis.Row, 0, delta) });
         }
+    }
+
+    private static PuzzleRuleSet CreatePreset(string name, OperationRegistry registry) => name switch
+    {
+        "Classic" => PuzzleRuleSet.CreateClassic(registry),
+        "ShuffleLogic" => PuzzleRuleSet.CreateShuffleLogic(registry),
+        "SwapLogic" => PuzzleRuleSet.CreateSwapLogic(registry),
+        "TwoWide" => PuzzleRuleSet.CreateTwoWide(registry),
+        "TwoTall" => PuzzleRuleSet.CreateTwoTall(registry),
+        "Hybrid" => PuzzleRuleSet.CreateHybrid(registry),
+        "ZeroSlide" => PuzzleRuleSet.CreateZeroSlide(registry),
+        "FreeStyle" => PuzzleRuleSet.CreateFreeStyle(registry),
+        _ => throw new ArgumentOutOfRangeException(nameof(name), name, "Unknown test preset")
+    };
+
+    private static void VerifySwapLabyrinth(ChallengeCatalog catalog, string name, int expectedOperationCount)
+    {
+        Assert.True(catalog.TryGet(name, out var recording));
+        Assert.NotNull(recording);
+        using (var serialized = System.Text.Json.JsonDocument.Parse(recording.ToJson()))
+            Assert.Equal(SessionRecording.Version, serialized.RootElement.GetProperty("version").GetInt32());
+        Assert.Equal(4, recording.Width);
+        Assert.Equal(4, recording.Height);
+        Assert.Equal("SwapLogic", recording.RuleSet.Name);
+        string[] expectedSwapIds = { PuzzleOperationIds.ColumnSwap, PuzzleOperationIds.RowSwap };
+        Assert.Equal(expectedSwapIds, recording.RuleSet.ScrambleAllowed);
+        Assert.Equal(expectedSwapIds, recording.RuleSet.SolveAllowed);
+        Assert.Equal(expectedSwapIds, recording.RuleSet.UIEnabled);
+        Assert.Equal(expectedOperationCount, recording.Operations.Count);
+        Assert.All(recording.Operations, operation =>
+        {
+            Assert.Contains(operation.OperationId, expectedSwapIds);
+            Assert.Equal(OperationMoveAccounting.LogicalOperation, operation.Accounting);
+            Assert.Equal(1, operation.MoveCost);
+            Assert.Equal(8, operation.PrimitiveMoves.Count);
+        });
+        Assert.NotNull(recording.GetVerifiedGoalMoveCost());
+
+        var grid = new Grid(recording.Width, recording.Height, 32);
+        var controller = new SessionRecordingController(grid);
+        controller.LoadPlayback(recording);
+        while (controller.Step()) { }
+        Assert.Equal(Solved(recording.Width, recording.Height), OperationBoardSnapshot.FromGrid(grid).Cells);
+    }
+
+    private static string FindCatalogPath()
+    {
+        for (DirectoryInfo? directory = new(AppContext.BaseDirectory); directory != null; directory = directory.Parent)
+        {
+            string path = Path.Combine(directory.FullName, "SlideScramble", "challenges.json");
+            if (File.Exists(path)) return path;
+        }
+
+        throw new FileNotFoundException("Could not locate the SlideScramble challenge catalog from the test directory.");
     }
 
     private static void VerifyOperations(int[,] start, IEnumerable<RecordedOperation> operations, PuzzleRuleSet rules,

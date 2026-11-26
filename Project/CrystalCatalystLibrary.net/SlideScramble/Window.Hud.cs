@@ -19,7 +19,8 @@ public partial class Window
         canvas.DrawPath(path, paint);
     }
 
-    private static void DrawStar(SKCanvas canvas, float cx, float cy, float outerRadius, float innerRadius, SKPaint fillPaint)
+    private static void DrawStar(SKCanvas canvas, float cx, float cy, float outerRadius, float innerRadius,
+        SKPaint fillPaint)
     {
         using var path = new SKPath();
         double angleStep = Math.PI / 5.0;
@@ -36,6 +37,7 @@ public partial class Window
             else
                 path.LineTo(x, y);
         }
+
         path.Close();
         canvas.DrawPath(path, fillPaint);
     }
@@ -101,6 +103,7 @@ public partial class Window
             {
                 pixelBacking.Dispose();
             }
+
             pixelBacking = CrystalSkia.net.FixedPixDataRenderer.CreateFixed(width, height, (canvas, info) => { });
         }
 
@@ -109,14 +112,15 @@ public partial class Window
         UpdateMediaEditorBounds(media);
 
         if (tileView == null) return;
-        
+
         CrystalSkia.net.PixDataSkia.WithCanvasView(pixelBacking, (bitmap, canvas) =>
         {
             // Clear background
             canvas.DrawRect(new SKRect(0, 0, width, height), bgPaint);
 
             // Draw Board Container Background
-            var boardRect = new SKRect(tileView.xx - 8, tileView.yy - 8, tileView.xx + tileView.width + 8, tileView.yy + tileView.height + 8);
+            var boardRect = new SKRect(tileView.xx - 8, tileView.yy - 8, tileView.xx + tileView.width + 8,
+                tileView.yy + tileView.height + 8);
             var boardRRect = new SKRoundRect(boardRect, 12, 12);
             canvas.DrawRoundRect(boardRRect, boardBgPaint);
             canvas.DrawRoundRect(boardRRect, boardBorderPaint);
@@ -133,11 +137,13 @@ public partial class Window
                 // Draw Static Grid Tiles
                 for (int y = 0; y < MyGrid.Height; y++)
                 {
-                    if (animationLockHoriz != null && animationLockHoriz.Value == false && animationOrdinal == y) continue;
+                    if (animationLockHoriz != null && animationLockHoriz.Value == false &&
+                        animationOrdinal == y) continue;
 
                     for (int x = 0; x < MyGrid.Width; x++)
                     {
-                        if (animationLockHoriz != null && animationLockHoriz.Value == true && animationOrdinal == x) continue;
+                        if (animationLockHoriz != null && animationLockHoriz.Value == true && animationOrdinal == x)
+                            continue;
 
                         SKImage image = (boardDraft ?? MyGrid.Tiles)[y, x].Image;
 
@@ -172,7 +178,7 @@ public partial class Window
 
                     canvas.Save();
                     canvas.ClipRect(clipRect);
-                    
+
                     float offset = (float)(animationTileOffset % MyGrid.Width);
                     if (offset < 0) offset += MyGrid.Width;
 
@@ -193,9 +199,12 @@ public partial class Window
                         var destWrapped = new SKRect(_xWrapped, _y, _xWrapped + tileW, _y + rowHeight);
                         canvas.DrawImage(image, src, destWrapped, paint: tilePaint);
                     }
-                    
-                    canvas.DrawRoundRect(new SKRoundRect(new SKRect(tileView.xx, rowTop, tileView.xx + tileView.width, rowTop + rowHeight), 6, 6), activeLinePaint);
-                    
+
+                    canvas.DrawRoundRect(
+                        new SKRoundRect(
+                            new SKRect(tileView.xx, rowTop, tileView.xx + tileView.width, rowTop + rowHeight), 6, 6),
+                        activeLinePaint);
+
                     canvas.Restore();
                 }
                 else
@@ -208,7 +217,7 @@ public partial class Window
 
                     canvas.Save();
                     canvas.ClipRect(clipRect);
-                    
+
                     float offset = (float)(animationTileOffset % MyGrid.Height);
                     if (offset < 0) offset += MyGrid.Height;
 
@@ -229,8 +238,11 @@ public partial class Window
                         var destWrapped = new SKRect(_x, _yWrapped, _x + colWidth, _yWrapped + tileH);
                         canvas.DrawImage(image, src, destWrapped, paint: tilePaint);
                     }
-                    
-                    canvas.DrawRoundRect(new SKRoundRect(new SKRect(colLeft, tileView.yy, colLeft + colWidth, tileView.yy + tileView.height), 6, 6), activeLinePaint);
+
+                    canvas.DrawRoundRect(
+                        new SKRoundRect(
+                            new SKRect(colLeft, tileView.yy, colLeft + colWidth, tileView.yy + tileView.height), 6, 6),
+                        activeLinePaint);
 
                     canvas.Restore();
                 }
@@ -248,14 +260,28 @@ public partial class Window
                     int length = column ? MyGrid.Height : MyGrid.Width;
                     float offset = animationTileOffset % length;
                     if (offset < 0) offset += length;
-                    if (column) { y -= tileH * offset; wrapY = tileView.height; }
-                    else { x -= tileW * offset; wrapX = tileView.width; }
+                    if (column)
+                    {
+                        y -= tileH * offset;
+                        wrapY = tileView.height;
+                    }
+                    else
+                    {
+                        x -= tileW * offset;
+                        wrapX = tileView.width;
+                    }
                 }
+
                 canvas.Save();
-                canvas.ClipRect(new SKRect(tileView.xx, tileView.yy, tileView.xx + tileView.width, tileView.yy + tileView.height));
-                canvas.DrawRoundRect(new SKRoundRect(new SKRect(x + 3, y + 3, x + tileW - 3, y + tileH - 3), 6, 6), activeLinePaint);
+                canvas.ClipRect(new SKRect(tileView.xx, tileView.yy, tileView.xx + tileView.width,
+                    tileView.yy + tileView.height));
+                canvas.DrawRoundRect(new SKRoundRect(new SKRect(x + 3, y + 3, x + tileW - 3, y + tileH - 3), 6, 6),
+                    activeLinePaint);
                 if (wrapX != 0 || wrapY != 0)
-                    canvas.DrawRoundRect(new SKRoundRect(new SKRect(x + wrapX + 3, y + wrapY + 3, x + wrapX + tileW - 3, y + wrapY + tileH - 3), 6, 6), activeLinePaint);
+                    canvas.DrawRoundRect(
+                        new SKRoundRect(
+                            new SKRect(x + wrapX + 3, y + wrapY + 3, x + wrapX + tileW - 3, y + wrapY + tileH - 3), 6,
+                            6), activeLinePaint);
                 canvas.Restore();
             }
 
@@ -295,10 +321,10 @@ public partial class Window
             string? recordingText = null;
             if (sessions.Mode == RecordingControllerMode.Playback)
                 recordingText = FormatRecordingStatus(sessions.Mode, sessions.Position, sessions.MoveCount);
-            
+
             if (sessions.Mode == RecordingControllerMode.Recording)
                 recordingText = FormatRecordingStatus(sessions.Mode, sessions.Position, sessions.MoveCount);
-            
+
             hudBoldFont.MeasureText(ruleSetText, out SKRect ruleSetBounds, hudMutedPaint);
             hudBoldFont.MeasureText(movesText, out SKRect movesBounds, hudTextPaint);
             hudBoldFont.MeasureText(timeText, out SKRect timeBounds, hudAccentPaint);
@@ -329,6 +355,7 @@ public partial class Window
                     float recX = timeX + timeBounds.Width + 16;
                     canvas.DrawText(recordingText, recX, 35, hudBoldFont, hudMutedPaint);
                 }
+
                 canvas.Restore();
             }
             else
@@ -401,7 +428,8 @@ public partial class Window
             if (showMedia) DrawMedia(canvas, media);
 
             // Session Selection Popup
-            if (popupHost.IsVisible && commandMenu == null && challengeGenerator == null && continueRecordingDialog == null)
+            if (popupHost.IsVisible && commandMenu == null && challengeGenerator == null &&
+                continueRecordingDialog == null)
             {
                 LayoutSelectionPopup(width, height);
                 ((ICrystalSkia)popupHost).OnDraw(canvas);
@@ -447,16 +475,17 @@ public partial class Window
                 canvas.DrawText("Columns", panelX + 24, row1Y + 5, hudBoldFont, hudTextPaint);
                 canvas.DrawText("2", panelX + 112, row1Y + 5, hudFont, hudMutedPaint);
                 canvas.DrawLine(trackStartX, row1Y, trackEndX, row1Y, sliderTrackPaint);
-                
+
                 float colT = (MyGrid.Width - 2) / 7f;
                 float colThumbX = trackStartX + colT * (trackEndX - trackStartX);
                 if (colT > 0.001f)
                 {
                     canvas.DrawLine(trackStartX, row1Y, colThumbX, row1Y, sliderFillPaint);
                 }
+
                 canvas.DrawCircle(colThumbX, row1Y, 8, sliderThumbPaint);
                 canvas.DrawCircle(colThumbX, row1Y, 8, sliderThumbBorderPaint);
-                
+
                 canvas.DrawText("9", panelX + 280, row1Y + 5, hudFont, hudMutedPaint);
                 string colValText = $"{MyGrid.Width}";
                 canvas.DrawText(colValText, panelX + 310, row1Y + 5, hudBoldFont, hudAccentPaint);
@@ -473,6 +502,7 @@ public partial class Window
                 {
                     canvas.DrawLine(trackStartX, row2Y, rowThumbX, row2Y, sliderFillPaint);
                 }
+
                 canvas.DrawCircle(rowThumbX, row2Y, 8, sliderThumbPaint);
                 canvas.DrawCircle(rowThumbX, row2Y, 8, sliderThumbBorderPaint);
 
@@ -483,14 +513,17 @@ public partial class Window
                 // Dimension Summary Pill
                 string dimSummary = $"{MyGrid.Width} x {MyGrid.Height}";
                 hudBoldFont.MeasureText(dimSummary, out SKRect dimBounds, hudAccentPaint);
-                var badgeRect = new SKRect(panelX + (panelWidth - dimBounds.Width) / 2f - 16, panelY + 158, panelX + (panelWidth + dimBounds.Width) / 2f + 16, panelY + 184);
+                var badgeRect = new SKRect(panelX + (panelWidth - dimBounds.Width) / 2f - 16, panelY + 158,
+                    panelX + (panelWidth + dimBounds.Width) / 2f + 16, panelY + 184);
                 canvas.DrawRoundRect(new SKRoundRect(badgeRect, 6, 6), hudChipPaint);
                 canvas.DrawRoundRect(new SKRoundRect(badgeRect, 6, 6), hudChipBorderPaint);
-                canvas.DrawText(dimSummary, panelX + (panelWidth - dimBounds.Width) / 2f, panelY + 177, hudBoldFont, hudAccentPaint);
+                canvas.DrawText(dimSummary, panelX + (panelWidth - dimBounds.Width) / 2f, panelY + 177, hudBoldFont,
+                    hudAccentPaint);
 
                 string hint = "[G] or [Esc] to Close";
                 footerFont.MeasureText(hint, out SKRect hintBounds, hudMutedPaint);
-                canvas.DrawText(hint, panelX + (panelWidth - hintBounds.Width) / 2f, panelY + 204, footerFont, hudMutedPaint);
+                canvas.DrawText(hint, panelX + (panelWidth - hintBounds.Width) / 2f, panelY + 204, footerFont,
+                    hudMutedPaint);
             }
 
             // Bottom Footer Shortcuts
@@ -509,8 +542,23 @@ public partial class Window
             if (commandMenu != null)
             {
                 var area = new System.Drawing.RectangleF(0, 0, width, height);
-                popupHost.SetLayout(area, commandMenu.GetCenteredBounds(area));
-                popupHost.OnDraw(canvas);
+                if (presetMenuVisible)
+                {
+                    var layout = PresetMenuPreviewLayout.Calculate(new SKRect(0, 0, width, height),
+                        commandMenu.PreferredWidth, commandMenu.PreferredHeight,
+                        SelectionPreviewRules.PresetPreviewLineCount);
+                    popupHost.SetLayout(area, layout.MenuBounds);
+                    popupHost.OnDraw(canvas);
+                    if (presetPreviewRules != null)
+                        DrawPreviewRules(canvas,
+                            SelectionPreviewRules.Format(presetPreviewRules, MyGrid.Width, MyGrid.Height),
+                            layout.PreviewBounds);
+                }
+                else
+                {
+                    popupHost.SetLayout(area, commandMenu.GetCenteredBounds(area));
+                    popupHost.OnDraw(canvas);
+                }
             }
         });
 

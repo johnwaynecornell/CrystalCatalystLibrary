@@ -3,6 +3,13 @@ namespace SlideScramble;
 /// <summary>Independent, immutable authorization sets for puzzle generation, solving, and player input.</summary>
 public sealed class PuzzleRuleSet
 {
+    private static readonly string[] PortableLensOperationIds =
+    {
+        PuzzleOperationIds.Shuffle,
+        PuzzleOperationIds.ColumnSwap,
+        PuzzleOperationIds.RowSwap
+    };
+
     private readonly HashSet<string> scrambleAllowed;
     private readonly HashSet<string> solveAllowed;
     private readonly HashSet<string> uiEnabled;
@@ -38,27 +45,59 @@ public sealed class PuzzleRuleSet
     public static PuzzleRuleSet CreateClassic(OperationRegistry? registry = null)
     {
         var selectedRegistry = registry ?? OperationRegistry.CreateDefault();
-        return new PuzzleRuleSet("Classic", new[] { PuzzleOperationIds.Slide }, new[] { PuzzleOperationIds.Slide },
-            new[] { PuzzleOperationIds.Slide }, selectedRegistry);
+        return CreatePreset("Classic", new[] { PuzzleOperationIds.Slide }, selectedRegistry);
     }
 
     public static PuzzleRuleSet CreateShuffleLogic(OperationRegistry? registry = null)
     {
         var selectedRegistry = registry ?? OperationRegistry.CreateDefault();
-        if (!selectedRegistry.TryGetOperation(PuzzleOperationIds.Shuffle, out _))
-            throw new ArgumentException("ShuffleLogic requires a registered Shuffle resolver.", nameof(registry));
+        return CreatePreset("ShuffleLogic", new[] { PuzzleOperationIds.Shuffle }, selectedRegistry);
+    }
 
-        return new PuzzleRuleSet("ShuffleLogic", new[] { PuzzleOperationIds.Shuffle },
-            new[] { PuzzleOperationIds.Shuffle }, new[] { PuzzleOperationIds.Shuffle }, selectedRegistry);
+    public static PuzzleRuleSet CreateSwapLogic(OperationRegistry? registry = null)
+    {
+        var selectedRegistry = registry ?? OperationRegistry.CreateDefault();
+        return CreatePreset("SwapLogic", new[] { PuzzleOperationIds.ColumnSwap, PuzzleOperationIds.RowSwap },
+            selectedRegistry);
+    }
+
+    public static PuzzleRuleSet CreateTwoWide(OperationRegistry? registry = null)
+    {
+        var selectedRegistry = registry ?? OperationRegistry.CreateDefault();
+        return CreatePreset("TwoWide", new[] { PuzzleOperationIds.Slide, PuzzleOperationIds.ColumnSwap },
+            selectedRegistry);
+    }
+
+    public static PuzzleRuleSet CreateTwoTall(OperationRegistry? registry = null)
+    {
+        var selectedRegistry = registry ?? OperationRegistry.CreateDefault();
+        return CreatePreset("TwoTall", new[] { PuzzleOperationIds.Slide, PuzzleOperationIds.RowSwap },
+            selectedRegistry);
     }
 
     public static PuzzleRuleSet CreateHybrid(OperationRegistry? registry = null)
     {
         var selectedRegistry = registry ?? OperationRegistry.CreateDefault();
-        if (!selectedRegistry.TryGetOperation(PuzzleOperationIds.Shuffle, out _))
-            throw new ArgumentException("Hybrid requires a registered Shuffle resolver.", nameof(registry));
-        var operations = new[] { PuzzleOperationIds.Slide, PuzzleOperationIds.Shuffle };
-        return new PuzzleRuleSet("Hybrid", operations, operations, operations, selectedRegistry);
+        return CreatePreset("Hybrid", new[] { PuzzleOperationIds.Slide, PuzzleOperationIds.Shuffle },
+            selectedRegistry);
+    }
+
+    public static PuzzleRuleSet CreateZeroSlide(OperationRegistry? registry = null)
+    {
+        var selectedRegistry = registry ?? OperationRegistry.CreateDefault();
+        return CreatePreset("ZeroSlide", PortableLensOperationIds, selectedRegistry);
+    }
+
+    public static PuzzleRuleSet CreateFreeStyle(OperationRegistry? registry = null)
+    {
+        var selectedRegistry = registry ?? OperationRegistry.CreateDefault();
+        return CreatePreset("FreeStyle", new[]
+        {
+            PuzzleOperationIds.Slide,
+            PuzzleOperationIds.Shuffle,
+            PuzzleOperationIds.ColumnSwap,
+            PuzzleOperationIds.RowSwap
+        }, selectedRegistry);
     }
 
     /// <summary>Returns an independent copy of the immutable rule-set snapshot.</summary>
@@ -77,6 +116,35 @@ public sealed class PuzzleRuleSet
     internal bool AllowsScramble(string operationId) => scrambleAllowed.Contains(operationId);
     internal bool AllowsSolve(string operationId) => solveAllowed.Contains(operationId);
     internal bool AllowsUi(string operationId) => uiEnabled.Contains(operationId);
+
+    public bool HasUnavailablePortableLensOperations(int width, int height) =>
+        (width < 3 || height < 3) &&
+        (scrambleAllowed.Concat(solveAllowed).Concat(uiEnabled).Intersect(PortableLensOperationIds).Any());
+
+    public bool IsBoardCompatible(int width, int height)
+    {
+        if (width <= 0 || height <= 0) return false;
+        if (!HasUnavailablePortableLensOperations(width, height)) return true;
+        return scrambleAllowed.Contains(PuzzleOperationIds.Slide) && solveAllowed.Contains(PuzzleOperationIds.Slide);
+    }
+
+    public string? GetBoardCompatibilityMessage(int width, int height)
+    {
+        if (width <= 0 || height <= 0) return "Board dimensions must be positive.";
+        if (!HasUnavailablePortableLensOperations(width, height)) return null;
+        return IsBoardCompatible(width, height)
+            ? "Portable Lens operations require a 3 × 3 board; Slide remains available."
+            : $"{Name} requires a 3 × 3 board for its configured Portable Lens operations.";
+    }
+
+    private static PuzzleRuleSet CreatePreset(string name, string[] operations, OperationRegistry registry)
+    {
+        foreach (string operationId in operations)
+            if (!registry.TryGetOperation(operationId, out _))
+                throw new ArgumentException($"{name} requires a registered {operationId} resolver.", nameof(registry));
+
+        return new PuzzleRuleSet(name, operations, operations, operations, registry);
+    }
 
     private static HashSet<string> ValidateSet(IEnumerable<string> operationIds, OperationRegistry registry,
         string parameterName)

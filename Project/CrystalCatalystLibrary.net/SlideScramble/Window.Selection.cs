@@ -39,7 +39,7 @@ public partial class Window
             selectionKind = kind;
             selectionMessage = names.Length == 0 ? "No entries available" : "Select an entry";
             var control = new CrystalSelectionControl(new System.Drawing.RectangleF(0, 0, 360,
-                CrystalSelectionControl.CalculateHeight(names.Length, 3, 360)), names, "",
+                    CrystalSelectionControl.CalculateHeight(names.Length, 3, 360)), names, "",
                 new[] { "Load", "Moves", "Cancel" }, editorFont);
             control.SetButtonEnabled(0, false);
             control.SetButtonEnabled(1, false);
@@ -51,7 +51,8 @@ public partial class Window
             popupHost.Show(control, new System.Drawing.RectangleF(0, 0, width, height));
             LayoutSelectionPopup(width, height);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or NotSupportedException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException
+                                       or InvalidOperationException or NotSupportedException)
         {
             selectionKind = SelectionKind.None;
             ClearPreview();
@@ -72,9 +73,11 @@ public partial class Window
         else
         {
             string path = Path.Combine(AppContext.BaseDirectory, "sessions", name + ".json");
-            if (new FileInfo(path).Length > 4_000_000) throw new InvalidOperationException("Session file is too large.");
+            if (new FileInfo(path).Length > 4_000_000)
+                throw new InvalidOperationException("Session file is too large.");
             recording = SessionRecording.FromJson(File.ReadAllText(path));
         }
+
         if (recording.Width < 2 || recording.Height < 2 || recording.Width > 9 || recording.Height > 9)
             throw new InvalidOperationException("Board dimensions must be between 2 and 9.");
         return recording;
@@ -116,17 +119,25 @@ public partial class Window
                 control.SetButtonEnabled(1, recording.Moves.Count > 0);
                 selectionMessage = $"Starting board  Goal: {recording.GetVerifiedGoalMoveCost()?.ToString() ?? "?"}";
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException or NotSupportedException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException
+                                           or InvalidOperationException or System.Text.Json.JsonException
+                                           or NotSupportedException)
             {
                 selectionMessage = ex.Message;
             }
         }
+
         wnd.QueueRedraw();
     }
 
     private void OnSelectionButtonActivated(SelectionButtonEventArgs e)
     {
-        if (e.ButtonLabel == "Cancel") { popupHost.Cancel(); return; }
+        if (e.ButtonLabel == "Cancel")
+        {
+            popupHost.Cancel();
+            return;
+        }
+
         if (e.SelectedIndex < 0) return;
         try
         {
@@ -151,7 +162,9 @@ public partial class Window
             sessionMessage = e.ButtonLabel == "Moves" ? "Moves loaded" : "Board loaded";
             popupHost.Accept(e.CurrentText, e.SelectedIndex);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Text.Json.JsonException or NotSupportedException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException
+                                       or InvalidOperationException or System.Text.Json.JsonException
+                                       or NotSupportedException)
         {
             selectionMessage = ex.Message;
         }
@@ -161,6 +174,7 @@ public partial class Window
     {
         commandMenu = null;
         rulesMenuVisible = false;
+        ClearPresetRulesPreview();
         challengeGenerator = null;
         continueRecordingDialog = null;
         selectionKind = SelectionKind.None;
@@ -194,6 +208,7 @@ public partial class Window
             popup = new System.Drawing.RectangleF(margin, margin, usableW, stackHeight);
             previewArea = new SKRect(margin, margin + stackHeight + gap, w - margin, margin + usableH);
         }
+
         popupHost.SetLayout(new System.Drawing.RectangleF(0, 0, w, h), popup);
     }
 
@@ -209,12 +224,15 @@ public partial class Window
             float left = layout.BoardBounds.Left;
             float top = layout.BoardBounds.Top;
             for (int y = 0; y < previewGrid.Height; y++)
-                for (int x = 0; x < previewGrid.Width; x++)
-                {
-                    var image = previewGrid.Tiles[y, x].Image;
-                    canvas.DrawImage(image, new SKRect(left + x * size, top + y * size, left + (x + 1) * size, top + (y + 1) * size), tilePaint);
-                }
+            for (int x = 0; x < previewGrid.Width; x++)
+            {
+                var image = previewGrid.Tiles[y, x].Image;
+                canvas.DrawImage(image,
+                    new SKRect(left + x * size, top + y * size, left + (x + 1) * size, top + (y + 1) * size),
+                    tilePaint);
+            }
         }
+
         canvas.Save();
         float messageX = popupHost.Bounds.Left + 4;
         float messageWidth = Math.Max(1, popupHost.Bounds.Width - 8);
@@ -260,6 +278,7 @@ public partial class Window
             canvas.DrawText(line, 0, 0, footerFont, hudTextPaint);
             canvas.Restore();
         }
+
         canvas.Restore();
     }
 }

@@ -1,10 +1,13 @@
 using CrystalSkia.net;
+using SkiaSharp;
 
 namespace SlideScramble;
 
 public partial class Window
 {
     private bool rulesMenuVisible;
+    private bool presetMenuVisible;
+    private PuzzleRuleSet? presetPreviewRules;
 
     private void ShowRulesMenu()
     {
@@ -21,31 +24,24 @@ public partial class Window
 
     private void ShowPresetMenu()
     {
-        ShowRulesList("Rule presets", new[]
+        var presets = SelectionPreviewRules.CreatePresets(activeRules.Registry);
+        var entries = presets.Select(preset => (preset.Name, (Action)(() => SelectPreset(preset)))).ToList();
+        entries.Add(("Back", ShowRulesMenu));
+        ShowRulesList("Rule presets", entries, index =>
         {
-            ("Classic", (Action)(() => SelectPreset(PuzzleRuleSet.CreateClassic(activeRules.Registry)))),
-            ("ShuffleLogic", (Action)(() => SelectPreset(PuzzleRuleSet.CreateShuffleLogic(activeRules.Registry)))),
-            ("Hybrid", (Action)(() => SelectPreset(PuzzleRuleSet.CreateHybrid(activeRules.Registry)))),
-            ("Back", (Action)ShowRulesMenu)
+            presetPreviewRules = index >= 0 && index < presets.Count ? presets[index] : null;
+            wnd.QueueRedraw();
         });
     }
 
-    private void SelectPreset(PuzzleRuleSet rules)
-    {
-        if (rules.Name == "ShuffleLogic" && (MyGrid.Width < 3 || MyGrid.Height < 3))
-        {
-            showMedia = true;
-            sessionMessage = "ShuffleLogic requires at least a 3 × 3 board";
-            return;
-        }
-        ApplyConfiguredRules(rules, false);
-    }
+    private void SelectPreset(PuzzleRuleSet rules) => ApplyConfiguredRules(rules, false);
 
     private void ShowRuleOperations(bool scramble)
     {
         var allowed = scramble ? activeRules.ScrambleAllowed : activeRules.SolveAllowed;
         var entries = activeRules.Registry.RegisteredOperationIds.Select(id =>
-            ($"{id}: {(allowed.Contains(id) ? "on" : "off")}", (Action)(() =>
+            ($"{id}: {(allowed.Contains(id) ? "on" : "off")}" +
+             (IsLensOperationUnavailable(id) ? " (unavailable: requires 3 × 3)" : ""), (Action)(() =>
             {
                 var ids = new HashSet<string>(allowed, StringComparer.Ordinal);
                 if (!ids.Add(id)) ids.Remove(id);
@@ -60,8 +56,16 @@ public partial class Window
     private void ShowInitialInputMenu()
     {
         var entries = activeRules.Registry.RegisteredOperationIds.Select(id =>
-            ($"{id}: {(activeRules.UIEnabled.Contains(id) ? "on" : "off")}", (Action)(() =>
+            ($"{id}: {(activeRules.UIEnabled.Contains(id) ? "on" : "off")}" +
+             (IsLensOperationUnavailable(id) ? " (unavailable: requires 3 × 3)" : ""), (Action)(() =>
             {
+                if (IsLensOperationUnavailable(id) && !activeRules.UIEnabled.Contains(id))
+                {
+                    sessionMessage = "Portable Lens operations require a 3 × 3 board";
+                    ShowInitialInputMenu();
+                    return;
+                }
+
                 var ids = new HashSet<string>(activeRules.UIEnabled, StringComparer.Ordinal);
                 if (!ids.Add(id)) ids.Remove(id);
                 if (ApplyConfiguredRules(activeRules.WithUIEnabled(ids), false)) ShowInitialInputMenu();
@@ -73,8 +77,16 @@ public partial class Window
     private void ShowLiveInputMenu()
     {
         var entries = sessions.RuleSet.Registry.RegisteredOperationIds.Select(id =>
-            ($"{id}: {(sessions.RuntimeUIEnabled.Contains(id) ? "on" : "off")}", (Action)(() =>
+            ($"{id}: {(sessions.RuntimeUIEnabled.Contains(id) ? "on" : "off")}" +
+             (IsLensOperationUnavailable(id) ? " (unavailable: requires 3 × 3)" : ""), (Action)(() =>
             {
+                if (IsLensOperationUnavailable(id) && !sessions.RuntimeUIEnabled.Contains(id))
+                {
+                    sessionMessage = "Portable Lens operations require a 3 × 3 board";
+                    ShowLiveInputMenu();
+                    return;
+                }
+
                 bool enabled = !sessions.RuntimeUIEnabled.Contains(id);
                 if (sessions.SetRuntimeUIEnabled(id, enabled))
                 {
@@ -84,6 +96,7 @@ public partial class Window
                     sessionMessage = $"{id} input {(enabled ? "enabled" : "disabled")}";
                 }
                 else sessionMessage = $"Could not change {id} input";
+
                 ShowLiveInputMenu();
             }))).ToList();
         entries.Add(("Back", ShowRulesMenu));
@@ -92,6 +105,14 @@ public partial class Window
 
     private bool ApplyConfiguredRules(PuzzleRuleSet rules, bool preserveLiveInput)
     {
+        if (!rules.IsBoardCompatible(MyGrid.Width, MyGrid.Height))
+        {
+            showMedia = true;
+            sessionMessage = rules.GetBoardCompatibilityMessage(MyGrid.Width, MyGrid.Height) ??
+                             "The selected rules are not compatible with this board";
+            return false;
+        }
+
         if (sessions.Mode != RecordingControllerMode.Idle || State.Mode == GameMode.Scrambling ||
             drag != null || Animations.Count != 0 || boardDraft != null || activeSlider != ActiveSlider.None)
         {
@@ -116,14 +137,23 @@ public partial class Window
         sessionMessage = mathematicalRulesChanged
             ? $"{rules.Name} rules selected; board unchanged and run reset"
             : $"{rules.Name} rules selected; board unchanged";
+        string? compatibilityMessage = activeRules.GetBoardCompatibilityMessage(MyGrid.Width, MyGrid.Height);
+        if (compatibilityMessage != null) sessionMessage += $" · {compatibilityMessage}";
         wnd.QueueRedraw();
         return true;
     }
 
-    private void ShowRulesList(string title, IEnumerable<(string Label, Action Execute)> commands)
+    private bool IsLensOperationUnavailable(string operationId) => operationId != PuzzleOperationIds.Slide &&
+                                                                   (MyGrid.Width < 3 || MyGrid.Height < 3);
+
+    private void ShowRulesList(string title, IEnumerable<(string Label, Action Execute)> commands,
+        Action<int>? selectionChanged = null)
     {
         var items = commands.ToArray();
         var menu = new CrystalCommandMenu(title, items.Select(item => new CrystalMenuEntry(item.Label)), hudFont);
+        presetMenuVisible = selectionChanged != null;
+        presetPreviewRules = null;
+        if (selectionChanged != null) menu.SelectionChanged += selectionChanged;
         menu.Activated += index =>
         {
             popupHost.Accept(selectedIndex: index);
@@ -134,7 +164,17 @@ public partial class Window
         wnd.GetSize(out int width, out int height);
         var area = new System.Drawing.RectangleF(0, 0, width, height);
         popupHost.Show(menu, area);
-        popupHost.SetLayout(area, menu.GetCenteredBounds(area));
+        var menuBounds = presetMenuVisible
+            ? PresetMenuPreviewLayout.Calculate(new SKRect(0, 0, width, height), menu.PreferredWidth,
+                menu.PreferredHeight, SelectionPreviewRules.PresetPreviewLineCount).MenuBounds
+            : menu.GetCenteredBounds(area);
+        popupHost.SetLayout(area, menuBounds);
         wnd.QueueRedraw();
+    }
+
+    private void ClearPresetRulesPreview()
+    {
+        presetMenuVisible = false;
+        presetPreviewRules = null;
     }
 }
