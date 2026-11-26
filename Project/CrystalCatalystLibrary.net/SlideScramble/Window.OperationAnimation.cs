@@ -1,0 +1,267 @@
+using System.Text.Json;
+using SkiaSharp;
+
+namespace SlideScramble;
+
+public partial class Window
+{
+    private sealed class ActiveOperationAnimation(
+        OperationAnimationTimeline timeline,
+        OperationPlan operationPlan,
+        JsonElement recordingParameters,
+        SKImage[] tileImages,
+        Grid grid,
+        SessionRecordingController controller)
+    {
+        public OperationAnimationTimeline Timeline { get; } = timeline;
+        public OperationPlan OperationPlan { get; } = operationPlan;
+        public JsonElement RecordingParameters { get; } = recordingParameters;
+        public SKImage[] TileImages { get; } = tileImages;
+        public Grid Grid { get; } = grid;
+        public SessionRecordingController Controller { get; } = controller;
+        public RecordingControllerMode Mode { get; } = controller.Mode;
+        public int Position { get; } = controller.Position;
+        public OperationAnimationFrame Frame { get; set; }
+        public double StartedAt { get; set; } = -1;
+        public bool[] MovingTiles { get; } = new bool[timeline.Plan.Width * timeline.Plan.Height];
+    }
+
+    private readonly SKPaint operationTileBorderPaint = new()
+    {
+        Color = new SKColor(226, 232, 240, 230),
+        Style = SKPaintStyle.Stroke,
+        StrokeWidth = 1.5f,
+        IsAntialias = true
+    };
+
+    private ActiveOperationAnimation? activeOperationAnimation;
+    private OperationAnimationStyle? operationAnimationPreference;
+
+    private void ShowOperationAnimationMenu()
+    {
+        ShowRulesList("Operation Animation", new[]
+        {
+            ("Instant", (Action)(() => SetOperationAnimationPreference(OperationAnimationStyle.Instant))),
+            ("Primitive", (Action)(() => SetOperationAnimationPreference(OperationAnimationStyle.Primitive))),
+            ("Logical", (Action)(() => SetOperationAnimationPreference(OperationAnimationStyle.Logical))),
+            ($"Automatic (current: {operationAnimationPreference?.ToString() ?? "per operation"})", (Action)(() =>
+                SetOperationAnimationPreference(null))),
+            ("Back to commands", (Action)ShowCommandMenu)
+        });
+    }
+
+    private void SetOperationAnimationPreference(OperationAnimationStyle? preference)
+    {
+        operationAnimationPreference = preference;
+        sessionMessage = preference.HasValue
+            ? $"Portable Lens animation set to {preference.Value}"
+            : "Portable Lens animation set to automatic per operation";
+        ShowCommandMenu();
+    }
+
+    private void BeginOperationAnimation(OperationPlan plan, JsonElement recordingParameters)
+    {
+        var board = new OperationBoardSnapshot(CaptureBoardCells());
+        var visualPlan = new OperationAnimationPlan(board, plan);
+        OperationAnimationStyle style = OperationAnimationPolicy.Select(plan,
+            visualPlan.SupportsLogicalAnimation, operationAnimationPreference);
+        if (style == OperationAnimationStyle.Instant)
+        {
+            CommitLensOperation(plan, recordingParameters);
+            return;
+        }
+
+        var tileImages = new SKImage[MyGrid.Width * MyGrid.Height];
+        foreach (Tile tile in MyGrid.Tiles)
+            tileImages[tile.OriginY * MyGrid.Width + tile.OriginX] = tile.Image;
+
+        var active = new ActiveOperationAnimation(
+            new OperationAnimationTimeline(visualPlan, style), plan, recordingParameters.Clone(), tileImages,
+            MyGrid, sessions);
+        activeOperationAnimation = active;
+        animationLockHoriz = null;
+        animationTileOffset = 0;
+        moveHighlight = null;
+        lensInteraction.CancelGesture();
+        sessionMessage = $"{plan.OperationId} · {style} animation · Esc cancels";
+
+        var animation = new Animation();
+        animation.animation = (_, _) => AdvanceOperationAnimation(active);
+        Animations.Enqueue(animation);
+    }
+
+    private bool AdvanceOperationAnimation(ActiveOperationAnimation active)
+    {
+        if (!ReferenceEquals(activeOperationAnimation, active)) return false;
+        double now = wnd.uptimeSeconds();
+        if (active.StartedAt < 0) active.StartedAt = now;
+        active.Frame = active.Timeline.GetFrame(now - active.StartedAt);
+        if (!active.Frame.IsComplete) return true;
+
+        try
+        {
+            if (!CanCommitOperationAnimation(active))
+            {
+                active.Timeline.Cancel();
+                sessionMessage = "The board or session changed; operation animation was cancelled";
+            }
+            else if (active.Timeline.TryCommit(() =>
+                         CommitLensOperation(active.OperationPlan, active.RecordingParameters)))
+            {
+                return FinishOperationAnimation(active);
+            }
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            sessionMessage = ex.Message;
+        }
+
+        return FinishOperationAnimation(active);
+    }
+
+    private bool CanCommitOperationAnimation(ActiveOperationAnimation active)
+    {
+        if (!ReferenceEquals(MyGrid, active.Grid) || !ReferenceEquals(sessions, active.Controller) ||
+            sessions.Mode != active.Mode || sessions.Position != active.Position ||
+            MyGrid.Width != active.Timeline.Plan.Width || MyGrid.Height != active.Timeline.Plan.Height)
+            return false;
+
+        int[,] current = CaptureBoardCells();
+        int[,] expected = active.Timeline.Plan.StartingCells;
+        for (int y = 0; y < MyGrid.Height; y++)
+        for (int x = 0; x < MyGrid.Width; x++)
+            if (current[y, x] != expected[y, x])
+                return false;
+        return true;
+    }
+
+    private bool FinishOperationAnimation(ActiveOperationAnimation active)
+    {
+        if (ReferenceEquals(activeOperationAnimation, active)) activeOperationAnimation = null;
+        return false;
+    }
+
+    private void CancelOperationAnimation()
+    {
+        if (activeOperationAnimation is not { } active) return;
+        active.Timeline.Cancel();
+        activeOperationAnimation = null;
+        sessionMessage = "Portable Lens animation cancelled; board and recording unchanged";
+        wnd.QueueRedraw();
+    }
+
+    private void CommitLensOperation(OperationPlan plan, JsonElement recordingParameters)
+    {
+        sessions.ApplyOperation(plan, recordingParameters);
+        State.TakeBackSolved(wnd.uptimeSeconds());
+        for (int i = 0; i < (plan.MoveCost ?? 0); i++) State.RecordMove(wnd.uptimeSeconds());
+        if (State.CheckSolved(MyGrid, wnd.uptimeSeconds())) Audio.PlayVictoryChime();
+        int primitiveCount = plan.Expansion.Count;
+        sessionMessage = plan.Accounting == OperationMoveAccounting.LogicalOperation
+            ? $"{plan.OperationId} committed · 1 logical move · {primitiveCount} primitive rotations"
+            : $"{plan.OperationId} committed · {plan.MoveCost} primitive moves";
+    }
+
+    private void DrawOperationAnimation(SKCanvas canvas, ActiveOperationAnimation active, float tileWidth,
+        float tileHeight)
+    {
+        OperationAnimationPlan plan = active.Timeline.Plan;
+        Array.Clear(active.MovingTiles);
+        IReadOnlyList<OperationTileMotion> motions;
+        if (active.Timeline.Style == OperationAnimationStyle.Logical)
+        {
+            motions = plan.LogicalMotions;
+            foreach (OperationTileMotion motion in motions) active.MovingTiles[motion.TileId] = true;
+        }
+        else
+        {
+            motions = plan.GetPrimitiveMotions(active.Frame.PrimitiveIndex);
+            foreach (OperationTileMotion motion in motions) active.MovingTiles[motion.TileId] = true;
+        }
+
+        var boardClip = new SKRect(tileView!.xx, tileView.yy, tileView.xx + tileView.width,
+            tileView.yy + tileView.height);
+        canvas.Save();
+        canvas.ClipRect(boardClip);
+
+        for (int y = 0; y < plan.Height; y++)
+        for (int x = 0; x < plan.Width; x++)
+        {
+            int tileId = active.Timeline.Style == OperationAnimationStyle.Logical
+                ? plan.TileAtStart(x, y)
+                : plan.TileAtPrimitiveStart(active.Frame.PrimitiveIndex, x, y);
+            if (active.MovingTiles[tileId]) continue;
+            DrawOperationTile(canvas, active.TileImages[tileId], tileView.xx + (x + 0.5f) * tileWidth,
+                tileView.yy + (y + 0.5f) * tileHeight, 1, tileWidth, tileHeight);
+        }
+
+        float progress = active.Frame.Progress;
+        RecordedMove? primitiveMove = active.Timeline.Style == OperationAnimationStyle.Primitive
+            ? plan.PrimitiveMoves[active.Frame.PrimitiveIndex]
+            : null;
+        foreach (OperationTileMotion motion in motions)
+        {
+            float centerX;
+            float centerY;
+            float scale;
+            if (active.Timeline.Style == OperationAnimationStyle.Logical)
+            {
+                OperationTilePose pose = plan.GetLogicalPose(motion.TileId, progress);
+                centerX = tileView.xx + pose.CenterX * tileWidth;
+                centerY = tileView.yy + pose.CenterY * tileHeight;
+                scale = pose.Scale;
+            }
+            else
+            {
+                centerX = tileView.xx + (motion.SourceX + 0.5f + motion.DeltaX * progress) * tileWidth;
+                centerY = tileView.yy + (motion.SourceY + 0.5f + motion.DeltaY * progress) * tileHeight;
+                scale = 1;
+            }
+
+            bool highlight = primitiveMove is not null && motion.SourceX == primitiveMove.StartX &&
+                             motion.SourceY == primitiveMove.StartY;
+            DrawOperationTile(canvas, active.TileImages[motion.TileId], centerX, centerY, scale,
+                tileWidth, tileHeight, highlight);
+        }
+
+        if (primitiveMove is not null)
+        {
+            var line = primitiveMove.Axis == RecordedMoveAxis.Row
+                ? new SKRect(tileView.xx, tileView.yy + primitiveMove.Index * tileHeight,
+                    tileView.xx + tileView.width, tileView.yy + (primitiveMove.Index + 1) * tileHeight)
+                : new SKRect(tileView.xx + primitiveMove.Index * tileWidth, tileView.yy,
+                    tileView.xx + (primitiveMove.Index + 1) * tileWidth, tileView.yy + tileView.height);
+            canvas.DrawRoundRect(line, 6, 6, activeLinePaint);
+        }
+
+        canvas.Restore();
+    }
+
+    private void DrawOperationTile(SKCanvas canvas, SKImage image, float centerX, float centerY, float scale,
+        float tileWidth, float tileHeight, bool highlight = false)
+    {
+        if (tileView is not { } view) return;
+        float boardWidth = MyGrid.Width;
+        float boardHeight = MyGrid.Height;
+        var copies = OperationAnimationGeometry.GetVisibleWrappedCopies(
+            (centerX - view.xx) / tileWidth, (centerY - view.yy) / tileHeight,
+            scale, scale, boardWidth, boardHeight);
+        var source = new SKRect(0, 0, image.Width, image.Height);
+        foreach (var copy in copies)
+        {
+            float left = view.xx + copy.X * tileWidth - tileWidth * scale / 2;
+            float top = view.yy + copy.Y * tileHeight - tileHeight * scale / 2;
+            var destination = new SKRect(left, top, left + tileWidth * scale, top + tileHeight * scale);
+            float cornerRadius = Math.Min(destination.Width, destination.Height) * 0.06f;
+            using var rounded = new SKRoundRect(destination, cornerRadius, cornerRadius);
+            canvas.Save();
+            canvas.ClipRoundRect(rounded);
+            canvas.DrawImage(image, source, destination, paint: tilePaint);
+            canvas.Restore();
+            canvas.DrawRoundRect(rounded, operationTileBorderPaint);
+            if (highlight)
+                canvas.DrawRoundRect(new SKRect(left + 3, top + 3,
+                    destination.Right - 3, destination.Bottom - 3), 6, 6, activeLinePaint);
+        }
+    }
+}

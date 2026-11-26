@@ -59,6 +59,7 @@ public partial class Window
 
     private void OnMouseMove(CrystalWindow windowHandle, int x, int y)
     {
+        if (activeOperationAnimation != null) return;
         if (boardDraft != null)
         {
             return;
@@ -144,6 +145,7 @@ public partial class Window
 
     private void OnMouseUp(CrystalWindow windowHandle, int button, int x, int y)
     {
+        if (activeOperationAnimation != null) return;
         if (boardDraft != null)
         {
             lensDoubleClick.Reset();
@@ -219,6 +221,7 @@ public partial class Window
 
     private void OnMouseDown(CrystalWindow windowHandle, int button, int x, int y)
     {
+        if (activeOperationAnimation != null) return;
         if (boardDraft != null)
         {
             if (button == (int)CrystalMouseButton.Left) EditBoardClick(x, y);

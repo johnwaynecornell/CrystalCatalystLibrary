@@ -403,6 +403,7 @@ public partial class Window
         {
             new(new CrystalMenuEntry("Edit Board"), OpenBoardEditor),
             new(new CrystalMenuEntry("Rules and Input Preferences"), ShowRulesMenu),
+            new(new CrystalMenuEntry("Operation Animation"), ShowOperationAnimationMenu),
             new(new CrystalMenuEntry("Position Portable Lens"), BeginPortableLensPlacement),
             new(new CrystalMenuEntry("Scramble", "S"), ScrambleBoard),
             new(new CrystalMenuEntry("Generate Challenge"), ShowChallengeGenerator),
@@ -431,6 +432,7 @@ public partial class Window
             modifiers.Clear();
             controlPressed = false;
             lensInteraction.CancelGesture();
+            CancelOperationAnimation();
             spaceHeld = false;
         };
         wnd.OnKeyDown = (handle, keycode) =>
@@ -438,6 +440,11 @@ public partial class Window
             bool modifierKey = modifiers.Press(keycode);
             controlPressed = modifiers.Control;
             if (modifierKey) return;
+            if (activeOperationAnimation != null)
+            {
+                if (keycode == (int)KeyCode.Escape) CancelOperationAnimation();
+                return;
+            }
             bool control = modifiers.Control;
             bool shift = modifiers.Shift;
             int commandKey = control && keycode >= 'A' && keycode <= 'Z' ? keycode + ('a' - 'A') : keycode;
@@ -548,7 +555,8 @@ public partial class Window
 
     private bool CanChangeBoard =>
         sessions.Mode == RecordingControllerMode.Idle && State.Mode != GameMode.Scrambling &&
-        drag == null && Animations.Count == 0 && lensInteraction.Phase == PortableLensInteractionPhase.Inactive;
+        drag == null && Animations.Count == 0 && activeOperationAnimation == null &&
+        lensInteraction.Phase == PortableLensInteractionPhase.Inactive;
 
     private bool HasClassicMathRules => activeRules.Name == "Classic" &&
         activeRules.ScrambleAllowed.SequenceEqual(new[] { PuzzleOperationIds.Slide }) &&

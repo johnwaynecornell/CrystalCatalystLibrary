@@ -146,22 +146,12 @@ public partial class Window
         };
         try
         {
-            sessions.ApplyOperation(plan, recordingParameters);
+            BeginOperationAnimation(plan, recordingParameters);
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
             sessionMessage = ex.Message;
-            return;
         }
-
-        State.TakeBackSolved(wnd.uptimeSeconds());
-        for (int i = 0; i < (plan.MoveCost ?? 0); i++) State.RecordMove(wnd.uptimeSeconds());
-        if (State.CheckSolved(MyGrid, wnd.uptimeSeconds())) Audio.PlayVictoryChime();
-        string operationName = request.OperationId;
-        int primitiveCount = plan.Expansion.Count;
-        sessionMessage = plan.Accounting == OperationMoveAccounting.LogicalOperation
-            ? $"{operationName} committed · 1 logical move · {primitiveCount} primitive rotations"
-            : $"{operationName} committed · {plan.MoveCost} primitive moves";
     }
 
     private int[,] CaptureBoardCells()
