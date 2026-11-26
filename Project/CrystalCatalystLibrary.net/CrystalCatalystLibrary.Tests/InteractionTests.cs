@@ -8,7 +8,7 @@ namespace CrystalCatalystLibrary.Tests;
 
 public class InteractionTests
 {
-    private static readonly SKFont TestFont = new(SKTypeface.Default, 14);
+    private static readonly SKFont TestFont = new(SKTypeface.FromFamilyName("monospace"), 14);
     private static CrystalTextEditor Editor() => new(new RectangleF(100, 50, 100, 20), TestFont);
 
     [Fact]
@@ -18,7 +18,7 @@ public class InteractionTests
         Assert.False(TestFont.ContainsGlyphs(missing));
         var editor = Editor();
         var requested = new List<string>();
-        editor.TypefaceForGlyph = glyph => { requested.Add(glyph); return SKTypeface.Default; };
+        editor.TypefaceForGlyph = glyph => { requested.Add(glyph); return TestFont.Typeface; };
         editor.Text = "a" + missing + "b";
         using var bitmap = new SKBitmap(220, 100);
         using var canvas = new SKCanvas(bitmap);

@@ -189,7 +189,7 @@ public class ScrollBarTests
 
 public class SelectionControlTests
 {
-    private static readonly SKFont TestFont = new(SKTypeface.Default, 14);
+    private static readonly SKFont TestFont = new(SKTypeface.FromFamilyName("monospace"), 14);
 
     private static CrystalSelectionControl CreateControl(
         IEnumerable<string> items,

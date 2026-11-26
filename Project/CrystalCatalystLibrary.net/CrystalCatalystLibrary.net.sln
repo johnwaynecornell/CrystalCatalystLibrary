@@ -31,6 +31,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SlideScramble.Tests", "Slid
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AudioStreamingDemo", "AudioStreamingDemo\AudioStreamingDemo.csproj", "{7D1A2B3C-4D5E-6F70-8192-A3B4C5D6E7F8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CrystalCatalystLibrary.Tests", "CrystalCatalystLibrary.Tests\CrystalCatalystLibrary.Tests.csproj", "{17F8ECC6-D052-4198-8C8C-7F870FE400FE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -197,6 +199,18 @@ Global
 		{7D1A2B3C-4D5E-6F70-8192-A3B4C5D6E7F8}.Release|x64.Build.0 = Release|Any CPU
 		{7D1A2B3C-4D5E-6F70-8192-A3B4C5D6E7F8}.Release|x86.ActiveCfg = Release|Any CPU
 		{7D1A2B3C-4D5E-6F70-8192-A3B4C5D6E7F8}.Release|x86.Build.0 = Release|Any CPU
+		{17F8ECC6-D052-4198-8C8C-7F870FE400FE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{17F8ECC6-D052-4198-8C8C-7F870FE400FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{17F8ECC6-D052-4198-8C8C-7F870FE400FE}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{17F8ECC6-D052-4198-8C8C-7F870FE400FE}.Debug|x64.Build.0 = Debug|Any CPU
+		{17F8ECC6-D052-4198-8C8C-7F870FE400FE}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{17F8ECC6-D052-4198-8C8C-7F870FE400FE}.Debug|x86.Build.0 = Debug|Any CPU
+		{17F8ECC6-D052-4198-8C8C-7F870FE400FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{17F8ECC6-D052-4198-8C8C-7F870FE400FE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{17F8ECC6-D052-4198-8C8C-7F870FE400FE}.Release|x64.ActiveCfg = Release|Any CPU
+		{17F8ECC6-D052-4198-8C8C-7F870FE400FE}.Release|x64.Build.0 = Release|Any CPU
+		{17F8ECC6-D052-4198-8C8C-7F870FE400FE}.Release|x86.ActiveCfg = Release|Any CPU
+		{17F8ECC6-D052-4198-8C8C-7F870FE400FE}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
