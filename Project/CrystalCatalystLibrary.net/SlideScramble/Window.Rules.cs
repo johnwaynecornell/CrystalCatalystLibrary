@@ -8,6 +8,8 @@ public partial class Window
     private bool rulesMenuVisible;
     private bool presetMenuVisible;
     private PuzzleRuleSet? presetPreviewRules;
+    private InputHelpPreview? inputHelpPreview;
+    private readonly AnsiSkiaRenderer inputHelpRenderer = new() { FontSize = 14 };
 
     private void ShowRulesMenu()
     {
@@ -55,7 +57,8 @@ public partial class Window
 
     private void ShowInitialInputMenu()
     {
-        var entries = activeRules.Registry.RegisteredOperationIds.Select(id =>
+        var operationIds = activeRules.Registry.RegisteredOperationIds;
+        var entries = operationIds.Select(id =>
             ($"{id}: {(activeRules.UIEnabled.Contains(id) ? "on" : "off")}" +
              (IsLensOperationUnavailable(id) ? " (unavailable: requires 3 × 3)" : ""), (Action)(() =>
             {
@@ -71,12 +74,13 @@ public partial class Window
                 if (ApplyConfiguredRules(activeRules.WithUIEnabled(ids), false)) ShowInitialInputMenu();
             }))).ToList();
         entries.Add(("Back", ShowRulesMenu));
-        ShowRulesList("Initial input preferences", entries);
+        ShowRulesList("Initial input preferences", entries, inputOperations: operationIds);
     }
 
     private void ShowLiveInputMenu()
     {
-        var entries = sessions.RuleSet.Registry.RegisteredOperationIds.Select(id =>
+        var operationIds = sessions.RuleSet.Registry.RegisteredOperationIds;
+        var entries = operationIds.Select(id =>
             ($"{id}: {(sessions.RuntimeUIEnabled.Contains(id) ? "on" : "off")}" +
              (IsLensOperationUnavailable(id) ? " (unavailable: requires 3 × 3)" : ""), (Action)(() =>
             {
@@ -100,7 +104,7 @@ public partial class Window
                 ShowLiveInputMenu();
             }))).ToList();
         entries.Add(("Back", ShowRulesMenu));
-        ShowRulesList("Live input preferences", entries);
+        ShowRulesList("Live input preferences", entries, inputOperations: operationIds);
     }
 
     private bool ApplyConfiguredRules(PuzzleRuleSet rules, bool preserveLiveInput)
@@ -147,13 +151,15 @@ public partial class Window
                                                                    (MyGrid.Width < 3 || MyGrid.Height < 3);
 
     private void ShowRulesList(string title, IEnumerable<(string Label, Action Execute)> commands,
-        Action<int>? selectionChanged = null)
+        Action<int>? selectionChanged = null, IEnumerable<string>? inputOperations = null)
     {
         var items = commands.ToArray();
         var menu = new CrystalCommandMenu(title, items.Select(item => new CrystalMenuEntry(item.Label)), hudFont);
         presetMenuVisible = selectionChanged != null;
         presetPreviewRules = null;
         if (selectionChanged != null) menu.SelectionChanged += selectionChanged;
+        inputHelpPreview = inputOperations == null ? null : new InputHelpPreview(menu, inputOperations, inputHelpRenderer);
+        if (inputHelpPreview != null) menu.SelectionChanged += _ => wnd.QueueRedraw();
         menu.Activated += index =>
         {
             popupHost.Accept(selectedIndex: index);
@@ -164,7 +170,7 @@ public partial class Window
         wnd.GetSize(out int width, out int height);
         var area = new System.Drawing.RectangleF(0, 0, width, height);
         popupHost.Show(menu, area);
-        var menuBounds = presetMenuVisible
+        var menuBounds = inputHelpPreview != null ? inputHelpPreview.Layout(area, menu) : presetMenuVisible
             ? PresetMenuPreviewLayout.Calculate(new SKRect(0, 0, width, height), menu.PreferredWidth,
                 menu.PreferredHeight, SelectionPreviewRules.PresetPreviewLineCount).MenuBounds
             : menu.GetCenteredBounds(area);

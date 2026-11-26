@@ -175,6 +175,7 @@ public partial class Window
         commandMenu = null;
         rulesMenuVisible = false;
         ClearPresetRulesPreview();
+        inputHelpPreview = null;
         challengeGenerator = null;
         continueRecordingDialog = null;
         selectionKind = SelectionKind.None;
