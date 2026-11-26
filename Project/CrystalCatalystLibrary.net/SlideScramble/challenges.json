@@ -408,5 +408,335 @@
         ]
       }
     ]
+  },
+  "Swap Labyrinth - Full": {
+    "format": "SlideScramble",
+    "version": 3,
+    "width": 4,
+    "height": 4,
+    "initialCells": [
+      [[1,2],[3,2],[3,1],[4,1]],
+      [[1,3],[2,1],[3,3],[4,2]],
+      [[1,1],[3,4],[2,2],[2,4]],
+      [[1,4],[4,3],[4,4],[2,3]]
+    ],
+    "ruleSet": {
+      "name": "SwapLogic",
+      "scrambleAllowed": ["ColumnSwap","RowSwap"],
+      "solveAllowed": ["ColumnSwap","RowSwap"],
+      "uiEnabled": ["ColumnSwap","RowSwap"]
+    },
+    "operations": [
+      {
+        "operationId": "RowSwap",
+        "parameters": {"lensAnchor":[3,1],"startCell":"Square","targetCell":"Star","variant":"RightDown"},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Row","index":3,"dragStart":[4,3],"delta":-1},
+          {"axis":"Row","index":2,"dragStart":[4,2],"delta":-1},
+          {"axis":"Column","index":1,"dragStart":[1,2],"delta":-1},
+          {"axis":"Row","index":3,"dragStart":[1,3],"delta":1},
+          {"axis":"Column","index":1,"dragStart":[1,4],"delta":1},
+          {"axis":"Column","index":1,"dragStart":[1,3],"delta":1},
+          {"axis":"Row","index":2,"dragStart":[1,2],"delta":1},
+          {"axis":"Column","index":1,"dragStart":[1,1],"delta":-1}
+        ]
+      },
+      {
+        "operationId": "RowSwap",
+        "parameters": {"lensAnchor":[0,0],"startCell":"Triangle","targetCell":"Circle","variant":"LeftDown"},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Row","index":2,"dragStart":[2,2],"delta":1},
+          {"axis":"Row","index":1,"dragStart":[2,1],"delta":1},
+          {"axis":"Column","index":1,"dragStart":[1,1],"delta":-1},
+          {"axis":"Row","index":2,"dragStart":[1,2],"delta":-1},
+          {"axis":"Column","index":1,"dragStart":[1,3],"delta":1},
+          {"axis":"Column","index":1,"dragStart":[1,2],"delta":1},
+          {"axis":"Row","index":1,"dragStart":[1,1],"delta":-1},
+          {"axis":"Column","index":1,"dragStart":[1,1],"delta":-1}
+        ]
+      },
+      {
+        "operationId": "RowSwap",
+        "parameters": {"lensAnchor":[2,1],"startCell":"Triangle","targetCell":"Circle","variant":"LeftDown"},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Row","index":3,"dragStart":[4,3],"delta":1},
+          {"axis":"Row","index":2,"dragStart":[4,2],"delta":1},
+          {"axis":"Column","index":3,"dragStart":[3,2],"delta":-1},
+          {"axis":"Row","index":3,"dragStart":[3,3],"delta":-1},
+          {"axis":"Column","index":3,"dragStart":[3,4],"delta":1},
+          {"axis":"Column","index":3,"dragStart":[3,3],"delta":1},
+          {"axis":"Row","index":2,"dragStart":[3,2],"delta":-1},
+          {"axis":"Column","index":3,"dragStart":[3,2],"delta":-1}
+        ]
+      },
+      {
+        "operationId": "ColumnSwap",
+        "parameters": {"lensAnchor":[1,1],"startCell":"Star","targetCell":"Circle","variant":"UpRight"},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Column","index":3,"dragStart":[3,3],"delta":1},
+          {"axis":"Column","index":2,"dragStart":[2,3],"delta":1},
+          {"axis":"Row","index":2,"dragStart":[2,2],"delta":-1},
+          {"axis":"Column","index":3,"dragStart":[3,2],"delta":-1},
+          {"axis":"Row","index":2,"dragStart":[4,2],"delta":1},
+          {"axis":"Row","index":2,"dragStart":[3,2],"delta":1},
+          {"axis":"Column","index":2,"dragStart":[2,2],"delta":-1},
+          {"axis":"Row","index":2,"dragStart":[2,2],"delta":-1}
+        ]
+      },
+      {
+        "operationId": "ColumnSwap",
+        "parameters": {"lensAnchor":[2,2],"startCell":"Square","targetCell":"Triangle","variant":"DownRight"},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Column","index":4,"dragStart":[4,3],"delta":-1},
+          {"axis":"Column","index":3,"dragStart":[3,3],"delta":-1},
+          {"axis":"Row","index":4,"dragStart":[3,4],"delta":-1},
+          {"axis":"Column","index":4,"dragStart":[4,4],"delta":1},
+          {"axis":"Row","index":4,"dragStart":[1,4],"delta":1},
+          {"axis":"Row","index":4,"dragStart":[4,4],"delta":1},
+          {"axis":"Column","index":3,"dragStart":[3,4],"delta":1},
+          {"axis":"Row","index":4,"dragStart":[3,4],"delta":-1}
+        ]
+      },
+      {
+        "operationId": "RowSwap",
+        "parameters": {"lensAnchor":[2,2],"startCell":"Triangle","targetCell":"Circle","variant":"LeftDown"},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Row","index":4,"dragStart":[4,4],"delta":1},
+          {"axis":"Row","index":3,"dragStart":[4,3],"delta":1},
+          {"axis":"Column","index":3,"dragStart":[3,3],"delta":-1},
+          {"axis":"Row","index":4,"dragStart":[3,4],"delta":-1},
+          {"axis":"Column","index":3,"dragStart":[3,1],"delta":1},
+          {"axis":"Column","index":3,"dragStart":[3,4],"delta":1},
+          {"axis":"Row","index":3,"dragStart":[3,3],"delta":-1},
+          {"axis":"Column","index":3,"dragStart":[3,3],"delta":-1}
+        ]
+      },
+      {
+        "operationId": "ColumnSwap",
+        "parameters": {"lensAnchor":[1,2],"startCell":"Star","targetCell":"Circle","variant":"UpRight"},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Column","index":3,"dragStart":[3,4],"delta":1},
+          {"axis":"Column","index":2,"dragStart":[2,4],"delta":1},
+          {"axis":"Row","index":3,"dragStart":[2,3],"delta":-1},
+          {"axis":"Column","index":3,"dragStart":[3,3],"delta":-1},
+          {"axis":"Row","index":3,"dragStart":[4,3],"delta":1},
+          {"axis":"Row","index":3,"dragStart":[3,3],"delta":1},
+          {"axis":"Column","index":2,"dragStart":[2,3],"delta":-1},
+          {"axis":"Row","index":3,"dragStart":[2,3],"delta":-1}
+        ]
+      },
+      {
+        "operationId": "ColumnSwap",
+        "parameters": {"lensAnchor":[2,2],"startCell":"Circle","targetCell":"Star","variant":"UpLeft"},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Column","index":3,"dragStart":[3,4],"delta":1},
+          {"axis":"Column","index":4,"dragStart":[4,4],"delta":1},
+          {"axis":"Row","index":3,"dragStart":[4,3],"delta":1},
+          {"axis":"Column","index":3,"dragStart":[3,3],"delta":-1},
+          {"axis":"Row","index":3,"dragStart":[2,3],"delta":-1},
+          {"axis":"Row","index":3,"dragStart":[3,3],"delta":-1},
+          {"axis":"Column","index":4,"dragStart":[4,3],"delta":-1},
+          {"axis":"Row","index":3,"dragStart":[4,3],"delta":1}
+        ]
+      },
+      {
+        "operationId": "RowSwap",
+        "parameters": {"lensAnchor":[3,2],"startCell":"Circle","targetCell":"Triangle","variant":"LeftUp"},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Row","index":3,"dragStart":[1,3],"delta":1},
+          {"axis":"Row","index":4,"dragStart":[1,4],"delta":1},
+          {"axis":"Column","index":4,"dragStart":[4,4],"delta":1},
+          {"axis":"Row","index":3,"dragStart":[4,3],"delta":-1},
+          {"axis":"Column","index":4,"dragStart":[4,2],"delta":-1},
+          {"axis":"Column","index":4,"dragStart":[4,3],"delta":-1},
+          {"axis":"Row","index":4,"dragStart":[4,4],"delta":-1},
+          {"axis":"Column","index":4,"dragStart":[4,4],"delta":1}
+        ]
+      },
+      {
+        "operationId": "ColumnSwap",
+        "parameters": {"lensAnchor":[2,1],"startCell":"Circle","targetCell":"Star","variant":"UpLeft"},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Column","index":3,"dragStart":[3,3],"delta":1},
+          {"axis":"Column","index":4,"dragStart":[4,3],"delta":1},
+          {"axis":"Row","index":2,"dragStart":[4,2],"delta":1},
+          {"axis":"Column","index":3,"dragStart":[3,2],"delta":-1},
+          {"axis":"Row","index":2,"dragStart":[2,2],"delta":-1},
+          {"axis":"Row","index":2,"dragStart":[3,2],"delta":-1},
+          {"axis":"Column","index":4,"dragStart":[4,2],"delta":-1},
+          {"axis":"Row","index":2,"dragStart":[4,2],"delta":1}
+        ]
+      },
+      {
+        "operationId": "RowSwap",
+        "parameters": {"lensAnchor":[3,2],"startCell":"Circle","targetCell":"Triangle","variant":"LeftUp"},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Row","index":3,"dragStart":[1,3],"delta":1},
+          {"axis":"Row","index":4,"dragStart":[1,4],"delta":1},
+          {"axis":"Column","index":4,"dragStart":[4,4],"delta":1},
+          {"axis":"Row","index":3,"dragStart":[4,3],"delta":-1},
+          {"axis":"Column","index":4,"dragStart":[4,2],"delta":-1},
+          {"axis":"Column","index":4,"dragStart":[4,3],"delta":-1},
+          {"axis":"Row","index":4,"dragStart":[4,4],"delta":-1},
+          {"axis":"Column","index":4,"dragStart":[4,4],"delta":1}
+        ]
+      },
+      {
+        "operationId": "ColumnSwap",
+        "parameters": {"lensAnchor":[2,1],"startCell":"Star","targetCell":"Circle","variant":"UpRight"},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Column","index":4,"dragStart":[4,3],"delta":1},
+          {"axis":"Column","index":3,"dragStart":[3,3],"delta":1},
+          {"axis":"Row","index":2,"dragStart":[3,2],"delta":-1},
+          {"axis":"Column","index":4,"dragStart":[4,2],"delta":-1},
+          {"axis":"Row","index":2,"dragStart":[1,2],"delta":1},
+          {"axis":"Row","index":2,"dragStart":[4,2],"delta":1},
+          {"axis":"Column","index":3,"dragStart":[3,2],"delta":-1},
+          {"axis":"Row","index":2,"dragStart":[3,2],"delta":-1}
+        ]
+      }
+    ]
+  },
+  "Swap Labyrinth - 3 cycle Finish": {
+    "format": "SlideScramble",
+    "version": 3,
+    "width": 4,
+    "height": 4,
+    "initialCells": [
+      [[1,1],[2,1],[3,1],[4,1]],
+      [[1,2],[2,2],[3,2],[4,2]],
+      [[1,3],[2,3],[4,4],[3,3]],
+      [[1,4],[2,4],[3,4],[4,3]]
+    ],
+    "ruleSet": {
+      "name": "SwapLogic",
+      "scrambleAllowed": ["ColumnSwap","RowSwap"],
+      "solveAllowed": ["ColumnSwap","RowSwap"],
+      "uiEnabled": ["ColumnSwap","RowSwap"]
+    },
+    "operations": [
+      {
+        "operationId": "RowSwap",
+        "parameters": {"lensAnchor":[3,2],"startCell":"Circle","targetCell":"Triangle","variant":"LeftUp"},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Row","index":3,"dragStart":[1,3],"delta":1},
+          {"axis":"Row","index":4,"dragStart":[1,4],"delta":1},
+          {"axis":"Column","index":4,"dragStart":[4,4],"delta":1},
+          {"axis":"Row","index":3,"dragStart":[4,3],"delta":-1},
+          {"axis":"Column","index":4,"dragStart":[4,2],"delta":-1},
+          {"axis":"Column","index":4,"dragStart":[4,3],"delta":-1},
+          {"axis":"Row","index":4,"dragStart":[4,4],"delta":-1},
+          {"axis":"Column","index":4,"dragStart":[4,4],"delta":1}
+        ]
+      },
+      {
+        "operationId": "ColumnSwap",
+        "parameters": {"lensAnchor":[2,1],"startCell":"Circle","targetCell":"Star","variant":"UpLeft"},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Column","index":3,"dragStart":[3,3],"delta":1},
+          {"axis":"Column","index":4,"dragStart":[4,3],"delta":1},
+          {"axis":"Row","index":2,"dragStart":[4,2],"delta":1},
+          {"axis":"Column","index":3,"dragStart":[3,2],"delta":-1},
+          {"axis":"Row","index":2,"dragStart":[2,2],"delta":-1},
+          {"axis":"Row","index":2,"dragStart":[3,2],"delta":-1},
+          {"axis":"Column","index":4,"dragStart":[4,2],"delta":-1},
+          {"axis":"Row","index":2,"dragStart":[4,2],"delta":1}
+        ]
+      },
+      {
+        "operationId": "RowSwap",
+        "parameters": {"lensAnchor":[3,2],"startCell":"Circle","targetCell":"Triangle","variant":"LeftUp"},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Row","index":3,"dragStart":[1,3],"delta":1},
+          {"axis":"Row","index":4,"dragStart":[1,4],"delta":1},
+          {"axis":"Column","index":4,"dragStart":[4,4],"delta":1},
+          {"axis":"Row","index":3,"dragStart":[4,3],"delta":-1},
+          {"axis":"Column","index":4,"dragStart":[4,2],"delta":-1},
+          {"axis":"Column","index":4,"dragStart":[4,3],"delta":-1},
+          {"axis":"Row","index":4,"dragStart":[4,4],"delta":-1},
+          {"axis":"Column","index":4,"dragStart":[4,4],"delta":1}
+        ]
+      },
+      {
+        "operationId": "ColumnSwap",
+        "parameters": {"lensAnchor":[2,1],"startCell":"Circle","targetCell":"Star","variant":"UpLeft"},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Column","index":3,"dragStart":[3,3],"delta":1},
+          {"axis":"Column","index":4,"dragStart":[4,3],"delta":1},
+          {"axis":"Row","index":2,"dragStart":[4,2],"delta":1},
+          {"axis":"Column","index":3,"dragStart":[3,2],"delta":-1},
+          {"axis":"Row","index":2,"dragStart":[2,2],"delta":-1},
+          {"axis":"Row","index":2,"dragStart":[3,2],"delta":-1},
+          {"axis":"Column","index":4,"dragStart":[4,2],"delta":-1},
+          {"axis":"Row","index":2,"dragStart":[4,2],"delta":1}
+        ]
+      }
+    ]
   }
+
+
 }

@@ -7,6 +7,112 @@ public class OperationRulesTests
     private const string CompositeId = PuzzleOperationIds.ColumnSwap;
 
     [Fact]
+    public void EightPresetsHaveTheirExactIndependentOperationSets()
+    {
+        var registry = OperationRegistry.CreateDefault();
+        AssertPreset(PuzzleRuleSet.CreateClassic(registry), "Classic", PuzzleOperationIds.Slide);
+        AssertPreset(PuzzleRuleSet.CreateShuffleLogic(registry), "ShuffleLogic", PuzzleOperationIds.Shuffle);
+        AssertPreset(PuzzleRuleSet.CreateSwapLogic(registry), "SwapLogic", PuzzleOperationIds.ColumnSwap,
+            PuzzleOperationIds.RowSwap);
+        AssertPreset(PuzzleRuleSet.CreateTwoWide(registry), "TwoWide", PuzzleOperationIds.Slide,
+            PuzzleOperationIds.ColumnSwap);
+        AssertPreset(PuzzleRuleSet.CreateTwoTall(registry), "TwoTall", PuzzleOperationIds.Slide,
+            PuzzleOperationIds.RowSwap);
+        AssertPreset(PuzzleRuleSet.CreateHybrid(registry), "Hybrid", PuzzleOperationIds.Slide,
+            PuzzleOperationIds.Shuffle);
+        AssertPreset(PuzzleRuleSet.CreateZeroSlide(registry), "ZeroSlide", PuzzleOperationIds.Shuffle,
+            PuzzleOperationIds.ColumnSwap, PuzzleOperationIds.RowSwap);
+        AssertPreset(PuzzleRuleSet.CreateFreeStyle(registry), "FreeStyle", PuzzleOperationIds.Slide,
+            PuzzleOperationIds.Shuffle, PuzzleOperationIds.ColumnSwap, PuzzleOperationIds.RowSwap);
+    }
+
+    [Fact]
+    public void PresetsRequireEveryResolverTheyEnable()
+    {
+        var incompleteRegistry = new OperationRegistry();
+        Assert.Throws<ArgumentException>(() => PuzzleRuleSet.CreateShuffleLogic(incompleteRegistry));
+        Assert.Throws<ArgumentException>(() => PuzzleRuleSet.CreateSwapLogic(incompleteRegistry));
+        Assert.Throws<ArgumentException>(() => PuzzleRuleSet.CreateTwoWide(incompleteRegistry));
+        Assert.Throws<ArgumentException>(() => PuzzleRuleSet.CreateTwoTall(incompleteRegistry));
+        Assert.Throws<ArgumentException>(() => PuzzleRuleSet.CreateHybrid(incompleteRegistry));
+        Assert.Throws<ArgumentException>(() => PuzzleRuleSet.CreateZeroSlide(incompleteRegistry));
+        Assert.Throws<ArgumentException>(() => PuzzleRuleSet.CreateFreeStyle(incompleteRegistry));
+        Assert.Equal(new[] { PuzzleOperationIds.Slide }, PuzzleRuleSet.CreateClassic(incompleteRegistry).UIEnabled);
+    }
+
+    [Fact]
+    public void TwoWideAndTwoTallDirectlyCountTheirSlideAndSwapOperations()
+    {
+        var board = CreateSolvedSnapshot(4);
+        var twoWide = PuzzleRuleSet.CreateTwoWide();
+        var wideEvaluator = new OperationRuleEvaluator(twoWide.Registry);
+        var wideSlide = wideEvaluator.EvaluateUiRequest(board,
+            new SlideOperationIntent(RecordedMoveAxis.Row, 0, 1), twoWide);
+        var wideSwap = wideEvaluator.EvaluateUiRequest(board,
+            new PortableLensSwapIntent(PuzzleOperationIds.ColumnSwap, 0, 0, PortableLensCell.Circle,
+                PortableLensCell.Star, "UpLeft"), twoWide);
+        AssertDirectLogicalMove(wideSlide, 1);
+        AssertDirectLogicalMove(wideSwap, 8);
+
+        var twoTall = PuzzleRuleSet.CreateTwoTall();
+        var tallEvaluator = new OperationRuleEvaluator(twoTall.Registry);
+        var tallSlide = tallEvaluator.EvaluateUiRequest(board,
+            new SlideOperationIntent(RecordedMoveAxis.Column, 0, 1), twoTall);
+        var tallSwap = tallEvaluator.EvaluateUiRequest(board,
+            new PortableLensSwapIntent(PuzzleOperationIds.RowSwap, 0, 0, PortableLensCell.Circle,
+                PortableLensCell.Triangle, "LeftUp"), twoTall);
+        AssertDirectLogicalMove(tallSlide, 1);
+        AssertDirectLogicalMove(tallSwap, 8);
+    }
+
+    [Fact]
+    public void TwoWideAndTwoTallUseSlideFallbackForOtherLensOperations()
+    {
+        var board = CreateSolvedSnapshot(4);
+        var allLensInputs = new[]
+        {
+            PuzzleOperationIds.Slide,
+            PuzzleOperationIds.Shuffle,
+            PuzzleOperationIds.ColumnSwap,
+            PuzzleOperationIds.RowSwap
+        };
+
+        var twoWide = PuzzleRuleSet.CreateTwoWide().WithUIEnabled(allLensInputs);
+        var wideEvaluator = new OperationRuleEvaluator(twoWide.Registry);
+        var wideRowSwap = wideEvaluator.EvaluateUiRequest(board,
+            new PortableLensSwapIntent(PuzzleOperationIds.RowSwap, 0, 0, PortableLensCell.Circle,
+                PortableLensCell.Triangle, "LeftUp"), twoWide);
+        var wideShuffle = wideEvaluator.EvaluateUiRequest(board,
+            new ShuffleOperationIntent(0, 0, PortableLensCell.Circle, PortableLensCell.Star), twoWide);
+        AssertPrimitiveFallback(wideRowSwap, 8);
+        AssertPrimitiveFallback(wideShuffle, 4);
+
+        var twoTall = PuzzleRuleSet.CreateTwoTall().WithUIEnabled(allLensInputs);
+        var tallEvaluator = new OperationRuleEvaluator(twoTall.Registry);
+        var tallColumnSwap = tallEvaluator.EvaluateUiRequest(board,
+            new PortableLensSwapIntent(PuzzleOperationIds.ColumnSwap, 0, 0, PortableLensCell.Circle,
+                PortableLensCell.Star, "UpLeft"), twoTall);
+        var tallShuffle = tallEvaluator.EvaluateUiRequest(board,
+            new ShuffleOperationIntent(0, 0, PortableLensCell.Circle, PortableLensCell.Star), twoTall);
+        AssertPrimitiveFallback(tallColumnSwap, 8);
+        AssertPrimitiveFallback(tallShuffle, 4);
+    }
+
+    [Fact]
+    public void BoardCompatibilityAllowsSlideCapableRulesButRejectsLensOnlyPresetsBelowThreeByThree()
+    {
+        Assert.True(PuzzleRuleSet.CreateClassic().IsBoardCompatible(2, 2));
+        Assert.False(PuzzleRuleSet.CreateShuffleLogic().IsBoardCompatible(2, 2));
+        Assert.False(PuzzleRuleSet.CreateSwapLogic().IsBoardCompatible(2, 2));
+        Assert.False(PuzzleRuleSet.CreateZeroSlide().IsBoardCompatible(2, 2));
+        Assert.True(PuzzleRuleSet.CreateTwoWide().IsBoardCompatible(2, 2));
+        Assert.True(PuzzleRuleSet.CreateTwoTall().IsBoardCompatible(2, 2));
+        Assert.True(PuzzleRuleSet.CreateFreeStyle().IsBoardCompatible(2, 2));
+        Assert.Contains("Slide remains available", PuzzleRuleSet.CreateTwoWide().GetBoardCompatibilityMessage(2, 2));
+        Assert.Null(PuzzleRuleSet.CreateFreeStyle().GetBoardCompatibilityMessage(3, 3));
+    }
+
+    [Fact]
     public void DefaultRulesPermitOnlyOrdinarySlides()
     {
         var rules = new PuzzleRuleSet();
@@ -259,6 +365,40 @@ public class OperationRulesTests
         var result = new OperationRuleEvaluator(registry).EvaluateScrambleRequest(Board(), new ReservedIntent(), rules);
         Assert.False(result.IsAccepted);
         Assert.Contains("no registered resolver", result.RejectionReason);
+    }
+
+    private static void AssertPreset(PuzzleRuleSet rules, string name, params string[] operationIds)
+    {
+        string[] expected = operationIds.Order(StringComparer.Ordinal).ToArray();
+        Assert.Equal(name, rules.Name);
+        Assert.Equal(expected, rules.ScrambleAllowed);
+        Assert.Equal(expected, rules.SolveAllowed);
+        Assert.Equal(expected, rules.UIEnabled);
+    }
+
+    private static void AssertDirectLogicalMove(OperationEvaluation result, int expansionCount)
+    {
+        Assert.True(result.IsAccepted, result.RejectionReason);
+        Assert.Equal(OperationMoveAccounting.LogicalOperation, result.Plan!.Accounting);
+        Assert.Equal(1, result.Plan.MoveCost);
+        Assert.Equal(expansionCount, result.Plan.Expansion.Count);
+    }
+
+    private static void AssertPrimitiveFallback(OperationEvaluation result, int moveCost)
+    {
+        Assert.True(result.IsAccepted, result.RejectionReason);
+        Assert.Equal(OperationMoveAccounting.PrimitiveMoves, result.Plan!.Accounting);
+        Assert.Equal(moveCost, result.Plan.MoveCost);
+        Assert.Equal(moveCost, result.Plan.Expansion.Count);
+    }
+
+    private static OperationBoardSnapshot CreateSolvedSnapshot(int size)
+    {
+        var cells = new int[size, size];
+        for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++)
+            cells[y, x] = y * size + x;
+        return new OperationBoardSnapshot(cells);
     }
 
     private static OperationRegistry RegistryWithComposite() =>

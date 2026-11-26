@@ -51,9 +51,10 @@ public partial class Window
     {
         width = Math.Clamp(width, 2, 9);
         height = Math.Clamp(height, 2, 9);
-        if (activeRules.Name == "ShuffleLogic" && (width < 3 || height < 3))
+        if (!activeRules.IsBoardCompatible(width, height))
         {
-            sessionMessage = "ShuffleLogic requires at least a 3 × 3 board";
+            sessionMessage = activeRules.GetBoardCompatibilityMessage(width, height) ??
+                             "The selected rules are not compatible with this board";
             return;
         }
         if (CanChangeBoard)
@@ -66,6 +67,8 @@ public partial class Window
             animationTileOffset = 0;
             lensInteraction.Cancel();
             UpdateTileView();
+            string? compatibilityMessage = activeRules.GetBoardCompatibilityMessage(width, height);
+            if (compatibilityMessage != null) sessionMessage = compatibilityMessage;
         }
     }
 

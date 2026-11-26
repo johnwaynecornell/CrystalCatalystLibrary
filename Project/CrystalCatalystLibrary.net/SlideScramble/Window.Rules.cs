@@ -25,27 +25,24 @@ public partial class Window
         {
             ("Classic", (Action)(() => SelectPreset(PuzzleRuleSet.CreateClassic(activeRules.Registry)))),
             ("ShuffleLogic", (Action)(() => SelectPreset(PuzzleRuleSet.CreateShuffleLogic(activeRules.Registry)))),
+            ("SwapLogic", (Action)(() => SelectPreset(PuzzleRuleSet.CreateSwapLogic(activeRules.Registry)))),
+            ("TwoWide", (Action)(() => SelectPreset(PuzzleRuleSet.CreateTwoWide(activeRules.Registry)))),
+            ("TwoTall", (Action)(() => SelectPreset(PuzzleRuleSet.CreateTwoTall(activeRules.Registry)))),
             ("Hybrid", (Action)(() => SelectPreset(PuzzleRuleSet.CreateHybrid(activeRules.Registry)))),
+            ("ZeroSlide", (Action)(() => SelectPreset(PuzzleRuleSet.CreateZeroSlide(activeRules.Registry)))),
+            ("FreeStyle", (Action)(() => SelectPreset(PuzzleRuleSet.CreateFreeStyle(activeRules.Registry)))),
             ("Back", (Action)ShowRulesMenu)
         });
     }
 
-    private void SelectPreset(PuzzleRuleSet rules)
-    {
-        if (rules.Name == "ShuffleLogic" && (MyGrid.Width < 3 || MyGrid.Height < 3))
-        {
-            showMedia = true;
-            sessionMessage = "ShuffleLogic requires at least a 3 × 3 board";
-            return;
-        }
-        ApplyConfiguredRules(rules, false);
-    }
+    private void SelectPreset(PuzzleRuleSet rules) => ApplyConfiguredRules(rules, false);
 
     private void ShowRuleOperations(bool scramble)
     {
         var allowed = scramble ? activeRules.ScrambleAllowed : activeRules.SolveAllowed;
         var entries = activeRules.Registry.RegisteredOperationIds.Select(id =>
-            ($"{id}: {(allowed.Contains(id) ? "on" : "off")}", (Action)(() =>
+            ($"{id}: {(allowed.Contains(id) ? "on" : "off")}" +
+             (IsLensOperationUnavailable(id) ? " (unavailable: requires 3 × 3)" : ""), (Action)(() =>
             {
                 var ids = new HashSet<string>(allowed, StringComparer.Ordinal);
                 if (!ids.Add(id)) ids.Remove(id);
@@ -60,8 +57,15 @@ public partial class Window
     private void ShowInitialInputMenu()
     {
         var entries = activeRules.Registry.RegisteredOperationIds.Select(id =>
-            ($"{id}: {(activeRules.UIEnabled.Contains(id) ? "on" : "off")}", (Action)(() =>
+            ($"{id}: {(activeRules.UIEnabled.Contains(id) ? "on" : "off")}" +
+             (IsLensOperationUnavailable(id) ? " (unavailable: requires 3 × 3)" : ""), (Action)(() =>
             {
+                if (IsLensOperationUnavailable(id) && !activeRules.UIEnabled.Contains(id))
+                {
+                    sessionMessage = "Portable Lens operations require a 3 × 3 board";
+                    ShowInitialInputMenu();
+                    return;
+                }
                 var ids = new HashSet<string>(activeRules.UIEnabled, StringComparer.Ordinal);
                 if (!ids.Add(id)) ids.Remove(id);
                 if (ApplyConfiguredRules(activeRules.WithUIEnabled(ids), false)) ShowInitialInputMenu();
@@ -73,8 +77,15 @@ public partial class Window
     private void ShowLiveInputMenu()
     {
         var entries = sessions.RuleSet.Registry.RegisteredOperationIds.Select(id =>
-            ($"{id}: {(sessions.RuntimeUIEnabled.Contains(id) ? "on" : "off")}", (Action)(() =>
+            ($"{id}: {(sessions.RuntimeUIEnabled.Contains(id) ? "on" : "off")}" +
+             (IsLensOperationUnavailable(id) ? " (unavailable: requires 3 × 3)" : ""), (Action)(() =>
             {
+                if (IsLensOperationUnavailable(id) && !sessions.RuntimeUIEnabled.Contains(id))
+                {
+                    sessionMessage = "Portable Lens operations require a 3 × 3 board";
+                    ShowLiveInputMenu();
+                    return;
+                }
                 bool enabled = !sessions.RuntimeUIEnabled.Contains(id);
                 if (sessions.SetRuntimeUIEnabled(id, enabled))
                 {
@@ -92,6 +103,14 @@ public partial class Window
 
     private bool ApplyConfiguredRules(PuzzleRuleSet rules, bool preserveLiveInput)
     {
+        if (!rules.IsBoardCompatible(MyGrid.Width, MyGrid.Height))
+        {
+            showMedia = true;
+            sessionMessage = rules.GetBoardCompatibilityMessage(MyGrid.Width, MyGrid.Height) ??
+                             "The selected rules are not compatible with this board";
+            return false;
+        }
+
         if (sessions.Mode != RecordingControllerMode.Idle || State.Mode == GameMode.Scrambling ||
             drag != null || Animations.Count != 0 || boardDraft != null || activeSlider != ActiveSlider.None)
         {
@@ -116,9 +135,14 @@ public partial class Window
         sessionMessage = mathematicalRulesChanged
             ? $"{rules.Name} rules selected; board unchanged and run reset"
             : $"{rules.Name} rules selected; board unchanged";
+        string? compatibilityMessage = activeRules.GetBoardCompatibilityMessage(MyGrid.Width, MyGrid.Height);
+        if (compatibilityMessage != null) sessionMessage += $" · {compatibilityMessage}";
         wnd.QueueRedraw();
         return true;
     }
+
+    private bool IsLensOperationUnavailable(string operationId) => operationId != PuzzleOperationIds.Slide &&
+        (MyGrid.Width < 3 || MyGrid.Height < 3);
 
     private void ShowRulesList(string title, IEnumerable<(string Label, Action Execute)> commands)
     {
