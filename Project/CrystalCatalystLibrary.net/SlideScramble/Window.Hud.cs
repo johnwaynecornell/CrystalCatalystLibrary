@@ -9,6 +9,22 @@ namespace SlideScramble;
 
 public partial class Window
 {
+    private const float FpsHudX = 132;
+    private const float FpsHudGap = 12;
+
+    internal static float CalculateCenterHudScale(float width, float centerTotalWidth) =>
+        Math.Min(1, Math.Max(1, width - 260f) / centerTotalWidth);
+
+    internal static bool ShouldDrawFps(float width, float fpsTextWidth, float centerTotalWidth)
+    {
+        if (width < 650 || centerTotalWidth <= 0) return false;
+
+        float centerAreaStart = width / 2f - centerTotalWidth / 2f;
+        float hudScale = CalculateCenterHudScale(width, centerTotalWidth);
+        float renderedCenterStart = width / 2f + (centerAreaStart - width / 2f) * hudScale;
+        return FpsHudX + fpsTextWidth + FpsHudGap <= renderedCenterStart;
+    }
+
     private static void DrawDropdownArrow(SKCanvas canvas, float x, float y, float size, SKPaint paint)
     {
         using var path = new SKPath();
@@ -298,9 +314,9 @@ public partial class Window
 
             string gridInfo = $"Grid: {MyGrid.Width}x{MyGrid.Height}";
             hudBoldFont.MeasureText(gridInfo, out SKRect gridBounds, hudAccentPaint);
+            hudFont.MeasureText(fpsText, out SKRect fpsBounds, hudMutedPaint);
             canvas.DrawText(gridInfo, 28, 35, hudBoldFont, hudAccentPaint);
             DrawDropdownArrow(canvas, 28 + gridBounds.Width + 8, 30, 4, hudAccentPaint);
-            if (width >= 650) canvas.DrawText(fpsText, 132, 35, hudFont, hudMutedPaint);
 
             // Diagnostics overlay
             if (ShowDiagnostics)
@@ -338,10 +354,10 @@ public partial class Window
             float centerTotalWidth = ruleSetBounds.Width + movesBounds.Width + timeBounds.Width + 48;
             if (recordingBounds.HasValue) centerTotalWidth += recordingBounds.Value.Width + 16;
             float centerAreaStart = width / 2f - centerTotalWidth / 2f;
+            float hudScale = CalculateCenterHudScale(width, centerTotalWidth);
             if (width >= 500)
             {
                 canvas.Save();
-                float hudScale = Math.Min(1, Math.Max(1, width - 260f) / centerTotalWidth);
                 canvas.Translate(width / 2f, 35);
                 canvas.Scale(hudScale);
                 canvas.Translate(-width / 2f, -35);
@@ -370,6 +386,9 @@ public partial class Window
                 canvas.DrawText(compactStats, -compactWidth / 2, 0, hudFont, hudTextPaint);
                 canvas.Restore();
             }
+
+            if (ShouldDrawFps(width, fpsBounds.Width, centerTotalWidth))
+                canvas.DrawText(fpsText, FpsHudX, 35, hudFont, hudMutedPaint);
 
             // Right HUD: Game Mode
             string modeText = State.Mode switch

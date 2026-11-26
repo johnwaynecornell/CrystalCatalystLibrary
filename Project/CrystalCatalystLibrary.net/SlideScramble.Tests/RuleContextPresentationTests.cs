@@ -49,4 +49,24 @@ public class RuleContextPresentationTests
         Assert.Equal("Operations recorded: 2",
             Window.FormatOperationPosition(RecordingControllerMode.Recording, 2, 2, null));
     }
+
+    [Fact]
+    public void FpsDisplayIsOmittedWhenCenterHudWouldOverlapIt()
+    {
+        Assert.True(Window.ShouldDrawFps(900, 42, 500));
+        Assert.False(Window.ShouldDrawFps(900, 42, 540));
+        Assert.False(Window.ShouldDrawFps(649, 42, 300));
+    }
+
+    [Fact]
+    public void FpsDisplayAccountsForLongRecordingTextAndWindowWidth()
+    {
+        const float fpsWidth = 42;
+        const float centerWidthWithShortStatus = 500;
+        const float centerWidthWithLongRecordingStatus = 540;
+
+        Assert.True(Window.ShouldDrawFps(900, fpsWidth, centerWidthWithShortStatus));
+        Assert.False(Window.ShouldDrawFps(900, fpsWidth, centerWidthWithLongRecordingStatus));
+        Assert.True(Window.ShouldDrawFps(1000, fpsWidth, centerWidthWithLongRecordingStatus));
+    }
 }
