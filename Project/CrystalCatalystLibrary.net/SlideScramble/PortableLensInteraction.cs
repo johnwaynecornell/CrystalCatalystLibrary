@@ -51,9 +51,11 @@ public sealed class PortableLensInteractionController
     public (int X, int Y)? GestureStartPointer { get; private set; }
     public (int X, int Y)? GesturePointer { get; private set; }
 
+    internal static bool CanPlaceOnBoard(int width, int height) => width >= 2 && height >= 2;
+
     public bool BeginPlacement(int width, int height, int? initialX = null, int? initialY = null)
     {
-        if (width < 3 || height < 3)
+        if (!CanPlaceOnBoard(width, height))
         {
             Cancel();
             return false;
@@ -68,7 +70,7 @@ public sealed class PortableLensInteractionController
             AnchorY = 0;
         }
 
-        gestureStart = null;
+        CancelGesture();
         Phase = PortableLensInteractionPhase.Positioning;
         return true;
     }
@@ -194,7 +196,7 @@ public sealed class PortableLensInteractionController
 
     public void Cancel()
     {
-        gestureStart = null;
+        CancelGesture();
         Phase = PortableLensInteractionPhase.Inactive;
     }
 }

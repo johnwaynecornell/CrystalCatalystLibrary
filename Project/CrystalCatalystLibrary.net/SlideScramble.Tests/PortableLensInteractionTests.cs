@@ -5,6 +5,9 @@ namespace SlideScramble.Tests;
 public class PortableLensInteractionTests
 {
     [Theory]
+    [InlineData(2, 2)]
+    [InlineData(2, 4)]
+    [InlineData(4, 2)]
     [InlineData(3, 3)]
     [InlineData(5, 3)]
     [InlineData(7, 6)]
@@ -179,12 +182,50 @@ public class PortableLensInteractionTests
         Assert.False(splitTop.TryGetGestureTarget(2, 0, out _, out _, out _));
     }
 
-    [Fact]
-    public void LensCannotBePositionedOnBoardSmallerThanAtlasMinimum()
+    [Theory]
+    [InlineData(1, 4)]
+    [InlineData(4, 1)]
+    [InlineData(1, 1)]
+    public void LensCannotBePositionedWithoutFourDistinctCells(int width, int height)
     {
         var interaction = new PortableLensInteractionController();
-        Assert.False(interaction.BeginPlacement(2, 4));
+        Assert.False(interaction.BeginPlacement(width, height));
         Assert.Equal(PortableLensInteractionPhase.Inactive, interaction.Phase);
+    }
+
+    [Theory]
+    [InlineData(PortableLensCell.Star, false, PuzzleOperationIds.Shuffle)]
+    [InlineData(PortableLensCell.Star, true, PuzzleOperationIds.ColumnSwap)]
+    [InlineData(PortableLensCell.Triangle, true, PuzzleOperationIds.RowSwap)]
+    public void RepositionedLensCanBeCopiedAndDisabledGesturesStillGetRejected(
+        PortableLensCell target, bool control, string operationId)
+    {
+        var grid = new Grid(3, 3);
+        var registry = OperationRegistry.CreateDefault();
+        var rules = PuzzleRuleSet.CreateZeroSlide(registry);
+        string originalBoard = ClipboardJson.Board(grid.Tiles);
+        var board = OperationBoardSnapshot.FromGrid(grid);
+        var lens = AcceptedLens();
+
+        Assert.True(lens.RepositionAndAccept(2, 2));
+        string? copied = null;
+        string message = ClipboardJson.Copy("Lens", ClipboardJson.Lens(grid.Tiles, lens), text =>
+        {
+            copied = text;
+            return null;
+        });
+        Assert.Equal("Lens copied to clipboard.", message);
+        Assert.Contains("\"at\": [3,3]", copied);
+        Assert.True(lens.BeginGesture(PortableLensCell.Circle, control));
+        var request = Assert.IsType<LensGestureRequest>(lens.CompleteGesture(target));
+
+        var evaluation = new OperationRuleEvaluator(registry)
+            .EvaluateUiRequest(board, request.Intent, rules, runtimeUiEnabled: Array.Empty<string>());
+
+        Assert.False(evaluation.IsAccepted);
+        Assert.Equal($"Operation '{operationId}' is not enabled in the UI.", evaluation.RejectionReason);
+        Assert.Equal(PortableLensInteractionPhase.Accepted, lens.Phase);
+        Assert.Equal(originalBoard, ClipboardJson.Board(grid.Tiles));
     }
 
     private static PortableLensInteractionController AcceptedLens()

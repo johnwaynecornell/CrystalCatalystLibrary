@@ -96,7 +96,6 @@ public partial class Window
                 {
                     lensInteraction.CancelGesture();
                     lensDoubleClick.Reset();
-                    if (!HasRuntimeLensOperation) lensInteraction.Cancel();
                     sessionMessage = $"{id} input {(enabled ? "enabled" : "disabled")}";
                 }
                 else sessionMessage = $"Could not change {id} input";
@@ -135,7 +134,8 @@ public partial class Window
             foreach (string id in SlidePermissions.MenuEntries(activeRules.Registry))
                 sessions.SetRuntimeUIEnabled(id, SlidePermissions.Includes(liveInput, id));
         goal = null;
-        lensInteraction.Cancel();
+        if (mathematicalRulesChanged) lensInteraction.Cancel();
+        else lensInteraction.CancelGesture();
         lensDoubleClick.Reset();
         moveHighlight = null;
         sessionMessage = mathematicalRulesChanged
