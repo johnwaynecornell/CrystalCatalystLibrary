@@ -517,7 +517,7 @@ public partial class Window
                 lensInteraction.Phase == PortableLensInteractionPhase.Positioning)
             {
                 if (lensInteraction.AcceptPosition())
-                    sessionMessage = "Lens accepted. Drag between neighboring symbols; Escape cancels.";
+                    sessionMessage = $"Lens accepted. {LensAcceptedHint}";
                 wnd.QueueRedraw();
                 return;
             }

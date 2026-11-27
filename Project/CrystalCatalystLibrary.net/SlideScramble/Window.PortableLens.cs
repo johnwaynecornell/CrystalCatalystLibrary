@@ -83,20 +83,14 @@ public partial class Window
     private void BeginPortableLensPlacement()
     {
         lensDoubleClick.Reset();
-        if (!HasRuntimeLensOperation)
-        {
-            sessionMessage = "No Portable Lens operation is enabled in the current input preferences";
-            return;
-        }
-        if (sessions.Mode == RecordingControllerMode.Playback || State.Mode == GameMode.Scrambling ||
-            drag != null || Animations.Count != 0 || popupHost.IsVisible || ShowGridSetup || boardDraft != null)
+        if (!CanHandleLensInput || drag != null)
         {
             sessionMessage = "Finish the current activity before positioning the lens";
             return;
         }
         if (!lensInteraction.BeginPlacement(MyGrid.Width, MyGrid.Height))
         {
-            sessionMessage = "Portable Lens requires a board at least 3 × 3";
+            sessionMessage = "Portable Lens placement requires at least two rows and two columns";
             return;
         }
 
@@ -106,7 +100,14 @@ public partial class Window
 
     private bool CanHandleLensInput =>
         sessions.Mode != RecordingControllerMode.Playback && State.Mode != GameMode.Scrambling &&
-        drag == null && Animations.Count == 0 && !popupHost.IsVisible && !ShowGridSetup && boardDraft == null;
+        Animations.Count == 0 && !popupHost.IsVisible && !ShowGridSetup && boardDraft == null;
+
+    private bool CanPlaceLensOnBoard =>
+        PortableLensInteractionController.CanPlaceOnBoard(MyGrid.Width, MyGrid.Height);
+
+    private string LensAcceptedHint => MyGrid.Width >= 3 && MyGrid.Height >= 3 && HasRuntimeLensOperation
+        ? "Drag between neighboring symbols; Escape cancels."
+        : "Double-click to reposition; Escape cancels.";
 
     private bool HasRuntimeLensOperation =>
         sessions.RuntimeUIEnabled.Contains(PuzzleOperationIds.Shuffle) ||
@@ -115,7 +116,7 @@ public partial class Window
 
     private void CommitLensGesture(LensGestureRequest request)
     {
-        if (!CanHandleLensInput)
+        if (!CanHandleLensInput || drag != null)
         {
             sessionMessage = "Finish the current activity before making a lens move";
             return;

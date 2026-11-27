@@ -275,7 +275,7 @@ public partial class Window
             }
         }
         lensDoubleClick.BeginPress(x, y, Environment.TickCount64,
-            insideBoard && CanHandleLensInput && HasRuntimeLensOperation);
+            insideBoard && CanHandleLensInput && drag == null && CanPlaceLensOnBoard);
         if (lensInteraction.Phase != PortableLensInteractionPhase.Inactive)
         {
             if (lensInteraction.Phase == PortableLensInteractionPhase.Positioning)
@@ -289,7 +289,7 @@ public partial class Window
                         sessionMessage = $"Lens anchor: {anchorX + 1},{anchorY + 1} · press Enter to accept";
                 }
             }
-            else if (CanHandleLensInput && tileView != null && x >= tileView.xx &&
+            else if (CanHandleLensInput && drag == null && tileView != null && x >= tileView.xx &&
                      x < tileView.xx + tileView.width && y >= tileView.yy && y < tileView.yy + tileView.height)
             {
                 int cellX = (int)((x - tileView.xx) * MyGrid.Width / tileView.width);
@@ -402,9 +402,7 @@ public partial class Window
         UpdateTileView(width, height);
         if (tileView == null || x < tileView.xx || x >= tileView.xx + tileView.width ||
             y < tileView.yy || y >= tileView.yy + tileView.height ||
-            sessions.Mode == RecordingControllerMode.Playback || State.Mode == GameMode.Scrambling ||
-            Animations.Count != 0 || popupHost.IsVisible || ShowGridSetup || boardDraft != null ||
-            !HasRuntimeLensOperation)
+            !CanHandleLensInput || !CanPlaceLensOnBoard)
             return false;
 
         int anchorX = (int)((x - tileView.xx) * MyGrid.Width / tileView.width);
@@ -419,7 +417,7 @@ public partial class Window
         animationLockHoriz = null;
         animationTileOffset = 0;
         moveHighlight = null;
-        sessionMessage = $"Lens accepted at {anchorX + 1},{anchorY + 1}; drag between neighboring symbols";
+        sessionMessage = $"Lens accepted at {anchorX + 1},{anchorY + 1}. {LensAcceptedHint}";
         windowHandle.QueueRedraw();
         return true;
     }
