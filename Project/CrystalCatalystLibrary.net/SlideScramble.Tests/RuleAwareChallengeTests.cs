@@ -51,6 +51,8 @@ public class RuleAwareChallengeTests
     [InlineData("TwoTall")]
     [InlineData("TwoWideSlide")]
     [InlineData("TwoTallSlide")]
+    [InlineData("TwoWideColumnSlide")]
+    [InlineData("TwoTallRowSlide")]
     [InlineData("Hybrid")]
     [InlineData("ZeroSlide")]
     [InlineData("FreeStyle")]
@@ -267,6 +269,8 @@ public class RuleAwareChallengeTests
         "TwoTall" => PuzzleRuleSet.CreateTwoTall(registry),
         "TwoWideSlide" => PuzzleRuleSet.CreateTwoWideSlide(registry),
         "TwoTallSlide" => PuzzleRuleSet.CreateTwoTallSlide(registry),
+        "TwoWideColumnSlide" => PuzzleRuleSet.CreateTwoWideColumnSlide(registry),
+        "TwoTallRowSlide" => PuzzleRuleSet.CreateTwoTallRowSlide(registry),
         "Hybrid" => PuzzleRuleSet.CreateHybrid(registry),
         "ZeroSlide" => PuzzleRuleSet.CreateZeroSlide(registry),
         "FreeStyle" => PuzzleRuleSet.CreateFreeStyle(registry),

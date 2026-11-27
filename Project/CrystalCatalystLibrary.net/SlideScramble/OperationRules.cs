@@ -132,6 +132,14 @@ public sealed class PuzzleRuleSet
         CreatePreset("TwoTallSlide", new[] { PuzzleOperationIds.ColumnSlide, PuzzleOperationIds.RowSwap },
             registry ?? OperationRegistry.CreateDefault());
 
+    public static PuzzleRuleSet CreateTwoWideColumnSlide(OperationRegistry? registry = null) =>
+        CreatePreset("TwoWideColumnSlide", new[] { PuzzleOperationIds.ColumnSlide, PuzzleOperationIds.ColumnSwap },
+            registry ?? OperationRegistry.CreateDefault());
+
+    public static PuzzleRuleSet CreateTwoTallRowSlide(OperationRegistry? registry = null) =>
+        CreatePreset("TwoTallRowSlide", new[] { PuzzleOperationIds.RowSlide, PuzzleOperationIds.RowSwap },
+            registry ?? OperationRegistry.CreateDefault());
+
     public static PuzzleRuleSet CreateHybrid(OperationRegistry? registry = null)
     {
         var selectedRegistry = registry ?? OperationRegistry.CreateDefault();

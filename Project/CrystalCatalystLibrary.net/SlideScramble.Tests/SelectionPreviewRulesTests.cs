@@ -45,7 +45,7 @@ public class SelectionPreviewRulesTests
         Assert.Equal(new[]
         {
             "Classic", "ShuffleLogic", "SwapLogic", "TwoWide", "TwoTall", "TwoWideSlide", "TwoTallSlide",
-            "Hybrid", "ZeroSlide", "FreeStyle"
+            "TwoWideColumnSlide", "TwoTallRowSlide", "Hybrid", "ZeroSlide", "FreeStyle"
         }, candidates.Select(rules => rules.Name));
 
         var expected = new Dictionary<string, string[]>(StringComparer.Ordinal)
@@ -57,6 +57,8 @@ public class SelectionPreviewRulesTests
             ["TwoTall"] = [PuzzleOperationIds.RowSwap, PuzzleOperationIds.Slide],
             ["TwoWideSlide"] = [PuzzleOperationIds.ColumnSwap, PuzzleOperationIds.RowSlide],
             ["TwoTallSlide"] = [PuzzleOperationIds.ColumnSlide, PuzzleOperationIds.RowSwap],
+            ["TwoWideColumnSlide"] = [PuzzleOperationIds.ColumnSlide, PuzzleOperationIds.ColumnSwap],
+            ["TwoTallRowSlide"] = [PuzzleOperationIds.RowSlide, PuzzleOperationIds.RowSwap],
             ["Hybrid"] = [PuzzleOperationIds.Shuffle, PuzzleOperationIds.Slide],
             ["ZeroSlide"] = [PuzzleOperationIds.ColumnSwap, PuzzleOperationIds.RowSwap, PuzzleOperationIds.Shuffle],
             ["FreeStyle"] =
