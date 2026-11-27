@@ -150,6 +150,15 @@ public class OperationPlaybackTests
         var timeline = new OperationAnimationTimeline(step.CreateAnimationPlan(OperationBoardSnapshot.FromGrid(grid)),
             style);
         int[,] original = OperationBoardSnapshot.FromGrid(grid).Cells;
+        timeline.GetFrame(0);
+        Assert.Equal(0f, timeline.LensOpacity);
+        timeline.GetFrame(0.05);
+        Assert.Equal(0.5f, timeline.LensOpacity, 3);
+        timeline.GetFrame(timeline.DurationSeconds / 2);
+        Assert.Equal(1f, timeline.LensOpacity);
+        timeline.GetFrame(timeline.DurationSeconds - 0.05);
+        Assert.Equal(0.5f, timeline.LensOpacity, 3);
+
         foreach (double fraction in new[] { 0, 0.25, 0.5, 0.75, 0.99 })
         {
             Assert.False(timeline.GetFrame(timeline.DurationSeconds * fraction).IsComplete);
@@ -160,6 +169,7 @@ public class OperationPlaybackTests
         Assert.Equal(0, controller.Position);
         Assert.Equal(original, OperationBoardSnapshot.FromGrid(grid).Cells);
         timeline.Cancel();
+        Assert.Equal(0f, timeline.LensOpacity);
         Assert.Null(timeline.GetVisibleLensAnchor(showOverlay: true));
         Assert.False(timeline.TryCommit(() => controller.CommitPlaybackOperationStep(step)));
         Assert.Equal(0, controller.Position);
@@ -167,6 +177,7 @@ public class OperationPlaybackTests
         var completed = new OperationAnimationTimeline(step.CreateAnimationPlan(OperationBoardSnapshot.FromGrid(grid)),
             style);
         completed.GetFrame(completed.DurationSeconds);
+        Assert.Equal(0f, completed.LensOpacity);
         Assert.Null(completed.GetVisibleLensAnchor(showOverlay: true));
         Assert.True(completed.TryCommit(() => controller.CommitPlaybackOperationStep(step)));
         Assert.False(completed.TryCommit(() => controller.CommitPlaybackOperationStep(step)));

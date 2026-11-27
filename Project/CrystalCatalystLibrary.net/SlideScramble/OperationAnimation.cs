@@ -471,6 +471,7 @@ public sealed class OperationAnimationTimeline
 {
     public const double PrimitiveStepDurationSeconds = 0.16;
     public const double LogicalDurationSeconds = 0.62;
+    private const double LensFadeSeconds = 0.1;
 
     private bool completed;
     private bool cancelled;
@@ -480,6 +481,7 @@ public sealed class OperationAnimationTimeline
     public OperationAnimationStyle Style { get; }
     public bool IsCompleted => completed;
     public bool IsCancelled => cancelled;
+    internal float LensOpacity { get; private set; }
     internal (int X, int Y)? GetVisibleLensAnchor(bool showOverlay) =>
         showOverlay && !completed && !cancelled ? Plan.LensOverlayAnchor : null;
 
@@ -509,6 +511,9 @@ public sealed class OperationAnimationTimeline
         if (cancelled) throw new InvalidOperationException("A cancelled animation has no active frame.");
         if (elapsedSeconds < 0) elapsedSeconds = 0;
         double duration = DurationSeconds;
+        double fadeDuration = Math.Min(LensFadeSeconds, duration / 2);
+        LensOpacity = OperationAnimationPlan.Ease((float)(Math.Min(elapsedSeconds, duration - elapsedSeconds) /
+                                                          fadeDuration));
         if (elapsedSeconds >= duration)
         {
             completed = true;
@@ -539,6 +544,7 @@ public sealed class OperationAnimationTimeline
     {
         if (completed || commitAttempted || cancelled) return false;
         cancelled = true;
+        LensOpacity = 0;
         return true;
     }
 }
