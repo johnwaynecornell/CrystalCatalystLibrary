@@ -409,6 +409,193 @@
       }
     ]
   },
+  "TwoWide 26-11-27": {
+    "format": "SlideScramble",
+    "version": 3,
+    "width": 4,
+    "height": 4,
+    "initialCells": [
+      [[1,1],[3,1],[2,4],[2,1]],
+      [[4,1],[1,2],[4,2],[2,2]],
+      [[4,3],[2,3],[3,3],[3,2]],
+      [[4,4],[3,4],[1,4],[1,3]]
+    ],
+    "ruleSet": {
+      "name": "TwoWide",
+      "scrambleAllowed": ["ColumnSwap","Slide"],
+      "solveAllowed": ["ColumnSwap","Slide"],
+      "uiEnabled": ["ColumnSwap","Slide"]
+    },
+    "operations": [
+      {
+        "operationId": "ColumnSwap",
+        "parameters": {"lensAnchor":[2,0],"startCell":"Square","targetCell":"Triangle","variant":"DownRight"},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Column","index":4,"dragStart":[4,1],"delta":-1},
+          {"axis":"Column","index":3,"dragStart":[3,1],"delta":-1},
+          {"axis":"Row","index":2,"dragStart":[3,2],"delta":-1},
+          {"axis":"Column","index":4,"dragStart":[4,2],"delta":1},
+          {"axis":"Row","index":2,"dragStart":[1,2],"delta":1},
+          {"axis":"Row","index":2,"dragStart":[4,2],"delta":1},
+          {"axis":"Column","index":3,"dragStart":[3,2],"delta":1},
+          {"axis":"Row","index":2,"dragStart":[3,2],"delta":-1}
+        ]
+      },
+      {
+        "operationId": "Slide",
+        "parameters": {"axis":"Row","index":1,"delta":-2},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Row","index":2,"dragStart":[3,2],"delta":-2}
+        ]
+      },
+      {
+        "operationId": "ColumnSwap",
+        "parameters": {"lensAnchor":[1,0],"startCell":"Square","targetCell":"Triangle","variant":"DownRight"},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Column","index":3,"dragStart":[3,1],"delta":-1},
+          {"axis":"Column","index":2,"dragStart":[2,1],"delta":-1},
+          {"axis":"Row","index":2,"dragStart":[2,2],"delta":-1},
+          {"axis":"Column","index":3,"dragStart":[3,2],"delta":1},
+          {"axis":"Row","index":2,"dragStart":[4,2],"delta":1},
+          {"axis":"Row","index":2,"dragStart":[3,2],"delta":1},
+          {"axis":"Column","index":2,"dragStart":[2,2],"delta":1},
+          {"axis":"Row","index":2,"dragStart":[2,2],"delta":-1}
+        ]
+      },
+      {
+        "operationId": "Slide",
+        "parameters": {"axis":"Row","index":1,"delta":1},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Row","index":2,"dragStart":[2,2],"delta":1}
+        ]
+      },
+      {
+        "operationId": "Slide",
+        "parameters": {"axis":"Row","index":1,"delta":1},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Row","index":2,"dragStart":[3,2],"delta":1}
+        ]
+      },
+      {
+        "operationId": "Slide",
+        "parameters": {"axis":"Column","index":3,"delta":1},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Column","index":4,"dragStart":[4,2],"delta":1}
+        ]
+      },
+      {
+        "operationId": "Slide",
+        "parameters": {"axis":"Row","index":1,"delta":1},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Row","index":2,"dragStart":[2,2],"delta":1}
+        ]
+      },
+      {
+        "operationId": "ColumnSwap",
+        "parameters": {"lensAnchor":[3,2],"startCell":"Circle","targetCell":"Star","variant":"UpLeft"},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Column","index":4,"dragStart":[4,4],"delta":1},
+          {"axis":"Column","index":1,"dragStart":[1,4],"delta":1},
+          {"axis":"Row","index":3,"dragStart":[1,3],"delta":1},
+          {"axis":"Column","index":4,"dragStart":[4,3],"delta":-1},
+          {"axis":"Row","index":3,"dragStart":[3,3],"delta":-1},
+          {"axis":"Row","index":3,"dragStart":[4,3],"delta":-1},
+          {"axis":"Column","index":1,"dragStart":[1,3],"delta":-1},
+          {"axis":"Row","index":3,"dragStart":[1,3],"delta":1}
+        ]
+      },
+      {
+        "operationId": "ColumnSwap",
+        "parameters": {"lensAnchor":[1,2],"startCell":"Square","targetCell":"Triangle","variant":"DownRight"},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Column","index":3,"dragStart":[3,3],"delta":-1},
+          {"axis":"Column","index":2,"dragStart":[2,3],"delta":-1},
+          {"axis":"Row","index":4,"dragStart":[2,4],"delta":-1},
+          {"axis":"Column","index":3,"dragStart":[3,4],"delta":1},
+          {"axis":"Row","index":4,"dragStart":[4,4],"delta":1},
+          {"axis":"Row","index":4,"dragStart":[3,4],"delta":1},
+          {"axis":"Column","index":2,"dragStart":[2,4],"delta":1},
+          {"axis":"Row","index":4,"dragStart":[2,4],"delta":-1}
+        ]
+      },
+      {
+        "operationId": "Slide",
+        "parameters": {"axis":"Row","index":2,"delta":1},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Row","index":3,"dragStart":[2,3],"delta":1}
+        ]
+      },
+      {
+        "operationId": "ColumnSwap",
+        "parameters": {"lensAnchor":[0,2],"startCell":"Square","targetCell":"Triangle","variant":"DownRight"},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Column","index":2,"dragStart":[2,3],"delta":-1},
+          {"axis":"Column","index":1,"dragStart":[1,3],"delta":-1},
+          {"axis":"Row","index":4,"dragStart":[1,4],"delta":-1},
+          {"axis":"Column","index":2,"dragStart":[2,4],"delta":1},
+          {"axis":"Row","index":4,"dragStart":[3,4],"delta":1},
+          {"axis":"Row","index":4,"dragStart":[2,4],"delta":1},
+          {"axis":"Column","index":1,"dragStart":[1,4],"delta":1},
+          {"axis":"Row","index":4,"dragStart":[1,4],"delta":-1}
+        ]
+      },
+      {
+        "operationId": "Slide",
+        "parameters": {"axis":"Row","index":2,"delta":-1},
+        "purpose": "Solve",
+        "accounting": "LogicalOperation",
+        "moveCost": 1,
+        "isInverse": false,
+        "moves": [
+          {"axis":"Row","index":3,"dragStart":[2,3],"delta":-1}
+        ]
+      }
+    ]
+  },
   "Swap Labyrinth - Full": {
     "format": "SlideScramble",
     "version": 3,
