@@ -21,7 +21,7 @@ public class OperationPlaybackTests
         var visual = forward.CreateAnimationPlan(OperationBoardSnapshot.FromGrid(grid));
         Assert.True(visual.SupportsLogicalAnimation);
         Assert.Equal(3, visual.LogicalMotions.Count);
-        Assert.Equal((3, 3), visual.PlaybackLensAnchor);
+        Assert.Equal((3, 3), visual.LensOverlayAnchor);
         controller.CommitPlaybackOperationStep(forward);
         Assert.Equal(visual.FinalCells, OperationBoardSnapshot.FromGrid(grid).Cells);
         Assert.Equal(4, controller.Position);
@@ -34,7 +34,7 @@ public class OperationPlaybackTests
         Assert.True(backward.IsCompleteOperation);
         var reverseVisual = backward.CreateAnimationPlan(OperationBoardSnapshot.FromGrid(grid));
         Assert.True(reverseVisual.SupportsLogicalAnimation);
-        Assert.Equal(visual.PlaybackLensAnchor, reverseVisual.PlaybackLensAnchor);
+        Assert.Equal(visual.LensOverlayAnchor, reverseVisual.LensOverlayAnchor);
         Assert.Equal(initial, reverseVisual.FinalCells);
         controller.CommitPlaybackOperationStep(backward);
         Assert.Equal(initial, OperationBoardSnapshot.FromGrid(grid).Cells);
@@ -58,7 +58,7 @@ public class OperationPlaybackTests
         Assert.Equal(4, forward.TargetPosition);
         var visual = forward.CreateAnimationPlan(OperationBoardSnapshot.FromGrid(grid));
         Assert.False(visual.SupportsLogicalAnimation);
-        Assert.Equal((3, 3), visual.PlaybackLensAnchor);
+        Assert.Equal((3, 3), visual.LensOverlayAnchor);
         controller.CommitPlaybackOperationStep(forward);
         Assert.Equal(1, controller.CompletedOperationCount);
         Assert.Null(controller.CurrentOperationIndex);
@@ -69,7 +69,7 @@ public class OperationPlaybackTests
         Assert.Equal(3, backward.Moves.Count);
         var reverseVisual = backward.CreateAnimationPlan(OperationBoardSnapshot.FromGrid(grid));
         Assert.False(reverseVisual.SupportsLogicalAnimation);
-        Assert.Equal(visual.PlaybackLensAnchor, reverseVisual.PlaybackLensAnchor);
+        Assert.Equal(visual.LensOverlayAnchor, reverseVisual.LensOverlayAnchor);
         controller.CommitPlaybackOperationStep(backward);
         Assert.Equal(0, controller.Position);
     }
@@ -113,7 +113,7 @@ public class OperationPlaybackTests
         var controller = new SessionRecordingController(grid);
         controller.LoadPlayback(recording);
         var slide = controller.GetPlaybackOperationStep(true)!;
-        Assert.Null(slide.CreateAnimationPlan(OperationBoardSnapshot.FromGrid(grid)).PlaybackLensAnchor);
+        Assert.Null(slide.CreateAnimationPlan(OperationBoardSnapshot.FromGrid(grid)).LensOverlayAnchor);
         controller.CommitPlaybackOperationStep(slide);
         Assert.Equal(1, controller.Position);
         controller.SetAutoplay(true);
@@ -153,20 +153,21 @@ public class OperationPlaybackTests
         foreach (double fraction in new[] { 0, 0.25, 0.5, 0.75, 0.99 })
         {
             Assert.False(timeline.GetFrame(timeline.DurationSeconds * fraction).IsComplete);
-            Assert.Equal((3, 3), timeline.VisiblePlaybackLensAnchor);
+            Assert.Equal((3, 3), timeline.GetVisibleLensAnchor(showOverlay: true));
+            Assert.Null(timeline.GetVisibleLensAnchor(showOverlay: false));
         }
         Assert.False(timeline.TryCommit(() => controller.CommitPlaybackOperationStep(step)));
         Assert.Equal(0, controller.Position);
         Assert.Equal(original, OperationBoardSnapshot.FromGrid(grid).Cells);
         timeline.Cancel();
-        Assert.Null(timeline.VisiblePlaybackLensAnchor);
+        Assert.Null(timeline.GetVisibleLensAnchor(showOverlay: true));
         Assert.False(timeline.TryCommit(() => controller.CommitPlaybackOperationStep(step)));
         Assert.Equal(0, controller.Position);
 
         var completed = new OperationAnimationTimeline(step.CreateAnimationPlan(OperationBoardSnapshot.FromGrid(grid)),
             style);
         completed.GetFrame(completed.DurationSeconds);
-        Assert.Null(completed.VisiblePlaybackLensAnchor);
+        Assert.Null(completed.GetVisibleLensAnchor(showOverlay: true));
         Assert.True(completed.TryCommit(() => controller.CommitPlaybackOperationStep(step)));
         Assert.False(completed.TryCommit(() => controller.CommitPlaybackOperationStep(step)));
         Assert.Equal(4, controller.Position);
@@ -189,7 +190,7 @@ public class OperationPlaybackTests
         var step = controller.GetPlaybackOperationStep(true)!;
         var visual = step.CreateAnimationPlan(board);
         Assert.False(visual.SupportsLogicalAnimation);
-        Assert.Equal((0, 0), visual.PlaybackLensAnchor);
+        Assert.Equal((0, 0), visual.LensOverlayAnchor);
         Assert.Equal(OperationAnimationStyle.Primitive,
             OperationAnimationPolicy.Select(operation.Accounting, operation.Purpose, visual.SupportsLogicalAnimation,
                 OperationAnimationStyle.Logical));
@@ -220,13 +221,13 @@ public class OperationPlaybackTests
         var visual = forward.CreateAnimationPlan(OperationBoardSnapshot.FromGrid(grid));
         Assert.True(visual.SupportsLogicalAnimation);
         Assert.Equal(4, visual.LogicalMotions.Count);
-        Assert.Equal((3, 3), visual.PlaybackLensAnchor);
+        Assert.Equal((3, 3), visual.LensOverlayAnchor);
         controller.CommitPlaybackOperationStep(forward);
         Assert.Equal(board.Cells, OperationBoardSnapshot.FromGrid(grid).Cells);
         var backward = controller.GetPlaybackOperationStep(false)!;
         var reverseVisual = backward.CreateAnimationPlan(OperationBoardSnapshot.FromGrid(grid));
         Assert.True(reverseVisual.SupportsLogicalAnimation);
-        Assert.Equal(visual.PlaybackLensAnchor, reverseVisual.PlaybackLensAnchor);
+        Assert.Equal(visual.LensOverlayAnchor, reverseVisual.LensOverlayAnchor);
         controller.CommitPlaybackOperationStep(backward);
         Assert.Equal(reversed.InitialCells, OperationBoardSnapshot.FromGrid(grid).Cells);
     }
@@ -242,7 +243,7 @@ public class OperationPlaybackTests
         controller.LoadPlayback(new SessionRecording(recording.InitialCells, new[] { legacy }, recording.RuleSet));
         var step = controller.GetPlaybackOperationStep(true)!;
         var visual = step.CreateAnimationPlan(OperationBoardSnapshot.FromGrid(grid));
-        Assert.Null(visual.PlaybackLensAnchor);
+        Assert.Null(visual.LensOverlayAnchor);
         Assert.False(visual.SupportsLogicalAnimation);
         controller.CommitPlaybackOperationStep(step);
         Assert.Equal(visual.FinalCells, OperationBoardSnapshot.FromGrid(grid).Cells);

@@ -20,6 +20,17 @@ public class RuleAwareChallengeTests
         Assert.NotEqual(Solved(width, height), challenge.ScrambledCells);
         Assert.Equal(12, challenge.ScrambleOperations.Count);
         Assert.All(challenge.ScrambleOperations, op => Assert.Equal(id, op.OperationId));
+        foreach (var (plan, operation) in challenge.ScramblePlans.Zip(challenge.ScrambleOperations))
+        {
+            var visual = new OperationAnimationPlan(plan.SourceBoard, plan);
+            var timeline = new OperationAnimationTimeline(visual, OperationAnimationStyle.Primitive);
+            if (operation.Parameters.TryGetProperty("lensAnchor", out var anchor))
+                Assert.Equal((anchor[0].GetInt32(), anchor[1].GetInt32()),
+                    timeline.GetVisibleLensAnchor(showOverlay: true));
+            else
+                Assert.Null(timeline.GetVisibleLensAnchor(showOverlay: true));
+            Assert.Null(timeline.GetVisibleLensAnchor(showOverlay: false));
+        }
         Assert.All(challenge.Solution.Operations, op => Assert.Equal(id, op.OperationId));
         VerifyOperations(Solved(width, height), challenge.ScrambleOperations, rules, evaluator, challenge.ScrambledCells);
         VerifyOperations(challenge.ScrambledCells, challenge.Solution.Operations, rules, evaluator, Solved(width, height));

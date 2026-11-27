@@ -58,7 +58,7 @@ public sealed class OperationAnimationPlan
     public IReadOnlyList<OperationTileMotion> LogicalMotions => logicalMotions;
     public bool SupportsLogicalAnimation => logicalMotions.Count > 0;
     public int? CenterBypassTileId { get; }
-    internal (int X, int Y)? PlaybackLensAnchor { get; init; }
+    internal (int X, int Y)? LensOverlayAnchor { get; init; }
     public int? LensAnchorX { get; }
     public int? LensAnchorY { get; }
     public IReadOnlyList<(int X, int Y)> LensCells { get; }
@@ -102,6 +102,14 @@ public sealed class OperationAnimationPlan
         logicalMotions = Array.AsReadOnly(allowLogicalAnimation && logical.Length == expectedLogicalTiles
             ? logical.OrderBy(motion => motion.TileId).ToArray()
             : Array.Empty<OperationTileMotion>());
+
+        LensOverlayAnchor = (OperationId, operation.Intent) switch
+        {
+            (PuzzleOperationIds.Shuffle, ShuffleOperationIntent intent) => (intent.AnchorX, intent.AnchorY),
+            (PuzzleOperationIds.ColumnSwap or PuzzleOperationIds.RowSwap, PortableLensSwapIntent intent) =>
+                (intent.AnchorX, intent.AnchorY),
+            _ => null
+        };
 
         if (OperationId == PuzzleOperationIds.Shuffle && operation.Intent is ShuffleOperationIntent shuffle)
         {
@@ -472,7 +480,8 @@ public sealed class OperationAnimationTimeline
     public OperationAnimationStyle Style { get; }
     public bool IsCompleted => completed;
     public bool IsCancelled => cancelled;
-    internal (int X, int Y)? VisiblePlaybackLensAnchor => completed || cancelled ? null : Plan.PlaybackLensAnchor;
+    internal (int X, int Y)? GetVisibleLensAnchor(bool showOverlay) =>
+        showOverlay && !completed && !cancelled ? Plan.LensOverlayAnchor : null;
 
     public double DurationSeconds => Style switch
     {

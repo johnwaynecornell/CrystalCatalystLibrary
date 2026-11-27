@@ -264,12 +264,13 @@ public partial class Window
                 }
             }
 
-            if (activeOperationAnimation?.Timeline.VisiblePlaybackLensAnchor is { } anchor)
+            if (activeOperationAnimation is { IsScramble: true } or { PlaybackStep: not null })
             {
-                DrawLensCells(canvas, anchor, tileView.xx, tileView.yy, MyGrid.Width, MyGrid.Height,
-                    tileW, tileH, positioning: false);
+                if (activeOperationAnimation.Timeline.GetVisibleLensAnchor(showAnimatedLens) is { } anchor)
+                    DrawLensCells(canvas, anchor, tileView.xx, tileView.yy, MyGrid.Width, MyGrid.Height,
+                        tileW, tileH, positioning: false);
             }
-            else if (activeOperationAnimation?.PlaybackStep == null)
+            else if (State.Mode != GameMode.Scrambling)
             {
                 DrawPortableLensOverlay(canvas);
             }

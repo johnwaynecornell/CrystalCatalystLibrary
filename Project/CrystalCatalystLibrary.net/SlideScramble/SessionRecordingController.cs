@@ -66,7 +66,7 @@ public sealed class RecordedOperationPlaybackStep
                                                     intent is ShuffleOperationIntent);
         OperationAnimationPlan BuildVisual(bool allowLogical) => new(board, plan, allowLogical)
         {
-            PlaybackLensAnchor = lensAnchor
+            LensOverlayAnchor = lensAnchor
         };
 
         var visual = BuildVisual(IsCompleteOperation && lensMetadata);
