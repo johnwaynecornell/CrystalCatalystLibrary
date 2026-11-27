@@ -72,6 +72,13 @@ public static class LensGestureOperationMapper
         _ => throw new ArgumentOutOfRangeException(nameof(cell))
     };
 
+    internal static (int X, int Y) BoardPosition(PortableLensCell cell, (int X, int Y) anchor,
+        int width, int height)
+    {
+        var offset = Coordinates(cell);
+        return ((anchor.X + offset.X) % width, (anchor.Y + offset.Y) % height);
+    }
+
     public static bool TryGetSwapVariant(PortableLensCell start, PortableLensCell target,
         out LensOperationFamily family, out string variant)
     {

@@ -209,22 +209,45 @@ public partial class Window
 
         float tileW = tileView.width / MyGrid.Width;
         float tileH = tileView.height / MyGrid.Height;
-        lensCellFillPaint.Color = lensInteraction.Phase == PortableLensInteractionPhase.Positioning
-            ? new SKColor(14, 165, 233, 38)
-            : new SKColor(234, 179, 8, 38);
-        lensCellBorderPaint.Color = lensInteraction.Phase == PortableLensInteractionPhase.Positioning
-            ? new SKColor(125, 211, 252, 235)
-            : new SKColor(253, 224, 71, 240);
+        DrawLensCells(canvas, (lensInteraction.AnchorX, lensInteraction.AnchorY), tileView.xx, tileView.yy,
+            MyGrid.Width, MyGrid.Height, tileW, tileH,
+            lensInteraction.Phase == PortableLensInteractionPhase.Positioning);
+
+        if (lensInteraction.GestureStartPointer is { } start && lensInteraction.GesturePointer is { } pointer)
+        {
+            float deltaX = pointer.X - start.X;
+            float deltaY = pointer.Y - start.Y;
+            float length = MathF.Sqrt(deltaX * deltaX + deltaY * deltaY);
+            if (length > 2)
+            {
+                DrawLensGestureArrow(canvas, start, pointer);
+
+                int pointerCellX = (int)MathF.Floor((pointer.X - tileView.xx) * MyGrid.Width / tileView.width);
+                int pointerCellY = (int)MathF.Floor((pointer.Y - tileView.yy) * MyGrid.Height / tileView.height);
+                if (lensInteraction.TryGetGestureTarget(pointerCellX, pointerCellY, out _,
+                        out int wrapOffsetX, out int wrapOffsetY) && (wrapOffsetX != 0 || wrapOffsetY != 0))
+                {
+                    DrawLensGestureArrow(canvas,
+                        (start.X + wrapOffsetX * tileW, start.Y + wrapOffsetY * tileH),
+                        (pointer.X + wrapOffsetX * tileW, pointer.Y + wrapOffsetY * tileH));
+                }
+            }
+        }
+    }
+
+    private void DrawLensCells(SKCanvas canvas, (int X, int Y) anchor, float originX, float originY,
+        int width, int height, float tileW, float tileH, bool positioning)
+    {
+        lensCellFillPaint.Color = positioning ? new SKColor(14, 165, 233, 38) : new SKColor(234, 179, 8, 38);
+        lensCellBorderPaint.Color = positioning ? new SKColor(125, 211, 252, 235) : new SKColor(253, 224, 71, 240);
 
         foreach (PortableLensCell cell in Enum.GetValues<PortableLensCell>())
         {
-            var (offsetX, offsetY) = LensGestureOperationMapper.Coordinates(cell);
-            int x = (lensInteraction.AnchorX + offsetX) % MyGrid.Width;
-            int y = (lensInteraction.AnchorY + offsetY) % MyGrid.Height;
-            float left = tileView.xx + x * tileW;
-            float top = tileView.yy + y * tileH;
+            var (x, y) = LensGestureOperationMapper.BoardPosition(cell, anchor, width, height);
+            float left = originX + x * tileW;
+            float top = originY + y * tileH;
             var rect = new SKRect(left + 3, top + 3, left + tileW - 3, top + tileH - 3);
-            var rounded = new SKRoundRect(rect, 9, 9);
+            using var rounded = new SKRoundRect(rect, 9, 9);
             canvas.DrawRoundRect(rounded, lensCellFillPaint);
             canvas.DrawRoundRect(rounded, lensCellBorderPaint);
 
@@ -253,27 +276,6 @@ public partial class Window
                     canvas.DrawRect(new SKRect(centerX - symbolSize * 0.75f, centerY - symbolSize * 0.75f,
                         centerX + symbolSize * 0.75f, centerY + symbolSize * 0.75f), lensSymbolPaint);
                     break;
-            }
-        }
-
-        if (lensInteraction.GestureStartPointer is { } start && lensInteraction.GesturePointer is { } pointer)
-        {
-            float deltaX = pointer.X - start.X;
-            float deltaY = pointer.Y - start.Y;
-            float length = MathF.Sqrt(deltaX * deltaX + deltaY * deltaY);
-            if (length > 2)
-            {
-                DrawLensGestureArrow(canvas, start, pointer);
-
-                int pointerCellX = (int)MathF.Floor((pointer.X - tileView.xx) * MyGrid.Width / tileView.width);
-                int pointerCellY = (int)MathF.Floor((pointer.Y - tileView.yy) * MyGrid.Height / tileView.height);
-                if (lensInteraction.TryGetGestureTarget(pointerCellX, pointerCellY, out _,
-                        out int wrapOffsetX, out int wrapOffsetY) && (wrapOffsetX != 0 || wrapOffsetY != 0))
-                {
-                    DrawLensGestureArrow(canvas,
-                        (start.X + wrapOffsetX * tileW, start.Y + wrapOffsetY * tileH),
-                        (pointer.X + wrapOffsetX * tileW, pointer.Y + wrapOffsetY * tileH));
-                }
             }
         }
     }

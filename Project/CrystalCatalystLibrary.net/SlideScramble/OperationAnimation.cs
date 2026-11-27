@@ -58,6 +58,7 @@ public sealed class OperationAnimationPlan
     public IReadOnlyList<OperationTileMotion> LogicalMotions => logicalMotions;
     public bool SupportsLogicalAnimation => logicalMotions.Count > 0;
     public int? CenterBypassTileId { get; }
+    internal (int X, int Y)? PlaybackLensAnchor { get; init; }
     public int? LensAnchorX { get; }
     public int? LensAnchorY { get; }
     public IReadOnlyList<(int X, int Y)> LensCells { get; }
@@ -107,7 +108,8 @@ public sealed class OperationAnimationPlan
             LensAnchorX = shuffle.AnchorX;
             LensAnchorY = shuffle.AnchorY;
             var lensCells = Enum.GetValues<PortableLensCell>()
-                .Select(cell => LensBoardPosition(shuffle, cell, Width, Height)).ToArray();
+                .Select(cell => LensGestureOperationMapper.BoardPosition(cell, (shuffle.AnchorX, shuffle.AnchorY),
+                    Width, Height)).ToArray();
             LensCells = Array.AsReadOnly(lensCells);
             BuildLensEdgeRoute(shuffle, lensCells);
         }
@@ -345,13 +347,6 @@ public sealed class OperationAnimationPlan
             sourceX, sourceY, exit.X, exit.Y, entry.X, entry.Y, destinationX, destinationY);
     }
 
-    private static (int X, int Y) LensBoardPosition(ShuffleOperationIntent intent, PortableLensCell cell,
-        int width, int height)
-    {
-        var offset = LensGestureOperationMapper.Coordinates(cell);
-        return ((intent.AnchorX + offset.X) % width, (intent.AnchorY + offset.Y) % height);
-    }
-
     private static int RingIndex(PortableLensCell cell) => cell switch
     {
         PortableLensCell.Circle => 0,
@@ -477,6 +472,7 @@ public sealed class OperationAnimationTimeline
     public OperationAnimationStyle Style { get; }
     public bool IsCompleted => completed;
     public bool IsCancelled => cancelled;
+    internal (int X, int Y)? VisiblePlaybackLensAnchor => completed || cancelled ? null : Plan.PlaybackLensAnchor;
 
     public double DurationSeconds => Style switch
     {

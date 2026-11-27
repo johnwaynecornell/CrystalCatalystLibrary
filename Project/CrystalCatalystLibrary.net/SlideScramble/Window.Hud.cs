@@ -264,7 +264,15 @@ public partial class Window
                 }
             }
 
-            DrawPortableLensOverlay(canvas);
+            if (activeOperationAnimation?.Timeline.VisiblePlaybackLensAnchor is { } anchor)
+            {
+                DrawLensCells(canvas, anchor, tileView.xx, tileView.yy, MyGrid.Width, MyGrid.Height,
+                    tileW, tileH, positioning: false);
+            }
+            else if (activeOperationAnimation?.PlaybackStep == null)
+            {
+                DrawPortableLensOverlay(canvas);
+            }
 
             if (moveHighlight is { } highlighted)
             {

@@ -51,14 +51,9 @@ public sealed class RecordedOperationPlaybackStep
             throw new InvalidOperationException("Playback board changed before the operation could be animated.");
         IOperationIntent intent = new PlaybackIntent(Operation.OperationId);
         var parameters = Operation.Parameters;
-        bool hasAnchor = parameters.TryGetProperty("lensAnchor", out var anchor) &&
-                         anchor.ValueKind == JsonValueKind.Array && anchor.GetArrayLength() == 2 &&
-                         anchor[0].TryGetInt32(out _) && anchor[1].TryGetInt32(out _);
-        int x = hasAnchor ? anchor[0].GetInt32() : 0;
-        int y = hasAnchor ? anchor[1].GetInt32() : 0;
-        bool validAnchor = hasAnchor && x >= 0 && x < board.Width && y >= 0 && y < board.Height &&
-                           board.Width >= 2 && board.Height >= 2;
-        if (Operation.OperationId == PuzzleOperationIds.Shuffle && validAnchor &&
+        (int X, int Y)? lensAnchor = ReadPlaybackLensAnchor(board);
+        var (x, y) = lensAnchor.GetValueOrDefault();
+        if (Operation.OperationId == PuzzleOperationIds.Shuffle && lensAnchor.HasValue &&
             parameters.TryGetProperty("startCell", out var start) && start.ValueKind == JsonValueKind.String &&
             parameters.TryGetProperty("targetCell", out var target) && target.ValueKind == JsonValueKind.String &&
             Enum.TryParse(start.GetString(), false, out PortableLensCell startCell) && Enum.IsDefined(startCell) &&
@@ -67,21 +62,38 @@ public sealed class RecordedOperationPlaybackStep
 
         var plan = new OperationPlan(Operation.OperationId, intent, board, Operation.Purpose, Moves,
             Operation.Accounting, Operation.MoveCost);
-        bool lensMetadata = validAnchor && (Operation.OperationId != PuzzleOperationIds.Shuffle ||
-                                             intent is ShuffleOperationIntent);
-        var visual = new OperationAnimationPlan(board, plan, IsCompleteOperation && lensMetadata);
-        var lensCells = new HashSet<(int, int)>
+        bool lensMetadata = lensAnchor.HasValue && (Operation.OperationId != PuzzleOperationIds.Shuffle ||
+                                                    intent is ShuffleOperationIntent);
+        OperationAnimationPlan BuildVisual(bool allowLogical) => new(board, plan, allowLogical)
         {
-            (x, y), ((x + 1) % board.Width, y), (x, (y + 1) % board.Height),
-            ((x + 1) % board.Width, (y + 1) % board.Height)
+            PlaybackLensAnchor = lensAnchor
         };
+
+        var visual = BuildVisual(IsCompleteOperation && lensMetadata);
+        if (!visual.SupportsLogicalAnimation) return visual;
+
+        var lensCells = Enum.GetValues<PortableLensCell>()
+            .Select(cell => LensGestureOperationMapper.BoardPosition(cell, (x, y), board.Width, board.Height))
+            .ToHashSet();
         bool local = visual.LogicalMotions.All(motion => lensCells.Contains((motion.SourceX, motion.SourceY)) &&
                                                           lensCells.Contains((motion.DestinationX, motion.DestinationY)));
         bool paired = Operation.OperationId is not (PuzzleOperationIds.ColumnSwap or PuzzleOperationIds.RowSwap) ||
                       visual.LogicalMotions.All(motion => visual.LogicalMotions.Any(other =>
                           other.SourceX == motion.DestinationX && other.SourceY == motion.DestinationY &&
                           other.DestinationX == motion.SourceX && other.DestinationY == motion.SourceY));
-        return local && paired ? visual : new OperationAnimationPlan(board, plan, false);
+        return local && paired ? visual : BuildVisual(false);
+    }
+
+    private (int X, int Y)? ReadPlaybackLensAnchor(OperationBoardSnapshot board)
+    {
+        if (Operation.OperationId is not (PuzzleOperationIds.Shuffle or PuzzleOperationIds.ColumnSwap or
+                PuzzleOperationIds.RowSwap) ||
+            board.Width < 2 || board.Height < 2 ||
+            !Operation.Parameters.TryGetProperty("lensAnchor", out var anchor))
+            return null;
+
+        // SessionRecording validates the shape and bounds of canonical lens anchors on load.
+        return (anchor[0].GetInt32(), anchor[1].GetInt32());
     }
 
     private sealed record PlaybackIntent(string OperationId) : IOperationIntent;
