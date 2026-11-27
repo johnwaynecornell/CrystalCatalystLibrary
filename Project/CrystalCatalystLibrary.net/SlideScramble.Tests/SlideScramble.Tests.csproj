@@ -20,4 +20,7 @@
     <ProjectReference Include="..\CrystalOpenAL\CrystalOpenAL.csproj" />
     <ProjectReference Include="..\SlideScramble\SlideScramble.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="TestData\challenges-pre-v4-baseline.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

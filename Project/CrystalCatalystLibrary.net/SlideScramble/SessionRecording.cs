@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace SlideScramble;
@@ -94,7 +95,7 @@ public sealed class RecordedOperation
 public sealed class SessionRecording
 {
     public const string Format = "SlideScramble";
-    public const int Version = 3;
+    public const int Version = 4;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -283,7 +284,8 @@ public sealed class SessionRecording
             Operations = operations.Select(operation => new OperationData
             {
                 OperationId = operation.OperationId,
-                Parameters = operation.Parameters,
+                Parameters = ConvertOperationParameters(operation.Parameters, operation.OperationId, Width, Height,
+                    toExternal: true),
                 Purpose = operation.Purpose,
                 Accounting = operation.Accounting,
                 MoveCost = operation.MoveCost,
@@ -306,8 +308,8 @@ public sealed class SessionRecording
                 data.InitialCells.Length != data.Height)
                 throw new JsonException("Recording must contain a supported format and nonempty board.");
 
-            bool isVersion3 = data.Version == 3;
-            if (isVersion3
+            bool hasOperations = data.Version >= 3;
+            if (hasOperations
                     ? data.Operations == null || data.Moves != null || data.RuleSet == null
                     : data.Moves == null || data.Operations != null)
                 throw new JsonException("Recording history does not match its format version.");
@@ -332,11 +334,12 @@ public sealed class SessionRecording
             var selectedRegistry = registry ?? OperationRegistry.CreateDefault();
             PuzzleRuleSet rules;
             RecordedOperation[] recordedOperations;
-            if (isVersion3)
+            if (hasOperations)
             {
                 rules = ReadRuleSet(data.RuleSet!, selectedRegistry);
                 recordedOperations = data.Operations!
-                    .Select(operation => ReadOperation(operation, width, data.Height, selectedRegistry)).ToArray();
+                    .Select(operation => ReadOperation(operation, width, data.Height, data.Version, selectedRegistry))
+                    .ToArray();
             }
             else
             {
@@ -488,7 +491,7 @@ public sealed class SessionRecording
         return ids;
     }
 
-    private static RecordedOperation ReadOperation(OperationData? data, int width, int height,
+    private static RecordedOperation ReadOperation(OperationData? data, int width, int height, int version,
         OperationRegistry registry)
     {
         if (data == null || string.IsNullOrWhiteSpace(data.OperationId) ||
@@ -497,8 +500,52 @@ public sealed class SessionRecording
         if (!registry.IsKnownOperation(data.OperationId))
             throw new JsonException($"Unknown operation ID '{data.OperationId}'.");
         var primitiveMoves = data.Moves.Select(move => ReadMove(move, width, height, 1)).ToArray();
-        return new RecordedOperation(data.OperationId, data.Parameters, primitiveMoves, data.Purpose,
+        var parameters = version == 4
+            ? ConvertOperationParameters(data.Parameters, data.OperationId, width, height, toExternal: false)
+            : data.Parameters;
+        return new RecordedOperation(data.OperationId, parameters, primitiveMoves, data.Purpose,
             data.Accounting, data.MoveCost, data.IsInverse);
+    }
+
+    private static JsonElement ConvertOperationParameters(JsonElement parameters, string operationId, int width,
+        int height, bool toExternal)
+    {
+        if (parameters.ValueKind != JsonValueKind.Object || HasDuplicateProperties(parameters))
+            throw new JsonException("Operation parameters must be an object with unique property names.");
+
+        var converted = JsonNode.Parse(parameters.GetRawText())?.AsObject() ??
+                        throw new JsonException("Operation parameters must be an object.");
+        if (converted.TryGetPropertyValue("lensAnchor", out var anchorNode))
+        {
+            if (anchorNode is not JsonArray anchor || anchor.Count != 2 ||
+                !TryGetCoordinate(anchor[0], toExternal, width, out int x) ||
+                !TryGetCoordinate(anchor[1], toExternal, height, out int y))
+                throw new JsonException("Lens anchor is outside the board or has invalid coordinates.");
+
+            anchor[0] = toExternal ? checked(x + 1) : x - 1;
+            anchor[1] = toExternal ? checked(y + 1) : y - 1;
+        }
+
+        if (string.Equals(operationId, PuzzleOperationIds.Slide, StringComparison.Ordinal) &&
+            converted.TryGetPropertyValue("index", out var indexNode))
+        {
+            if (converted["axis"] is not JsonValue axisValue || !axisValue.TryGetValue<string>(out string? axisName) ||
+                !Enum.TryParse(axisName, false, out RecordedMoveAxis axis) || !Enum.IsDefined(axis) ||
+                !TryGetCoordinate(indexNode, toExternal,
+                    axis == RecordedMoveAxis.Row ? height : width, out int index))
+                throw new JsonException("Slide index is outside the board or has invalid coordinates.");
+
+            converted["index"] = toExternal ? checked(index + 1) : index - 1;
+        }
+
+        return JsonSerializer.SerializeToElement(converted, JsonOptions);
+    }
+
+    private static bool TryGetCoordinate(JsonNode? node, bool toExternal, int length, out int coordinate)
+    {
+        coordinate = 0;
+        if (node is not JsonValue value || !value.TryGetValue(out coordinate)) return false;
+        return toExternal ? coordinate >= 0 && coordinate < length : coordinate >= 1 && coordinate <= length;
     }
 
     private static RecordedMove ReadMove(MoveData? data, int width, int height, int offset)
