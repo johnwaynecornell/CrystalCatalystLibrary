@@ -49,6 +49,10 @@ public class RuleAwareChallengeTests
     [InlineData("SwapLogic")]
     [InlineData("TwoWide")]
     [InlineData("TwoTall")]
+    [InlineData("TwoWideSlide")]
+    [InlineData("TwoTallSlide")]
+    [InlineData("TwoWideColumnSlide")]
+    [InlineData("TwoTallRowSlide")]
     [InlineData("Hybrid")]
     [InlineData("ZeroSlide")]
     [InlineData("FreeStyle")]
@@ -60,7 +64,13 @@ public class RuleAwareChallengeTests
         var challenge = ShuffleChallengeFactory.GenerateRuleAware(4, 4, 8, rules, evaluator, new Random(87));
 
         Assert.All(challenge.ScrambleOperations,
-            operation => Assert.Contains(operation.OperationId, rules.ScrambleAllowed));
+            operation =>
+            {
+                if (operation.OperationId == PuzzleOperationIds.Slide)
+                    Assert.True(rules.AllowsScrambleSlide(operation.PrimitiveMoves.Single().Axis));
+                else
+                    Assert.Contains(operation.OperationId, rules.ScrambleAllowed);
+            });
         VerifyOperations(Solved(4, 4), challenge.ScrambleOperations, rules, evaluator, challenge.ScrambledCells);
         VerifyOperations(challenge.ScrambledCells, challenge.Solution.Operations, rules, evaluator, Solved(4, 4));
         Assert.NotNull(challenge.Solution.GetVerifiedGoalMoveCost());
@@ -257,6 +267,10 @@ public class RuleAwareChallengeTests
         "SwapLogic" => PuzzleRuleSet.CreateSwapLogic(registry),
         "TwoWide" => PuzzleRuleSet.CreateTwoWide(registry),
         "TwoTall" => PuzzleRuleSet.CreateTwoTall(registry),
+        "TwoWideSlide" => PuzzleRuleSet.CreateTwoWideSlide(registry),
+        "TwoTallSlide" => PuzzleRuleSet.CreateTwoTallSlide(registry),
+        "TwoWideColumnSlide" => PuzzleRuleSet.CreateTwoWideColumnSlide(registry),
+        "TwoTallRowSlide" => PuzzleRuleSet.CreateTwoTallRowSlide(registry),
         "Hybrid" => PuzzleRuleSet.CreateHybrid(registry),
         "ZeroSlide" => PuzzleRuleSet.CreateZeroSlide(registry),
         "FreeStyle" => PuzzleRuleSet.CreateFreeStyle(registry),

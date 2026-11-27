@@ -41,12 +41,12 @@ public partial class Window
     private void ShowRuleOperations(bool scramble)
     {
         var allowed = scramble ? activeRules.ScrambleAllowed : activeRules.SolveAllowed;
-        var entries = activeRules.Registry.RegisteredOperationIds.Select(id =>
-            ($"{id}: {(allowed.Contains(id) ? "on" : "off")}" +
+        var entries = SlidePermissions.MenuEntries(activeRules.Registry).Select(id =>
+            ($"{id}: {(SlidePermissions.Includes(allowed, id) ? "on" : "off")}" +
              (IsLensOperationUnavailable(id) ? " (unavailable: requires 3 × 3)" : ""), (Action)(() =>
             {
                 var ids = new HashSet<string>(allowed, StringComparer.Ordinal);
-                if (!ids.Add(id)) ids.Remove(id);
+                SlidePermissions.Set(ids, id, !SlidePermissions.Includes(ids, id));
                 var rules = new PuzzleRuleSet("Custom", scramble ? ids : activeRules.ScrambleAllowed,
                     scramble ? activeRules.SolveAllowed : ids, activeRules.UIEnabled, activeRules.Registry);
                 if (ApplyConfiguredRules(rules, true)) ShowRuleOperations(scramble);
@@ -57,12 +57,12 @@ public partial class Window
 
     private void ShowInitialInputMenu()
     {
-        var operationIds = activeRules.Registry.RegisteredOperationIds;
+        var operationIds = SlidePermissions.MenuEntries(activeRules.Registry).ToArray();
         var entries = operationIds.Select(id =>
-            ($"{id}: {(activeRules.UIEnabled.Contains(id) ? "on" : "off")}" +
+            ($"{id}: {(SlidePermissions.Includes(activeRules.UIEnabled, id) ? "on" : "off")}" +
              (IsLensOperationUnavailable(id) ? " (unavailable: requires 3 × 3)" : ""), (Action)(() =>
             {
-                if (IsLensOperationUnavailable(id) && !activeRules.UIEnabled.Contains(id))
+                if (IsLensOperationUnavailable(id) && !SlidePermissions.Includes(activeRules.UIEnabled, id))
                 {
                     sessionMessage = "Portable Lens operations require a 3 × 3 board";
                     ShowInitialInputMenu();
@@ -70,7 +70,7 @@ public partial class Window
                 }
 
                 var ids = new HashSet<string>(activeRules.UIEnabled, StringComparer.Ordinal);
-                if (!ids.Add(id)) ids.Remove(id);
+                SlidePermissions.Set(ids, id, !SlidePermissions.Includes(ids, id));
                 if (ApplyConfiguredRules(activeRules.WithUIEnabled(ids), false)) ShowInitialInputMenu();
             }))).ToList();
         entries.Add(("Back", ShowRulesMenu));
@@ -79,19 +79,19 @@ public partial class Window
 
     private void ShowLiveInputMenu()
     {
-        var operationIds = sessions.RuleSet.Registry.RegisteredOperationIds;
+        var operationIds = SlidePermissions.MenuEntries(sessions.RuleSet.Registry).ToArray();
         var entries = operationIds.Select(id =>
-            ($"{id}: {(sessions.RuntimeUIEnabled.Contains(id) ? "on" : "off")}" +
+            ($"{id}: {(SlidePermissions.Includes(sessions.RuntimeUIEnabled, id) ? "on" : "off")}" +
              (IsLensOperationUnavailable(id) ? " (unavailable: requires 3 × 3)" : ""), (Action)(() =>
             {
-                if (IsLensOperationUnavailable(id) && !sessions.RuntimeUIEnabled.Contains(id))
+                if (IsLensOperationUnavailable(id) && !SlidePermissions.Includes(sessions.RuntimeUIEnabled, id))
                 {
                     sessionMessage = "Portable Lens operations require a 3 × 3 board";
                     ShowLiveInputMenu();
                     return;
                 }
 
-                bool enabled = !sessions.RuntimeUIEnabled.Contains(id);
+                bool enabled = !SlidePermissions.Includes(sessions.RuntimeUIEnabled, id);
                 if (sessions.SetRuntimeUIEnabled(id, enabled))
                 {
                     lensInteraction.CancelGesture();
@@ -132,8 +132,8 @@ public partial class Window
         sessions = new SessionRecordingController(MyGrid, activeRules);
         if (mathematicalRulesChanged) State.Reset();
         if (preserveLiveInput)
-            foreach (string id in activeRules.Registry.RegisteredOperationIds)
-                sessions.SetRuntimeUIEnabled(id, liveInput.Contains(id));
+            foreach (string id in SlidePermissions.MenuEntries(activeRules.Registry))
+                sessions.SetRuntimeUIEnabled(id, SlidePermissions.Includes(liveInput, id));
         goal = null;
         lensInteraction.Cancel();
         lensDoubleClick.Reset();
@@ -147,7 +147,7 @@ public partial class Window
         return true;
     }
 
-    private bool IsLensOperationUnavailable(string operationId) => operationId != PuzzleOperationIds.Slide &&
+    private bool IsLensOperationUnavailable(string operationId) => !SlidePermissions.IsName(operationId) &&
                                                                    (MyGrid.Width < 3 || MyGrid.Height < 3);
 
     private void ShowRulesList(string title, IEnumerable<(string Label, Action Execute)> commands,

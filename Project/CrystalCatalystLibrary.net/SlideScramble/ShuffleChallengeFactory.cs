@@ -179,7 +179,9 @@ public static class ShuffleChallengeFactory
         IsSolved(start) || (solution != null &&
                             ReferenceEquals(solution.RuleSet.Registry, rules.Registry) &&
                             solution.RuleSet.HasSameMathematicalPermissions(rules) &&
-                            solution.Operations.All(operation => rules.UIEnabled.Contains(operation.OperationId)) &&
+                            solution.Operations.All(operation => operation.OperationId == PuzzleOperationIds.Slide
+                                ? SlidePermissions.Allows(rules.UIEnabled, operation.PrimitiveMoves[0].Axis)
+                                : rules.UIEnabled.Contains(operation.OperationId)) &&
                             RecordedOperationPlaybackStep.BoardsEqual(start, solution.InitialCells));
 
     internal static SessionRecording? TrackSolveMove(int[,] before, int[,] after, IOperationIntent intent,
@@ -201,19 +203,16 @@ public static class ShuffleChallengeFactory
 
     private static IEnumerable<IOperationIntent> CandidateIntents(int width, int height, PuzzleRuleSet rules)
     {
-        if (rules.ScrambleAllowed.Contains(PuzzleOperationIds.Slide) &&
-            rules.Registry.TryGetOperation(PuzzleOperationIds.Slide, out _))
+        foreach (var axis in new[] { RecordedMoveAxis.Row, RecordedMoveAxis.Column })
         {
-            foreach (var axis in new[] { RecordedMoveAxis.Row, RecordedMoveAxis.Column })
+            if (!rules.AllowsScrambleSlide(axis)) continue;
+            int count = axis == RecordedMoveAxis.Row ? height : width;
+            int length = axis == RecordedMoveAxis.Row ? width : height;
+            for (int index = 0; index < count; index++)
+            for (int delta = 1; delta < length; delta++)
             {
-                int count = axis == RecordedMoveAxis.Row ? height : width;
-                int length = axis == RecordedMoveAxis.Row ? width : height;
-                for (int index = 0; index < count; index++)
-                for (int delta = 1; delta < length; delta++)
-                {
-                    yield return new SlideOperationIntent(axis, index, delta);
-                    yield return new SlideOperationIntent(axis, index, -delta);
-                }
+                yield return new SlideOperationIntent(axis, index, delta);
+                yield return new SlideOperationIntent(axis, index, -delta);
             }
         }
 

@@ -24,6 +24,12 @@ internal sealed class InputHelpPreview
         PuzzleOperationIds.Slide =>
             "Drag a tile horizontally to slide its row, or vertically to slide its column. Tiles wrap around the board." +
             "\nIf the lens is active, press Escape first.",
+        PuzzleOperationIds.RowSlide =>
+            "Drag a tile horizontally to slide its row. Tiles wrap around the board." +
+            "\nIf the lens is active, press Escape first.",
+        PuzzleOperationIds.ColumnSlide =>
+            "Drag a tile vertically to slide its column. Tiles wrap around the board." +
+            "\nIf the lens is active, press Escape first.",
         PuzzleOperationIds.Shuffle => LensPlacement +
             "\nWith the lens active, drag to a neighboring symbol horizontally or vertically without holding Ctrl.",
         PuzzleOperationIds.ColumnSwap => LensPlacement +

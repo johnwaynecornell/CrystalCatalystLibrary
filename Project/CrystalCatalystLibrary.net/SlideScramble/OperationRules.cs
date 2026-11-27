@@ -1,5 +1,54 @@
 namespace SlideScramble;
 
+/// <summary>Slide permission names represent two independent axes of the same operation.</summary>
+internal static class SlidePermissions
+{
+    internal static bool IsName(string id) =>
+        id is PuzzleOperationIds.Slide or PuzzleOperationIds.RowSlide or PuzzleOperationIds.ColumnSlide;
+
+    internal static bool Allows(IEnumerable<string> ids, RecordedMoveAxis axis) => axis switch
+    {
+        RecordedMoveAxis.Row => ids.Contains(PuzzleOperationIds.Slide) || ids.Contains(PuzzleOperationIds.RowSlide),
+        RecordedMoveAxis.Column => ids.Contains(PuzzleOperationIds.Slide) || ids.Contains(PuzzleOperationIds.ColumnSlide),
+        _ => false
+    };
+
+    internal static bool Includes(IEnumerable<string> ids, string id) => id switch
+    {
+        PuzzleOperationIds.RowSlide => Allows(ids, RecordedMoveAxis.Row),
+        PuzzleOperationIds.ColumnSlide => Allows(ids, RecordedMoveAxis.Column),
+        _ => ids.Contains(id)
+    };
+
+    internal static bool Set(HashSet<string> ids, string id, bool enabled)
+    {
+        if (!IsName(id)) return enabled ? ids.Add(id) : ids.Remove(id);
+
+        bool row = Allows(ids, RecordedMoveAxis.Row);
+        bool column = Allows(ids, RecordedMoveAxis.Column);
+        bool newRow = id == PuzzleOperationIds.ColumnSlide ? row : enabled;
+        bool newColumn = id == PuzzleOperationIds.RowSlide ? column : enabled;
+        if (newRow == row && newColumn == column) return false;
+
+        ids.RemoveWhere(IsName);
+        if (Name(newRow, newColumn) is { } name) ids.Add(name);
+        return true;
+    }
+
+    internal static string? Name(bool row, bool column) => (row, column) switch
+    {
+        (true, true) => PuzzleOperationIds.Slide,
+        (true, false) => PuzzleOperationIds.RowSlide,
+        (false, true) => PuzzleOperationIds.ColumnSlide,
+        _ => null
+    };
+
+    internal static IEnumerable<string> MenuEntries(OperationRegistry registry) =>
+        registry.RegisteredOperationIds.SelectMany(id => id == PuzzleOperationIds.Slide
+            ? new[] { PuzzleOperationIds.RowSlide, PuzzleOperationIds.ColumnSlide }
+            : new[] { id });
+}
+
 /// <summary>Independent, immutable authorization sets for puzzle generation, solving, and player input.</summary>
 public sealed class PuzzleRuleSet
 {
@@ -75,6 +124,22 @@ public sealed class PuzzleRuleSet
             selectedRegistry);
     }
 
+    public static PuzzleRuleSet CreateTwoWideSlide(OperationRegistry? registry = null) =>
+        CreatePreset("TwoWideSlide", new[] { PuzzleOperationIds.RowSlide, PuzzleOperationIds.ColumnSwap },
+            registry ?? OperationRegistry.CreateDefault());
+
+    public static PuzzleRuleSet CreateTwoTallSlide(OperationRegistry? registry = null) =>
+        CreatePreset("TwoTallSlide", new[] { PuzzleOperationIds.ColumnSlide, PuzzleOperationIds.RowSwap },
+            registry ?? OperationRegistry.CreateDefault());
+
+    public static PuzzleRuleSet CreateTwoWideColumnSlide(OperationRegistry? registry = null) =>
+        CreatePreset("TwoWideColumnSlide", new[] { PuzzleOperationIds.ColumnSlide, PuzzleOperationIds.ColumnSwap },
+            registry ?? OperationRegistry.CreateDefault());
+
+    public static PuzzleRuleSet CreateTwoTallRowSlide(OperationRegistry? registry = null) =>
+        CreatePreset("TwoTallRowSlide", new[] { PuzzleOperationIds.RowSlide, PuzzleOperationIds.RowSwap },
+            registry ?? OperationRegistry.CreateDefault());
+
     public static PuzzleRuleSet CreateHybrid(OperationRegistry? registry = null)
     {
         var selectedRegistry = registry ?? OperationRegistry.CreateDefault();
@@ -115,7 +180,15 @@ public sealed class PuzzleRuleSet
 
     internal bool AllowsScramble(string operationId) => scrambleAllowed.Contains(operationId);
     internal bool AllowsSolve(string operationId) => solveAllowed.Contains(operationId);
-    internal bool AllowsUi(string operationId) => uiEnabled.Contains(operationId);
+    internal bool AllowsSolveSlide(RecordedMoveAxis axis) => SlidePermissions.Allows(solveAllowed, axis);
+    internal bool AllowsScrambleSlide(RecordedMoveAxis axis) => SlidePermissions.Allows(scrambleAllowed, axis);
+
+    internal string? GetSlideInputRejection(RecordedMoveAxis axis, IReadOnlyCollection<string> inputs)
+    {
+        string label = axis == RecordedMoveAxis.Row ? "Row slides" : "Column slides";
+        if (!AllowsSolveSlide(axis)) return $"{label} aren’t allowed by {Name}.";
+        return SlidePermissions.Allows(inputs, axis) ? null : $"{label} are disabled in Live Input.";
+    }
 
     public bool HasUnavailablePortableLensOperations(int width, int height) =>
         (width < 3 || height < 3) &&
@@ -125,22 +198,26 @@ public sealed class PuzzleRuleSet
     {
         if (width <= 0 || height <= 0) return false;
         if (!HasUnavailablePortableLensOperations(width, height)) return true;
-        return scrambleAllowed.Contains(PuzzleOperationIds.Slide) && solveAllowed.Contains(PuzzleOperationIds.Slide);
+        return AvailableSlideName(width, height) != null;
     }
 
     public string? GetBoardCompatibilityMessage(int width, int height)
     {
         if (width <= 0 || height <= 0) return "Board dimensions must be positive.";
         if (!HasUnavailablePortableLensOperations(width, height)) return null;
-        return IsBoardCompatible(width, height)
-            ? "Portable Lens operations require a 3 × 3 board; Slide remains available."
+        return AvailableSlideName(width, height) is { } slide
+            ? $"Portable Lens operations require a 3 × 3 board; {slide} remains available."
             : $"{Name} requires a 3 × 3 board for its configured Portable Lens operations.";
     }
+
+    private string? AvailableSlideName(int width, int height) => SlidePermissions.Name(
+        width > 1 && AllowsScrambleSlide(RecordedMoveAxis.Row) && AllowsSolveSlide(RecordedMoveAxis.Row),
+        height > 1 && AllowsScrambleSlide(RecordedMoveAxis.Column) && AllowsSolveSlide(RecordedMoveAxis.Column));
 
     private static PuzzleRuleSet CreatePreset(string name, string[] operations, OperationRegistry registry)
     {
         foreach (string operationId in operations)
-            if (!registry.TryGetOperation(operationId, out _))
+            if (!registry.TryGetOperation(SlidePermissions.IsName(operationId) ? PuzzleOperationIds.Slide : operationId, out _))
                 throw new ArgumentException($"{name} requires a registered {operationId} resolver.", nameof(registry));
 
         return new PuzzleRuleSet(name, operations, operations, operations, registry);
@@ -154,9 +231,9 @@ public sealed class PuzzleRuleSet
         foreach (string operationId in operationIds)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(operationId, parameterName);
-            if (!registry.IsKnownOperation(operationId))
+            if (!SlidePermissions.IsName(operationId) && !registry.IsKnownOperation(operationId))
                 throw new ArgumentException($"Unknown operation ID '{operationId}'.", parameterName);
-            result.Add(operationId);
+            SlidePermissions.Set(result, operationId, true);
         }
 
         return result;
@@ -236,23 +313,27 @@ public sealed class OperationRuleEvaluator
         ArgumentNullException.ThrowIfNull(rules);
         string? error = ValidateIntent(intent);
         if (error != null) return OperationEvaluation.Reject(error);
-        bool uiEnabled = runtimeUiEnabled == null
-            ? rules.AllowsUi(intent!.OperationId)
-            : runtimeUiEnabled.Contains(intent!.OperationId, StringComparer.Ordinal);
-        if (!uiEnabled)
+        var inputs = runtimeUiEnabled ?? rules.UIEnabled;
+        if (intent is SlideOperationIntent slide)
+        {
+            if (!Enum.IsDefined(slide.Axis)) return OperationEvaluation.Reject("Slide axis is invalid.");
+            error = rules.GetSlideInputRejection(slide.Axis, inputs);
+            if (error != null) return OperationEvaluation.Reject(error);
+        }
+        else if (!inputs.Contains(intent!.OperationId, StringComparer.Ordinal))
             return OperationEvaluation.Reject($"Operation '{intent.OperationId}' is not enabled in the UI.");
         error = Resolve(board, intent, out var resolution);
         if (error != null) return OperationEvaluation.Reject(error);
 
-        if (rules.AllowsSolve(intent.OperationId))
-            return OperationEvaluation.Accept(new OperationPlan(intent.OperationId, intent, board,
+        if (intent is SlideOperationIntent || rules.AllowsSolve(intent!.OperationId))
+            return OperationEvaluation.Accept(new OperationPlan(intent!.OperationId, intent, board,
                 OperationPlanPurpose.Solve, resolution!.Expansion, OperationMoveAccounting.LogicalOperation, 1));
 
-        if (!rules.AllowsSolve(PuzzleOperationIds.Slide))
+        if (!resolution!.Expansion.All(move => rules.AllowsSolveSlide(move.Axis)))
             return OperationEvaluation.Reject(
-                "The requested operation is not solve-allowed and Slide is not solve-allowed.");
+                "The requested operation is not solve-allowed and its expansion uses a forbidden Slide axis.");
 
-        return OperationEvaluation.Accept(new OperationPlan(intent.OperationId, intent, board,
+        return OperationEvaluation.Accept(new OperationPlan(intent!.OperationId, intent, board,
             OperationPlanPurpose.Solve, resolution!.Expansion, OperationMoveAccounting.PrimitiveMoves,
             resolution.Expansion.Count));
     }
@@ -264,12 +345,14 @@ public sealed class OperationRuleEvaluator
         ArgumentNullException.ThrowIfNull(rules);
         string? error = ValidateIntent(intent);
         if (error != null) return OperationEvaluation.Reject(error);
-        if (!rules.AllowsScramble(intent!.OperationId))
-            return OperationEvaluation.Reject($"Operation '{intent.OperationId}' is not allowed for scrambling.");
+        if (!(intent is SlideOperationIntent slide
+                ? rules.AllowsScrambleSlide(slide.Axis)
+                : rules.AllowsScramble(intent!.OperationId)))
+            return OperationEvaluation.Reject($"Operation '{intent!.OperationId}' is not allowed for scrambling.");
         error = Resolve(board, intent, out var resolution);
         if (error != null) return OperationEvaluation.Reject(error);
 
-        return OperationEvaluation.Accept(new OperationPlan(intent.OperationId, intent, board,
+        return OperationEvaluation.Accept(new OperationPlan(intent!.OperationId, intent, board,
             OperationPlanPurpose.Scramble, resolution!.Expansion, OperationMoveAccounting.None, null));
     }
 

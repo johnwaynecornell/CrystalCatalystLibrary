@@ -556,7 +556,9 @@ public partial class Window
             }
 
             // Bottom Footer Shortcuts
-            string footerText = "[Space] Commands";
+            string footerText = Environment.TickCount64 < blockedSlideMessageUntil
+                ? blockedSlideMessage
+                : "[Space] Commands";
             footerFont.MeasureText(footerText, out SKRect footerBounds, hudMutedPaint);
             canvas.Save();
             float footerScale = Math.Min(1, Math.Max(1, width - 16) / Math.Max(1, footerBounds.Width));

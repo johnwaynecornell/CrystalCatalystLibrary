@@ -44,7 +44,7 @@ public partial class Window
     private void BeginGeneratedChallenge(int multiplier)
     {
         popupHost.Accept();
-        if (HasClassicMathRules)
+        if (UseClassicScramble)
         {
             challengeScale = multiplier;
             pendingGeneratedOperations = null;

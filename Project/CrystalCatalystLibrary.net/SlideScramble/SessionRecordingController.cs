@@ -195,9 +195,12 @@ public sealed class SessionRecordingController
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(operationId);
         var rules = recordingRules ?? playback?.RuleSet ?? configuredRules;
-        if (!rules.Registry.TryGetOperation(operationId, out _)) return false;
-        return enabled ? runtimeUiEnabled.Add(operationId) : runtimeUiEnabled.Remove(operationId);
+        if (!SlidePermissions.IsName(operationId) && !rules.Registry.TryGetOperation(operationId, out _)) return false;
+        return SlidePermissions.Set(runtimeUiEnabled, operationId, enabled);
     }
+
+    internal string? GetSlideInputRejection(RecordedMoveAxis axis) =>
+        (recordingRules ?? configuredRules).GetSlideInputRejection(axis, runtimeUiEnabled);
 
     public void StartRecording()
     {
@@ -295,10 +298,8 @@ public sealed class SessionRecordingController
             (axis == RecordedMoveAxis.Row ? startY : startX) != index)
             throw new ArgumentException("Drag start must be on the moved line and within the grid.");
         if (delta % length == 0) return false;
-        if (Mode == RecordingControllerMode.Recording &&
-            (!runtimeUiEnabled.Contains(PuzzleOperationIds.Slide) ||
-             !recordingRules!.AllowsSolve(PuzzleOperationIds.Slide)))
-            throw new InvalidOperationException("Slide is not enabled and solve-allowed by the recording rules.");
+        if (GetSlideInputRejection(axis) is { } rejection)
+            throw new InvalidOperationException(rejection);
 
         var move = new RecordedMove(axis, startX, startY, delta);
         Apply(move);
