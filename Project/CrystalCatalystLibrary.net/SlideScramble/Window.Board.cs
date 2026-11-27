@@ -97,7 +97,7 @@ public partial class Window
                     var axis = horizontal ? RecordedMoveAxis.Column : RecordedMoveAxis.Row;
                     if (sessions.GetSlideInputRejection(axis) is { } rejection)
                     {
-                        ShowBlockedSlideMessage(rejection);
+                        ShowBoardMessage(rejection);
                         return false;
                     }
 

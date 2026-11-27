@@ -232,13 +232,13 @@ namespace NewAge {
             return;
         }
 
-        xwin->current_clipboard_provide_data = data;
-
         XSetSelectionOwner(xwin->display, AppX11->atoms.clipboard, xwin->window, CurrentTime);
         XFlush(xwin->display);
         if (XGetSelectionOwner(xwin->display, AppX11->atoms.clipboard) != xwin->window) {
-            std::cerr << "Failed to set clipboard owner." << std::endl;
+            handleDataInterchangeError(handle, data, "Failed to set clipboard owner.");
+            return;
         }
+        xwin->current_clipboard_provide_data = data;
         Atom *types;
         int num_types;
 

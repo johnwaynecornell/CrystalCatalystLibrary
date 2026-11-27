@@ -43,8 +43,8 @@ public partial class Window
     }
     
     private Drag? drag = null;
-    private string blockedSlideMessage = "";
-    private long blockedSlideMessageUntil;
+    private string boardMessage = "";
+    private long boardMessageUntil;
 
     public Queue<Animation> Animations = new Queue<Animation>();
 
@@ -368,6 +368,11 @@ public partial class Window
             }
         }
         
+        wnd.OnClipboardProvideChosen = ProvideClipboardText;
+        wnd.OnDataInterchangeError = (_, data, error) =>
+        {
+            if (data == clipboardData) clipboardError = error;
+        };
         wnd.OnDraw = OnDraw;
         wnd.OnIdle = OnIdle;
         wnd.OnResize = OnResize;
@@ -395,6 +400,7 @@ public partial class Window
             {
                 pixelBacking.Dispose();
             }
+            clipboardData?.Dispose();
             w.ApplicationRelease();
         };
         
@@ -418,6 +424,8 @@ public partial class Window
             new(new CrystalMenuEntry("8 × 8 Grid", "4"), () => SetGridSize(8)),
             new(new CrystalMenuEntry("Session Controls", "R"), () => showMedia = !showMedia),
             new(new CrystalMenuEntry("Challenges", "C"), () => ShowSelectionPopup(SelectionKind.Challenge)),
+            new(new CrystalMenuEntry("Copy Board", "B"), CopyBoard),
+            new(new CrystalMenuEntry("Copy Lens", "L"), CopyLens),
             new(new CrystalMenuEntry("Time Reversal", "Ctrl+Shift+R"), ReverseSession, (keys, key) => keys.IsReverse(key)),
             new(new CrystalMenuEntry("Close Menu", "Space / Esc"),
                 MatchShortcut: (keys, key) => keys.AllowOrdinary && !keys.Shift && key == (int)KeyCode.Space)

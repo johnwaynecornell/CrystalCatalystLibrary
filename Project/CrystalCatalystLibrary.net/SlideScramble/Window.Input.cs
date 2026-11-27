@@ -124,7 +124,7 @@ public partial class Window
                 {
                     drag.slideBlocked = true;
                     moveHighlight = null;
-                    ShowBlockedSlideMessage(rejection);
+                    ShowBoardMessage(rejection);
                     return;
                 }
 
@@ -156,10 +156,10 @@ public partial class Window
     }
 
 
-    private void ShowBlockedSlideMessage(string message)
+    private void ShowBoardMessage(string message)
     {
-        blockedSlideMessage = message;
-        blockedSlideMessageUntil = Environment.TickCount64 + 2500;
+        boardMessage = message;
+        boardMessageUntil = Environment.TickCount64 + 2500;
         wnd.QueueRedraw();
     }
 
