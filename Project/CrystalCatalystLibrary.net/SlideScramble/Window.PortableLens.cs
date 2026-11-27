@@ -189,6 +189,7 @@ public partial class Window
             MyGrid = grid;
             sessions = controller;
             savedSession = challenge.Solution;
+            verifiedBoardSolution = challenge.Solution;
             goal = challenge.Solution.GetVerifiedGoalMoveCost();
             lensInteraction.Cancel();
             State.StartScrambling();

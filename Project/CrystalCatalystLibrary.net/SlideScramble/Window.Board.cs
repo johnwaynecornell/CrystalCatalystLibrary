@@ -94,6 +94,7 @@ public partial class Window
                 moveHighlight = null;
                 if (delta != 0)
                 {
+                    int[,]? before = HasClassicMathRules ? null : CaptureBoardCells();
                     bool committed;
                     if (!horizontal)
                     {
@@ -103,7 +104,13 @@ public partial class Window
                     {
                         committed = sessions.MoveColumn(ordinal, delta, cellX, cellY);
                     }
-                    if (committed) State.RecordMove(wnd.uptimeSeconds());
+                    if (committed)
+                    {
+                        if (before != null)
+                            TrackSolveMove(before, new SlideOperationIntent(
+                                horizontal ? RecordedMoveAxis.Column : RecordedMoveAxis.Row, ordinal, delta));
+                        State.RecordMove(wnd.uptimeSeconds());
+                    }
                     if (committed && State.CheckSolved(MyGrid, wnd.uptimeSeconds()))
                     {
                         Audio.PlayVictoryChime();

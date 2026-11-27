@@ -91,6 +91,74 @@ public class RuleAwareChallengeTests
         VerifySwapLabyrinth(catalog, "Swap Labyrinth - 3 cycle Finish", 4);
     }
 
+    [Theory]
+    [InlineData(PuzzleOperationIds.Shuffle, PuzzleOperationIds.Shuffle)]
+    [InlineData(PuzzleOperationIds.RowSwap, PuzzleOperationIds.Slide)]
+    public void RepeatedScrambleComposesWithTheCurrentBoardAndReplaysToIdentity(string scrambleId, string solveId)
+    {
+        var registry = OperationRegistry.CreateDefault();
+        var rules = new PuzzleRuleSet("test", new[] { scrambleId }, new[] { solveId }, new[] { solveId }, registry);
+        var evaluator = new OperationRuleEvaluator(registry);
+        var random = new Random(23);
+        var grid = new Grid(4, 4, 32);
+        var controller = new SessionRecordingController(grid, rules);
+        var first = ShuffleChallengeFactory.GenerateRuleAware(4, 4, 4, rules, evaluator, random);
+        controller.LoadPlayback(first.Solution);
+        controller.StopPlayback();
+
+        var start = OperationBoardSnapshot.FromGrid(grid).Cells;
+        Assert.False(grid.IsSolved());
+        var second = ShuffleChallengeFactory.GenerateRuleAware(start, first.Solution, 4, rules, evaluator, random);
+        Assert.Equal(start, second.ScramblePlans[0].SourceBoard.Cells);
+        Assert.Equal(start, OperationBoardSnapshot.FromGrid(grid).Cells);
+        Assert.All(second.ScrambleOperations, operation => Assert.Equal(scrambleId, operation.OperationId));
+        foreach (var (plan, operation) in second.ScramblePlans.Zip(second.ScrambleOperations))
+            controller.ApplyOperation(plan, operation.Parameters);
+
+        Assert.Equal(second.ScrambledCells, OperationBoardSnapshot.FromGrid(grid).Cells);
+        Assert.All(second.Solution.Operations, operation => Assert.Equal(solveId, operation.OperationId));
+        VerifyOperations(second.ScrambledCells, second.Solution.Operations, rules, evaluator, Solved(4, 4));
+
+        var recording = SessionRecording.FromJson(second.Solution.ToJson());
+        controller.LoadPlayback(recording);
+        while (controller.Step()) { }
+        Assert.True(grid.IsSolved());
+        while (controller.StepBack()) { }
+        Assert.Equal(second.ScrambledCells, OperationBoardSnapshot.FromGrid(grid).Cells);
+    }
+
+    [Fact]
+    public void VerifiedStartFollowsPlayerMovesAndRejectsUnprovenBoards()
+    {
+        var rules = PuzzleRuleSet.CreateTwoWide();
+        var evaluator = new OperationRuleEvaluator(rules.Registry);
+        var grid = new Grid(4, 4, 32);
+        var controller = new SessionRecordingController(grid, rules);
+        var first = ShuffleChallengeFactory.GenerateRuleAware(4, 4, 4, rules, evaluator, new Random(8));
+        controller.LoadPlayback(first.Solution);
+        controller.StopPlayback();
+        var before = OperationBoardSnapshot.FromGrid(grid).Cells;
+        var intent = new SlideOperationIntent(RecordedMoveAxis.Row, 0, 1);
+        controller.MoveRow(0, 1);
+        var after = OperationBoardSnapshot.FromGrid(grid).Cells;
+
+        Assert.False(ShuffleChallengeFactory.HasVerifiedStart(after, first.Solution, rules));
+        Assert.Throws<InvalidOperationException>(() =>
+            ShuffleChallengeFactory.GenerateRuleAware(after, first.Solution, 4, rules, evaluator, new Random(9)));
+        var verified = ShuffleChallengeFactory.TrackSolveMove(before, after, intent, first.Solution, rules);
+        Assert.NotNull(verified);
+        Assert.True(ShuffleChallengeFactory.HasVerifiedStart(after, verified, rules));
+        var incompatible = PuzzleRuleSet.CreateSwapLogic(rules.Registry);
+        Assert.False(ShuffleChallengeFactory.HasVerifiedStart(after, verified, incompatible));
+
+        var next = ShuffleChallengeFactory.GenerateRuleAware(after, verified, 4, rules, evaluator, new Random(9));
+        VerifyOperations(next.ScrambledCells, next.Solution.Operations, rules, evaluator, Solved(4, 4));
+
+        grid.Reset();
+        Assert.True(grid.IsSolved());
+        Assert.True(ShuffleChallengeFactory.HasVerifiedStart(OperationBoardSnapshot.FromGrid(grid).Cells, null, rules));
+    }
+
     [Fact]
     public void SlideFallbackIsIndividuallyEvaluatedAndRecorded()
     {
