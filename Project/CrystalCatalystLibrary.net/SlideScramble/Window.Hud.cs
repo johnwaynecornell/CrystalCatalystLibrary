@@ -264,7 +264,17 @@ public partial class Window
                 }
             }
 
-            DrawPortableLensOverlay(canvas);
+            if (activeOperationAnimation is { IsScramble: true } or { PlaybackStep: not null })
+            {
+                if (activeOperationAnimation.Timeline.GetVisibleLensAnchor(showAnimatedLens) is { } anchor)
+                    DrawLensCells(canvas, anchor, tileView.xx, tileView.yy, MyGrid.Width, MyGrid.Height,
+                        tileW, tileH, positioning: false, fillCells: false,
+                        opacity: activeOperationAnimation.Timeline.LensOpacity);
+            }
+            else if (State.Mode != GameMode.Scrambling)
+            {
+                DrawPortableLensOverlay(canvas);
+            }
 
             if (moveHighlight is { } highlighted)
             {

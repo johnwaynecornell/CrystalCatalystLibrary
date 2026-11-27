@@ -40,6 +40,7 @@ public partial class Window
 
     private ActiveOperationAnimation? activeOperationAnimation;
     private OperationAnimationStyle? operationAnimationPreference;
+    private bool showAnimatedLens = true;
 
     private void ShowOperationAnimationMenu()
     {
@@ -50,8 +51,15 @@ public partial class Window
             ("Logical", (Action)(() => SetOperationAnimationPreference(OperationAnimationStyle.Logical))),
             ($"Automatic (current: {operationAnimationPreference?.ToString() ?? "per operation"})", (Action)(() =>
                 SetOperationAnimationPreference(null))),
+            ($"Lens in scramble and playback: {(showAnimatedLens ? "On" : "Off")}", (Action)ToggleAnimatedLens),
             ("Back to commands", (Action)ShowCommandMenu)
         });
+    }
+
+    private void ToggleAnimatedLens()
+    {
+        showAnimatedLens = !showAnimatedLens;
+        ShowOperationAnimationMenu();
     }
 
     private void SetOperationAnimationPreference(OperationAnimationStyle? preference)

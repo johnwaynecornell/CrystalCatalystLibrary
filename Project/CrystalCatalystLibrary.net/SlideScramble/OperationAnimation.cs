@@ -58,6 +58,7 @@ public sealed class OperationAnimationPlan
     public IReadOnlyList<OperationTileMotion> LogicalMotions => logicalMotions;
     public bool SupportsLogicalAnimation => logicalMotions.Count > 0;
     public int? CenterBypassTileId { get; }
+    internal (int X, int Y)? LensOverlayAnchor { get; init; }
     public int? LensAnchorX { get; }
     public int? LensAnchorY { get; }
     public IReadOnlyList<(int X, int Y)> LensCells { get; }
@@ -102,12 +103,21 @@ public sealed class OperationAnimationPlan
             ? logical.OrderBy(motion => motion.TileId).ToArray()
             : Array.Empty<OperationTileMotion>());
 
+        LensOverlayAnchor = (OperationId, operation.Intent) switch
+        {
+            (PuzzleOperationIds.Shuffle, ShuffleOperationIntent intent) => (intent.AnchorX, intent.AnchorY),
+            (PuzzleOperationIds.ColumnSwap or PuzzleOperationIds.RowSwap, PortableLensSwapIntent intent) =>
+                (intent.AnchorX, intent.AnchorY),
+            _ => null
+        };
+
         if (OperationId == PuzzleOperationIds.Shuffle && operation.Intent is ShuffleOperationIntent shuffle)
         {
             LensAnchorX = shuffle.AnchorX;
             LensAnchorY = shuffle.AnchorY;
             var lensCells = Enum.GetValues<PortableLensCell>()
-                .Select(cell => LensBoardPosition(shuffle, cell, Width, Height)).ToArray();
+                .Select(cell => LensGestureOperationMapper.BoardPosition(cell, (shuffle.AnchorX, shuffle.AnchorY),
+                    Width, Height)).ToArray();
             LensCells = Array.AsReadOnly(lensCells);
             BuildLensEdgeRoute(shuffle, lensCells);
         }
@@ -345,13 +355,6 @@ public sealed class OperationAnimationPlan
             sourceX, sourceY, exit.X, exit.Y, entry.X, entry.Y, destinationX, destinationY);
     }
 
-    private static (int X, int Y) LensBoardPosition(ShuffleOperationIntent intent, PortableLensCell cell,
-        int width, int height)
-    {
-        var offset = LensGestureOperationMapper.Coordinates(cell);
-        return ((intent.AnchorX + offset.X) % width, (intent.AnchorY + offset.Y) % height);
-    }
-
     private static int RingIndex(PortableLensCell cell) => cell switch
     {
         PortableLensCell.Circle => 0,
@@ -468,6 +471,7 @@ public sealed class OperationAnimationTimeline
 {
     public const double PrimitiveStepDurationSeconds = 0.16;
     public const double LogicalDurationSeconds = 0.62;
+    private const double LensFadeSeconds = 0.1;
 
     private bool completed;
     private bool cancelled;
@@ -477,6 +481,9 @@ public sealed class OperationAnimationTimeline
     public OperationAnimationStyle Style { get; }
     public bool IsCompleted => completed;
     public bool IsCancelled => cancelled;
+    internal float LensOpacity { get; private set; }
+    internal (int X, int Y)? GetVisibleLensAnchor(bool showOverlay) =>
+        showOverlay && !completed && !cancelled ? Plan.LensOverlayAnchor : null;
 
     public double DurationSeconds => Style switch
     {
@@ -504,6 +511,9 @@ public sealed class OperationAnimationTimeline
         if (cancelled) throw new InvalidOperationException("A cancelled animation has no active frame.");
         if (elapsedSeconds < 0) elapsedSeconds = 0;
         double duration = DurationSeconds;
+        double fadeDuration = Math.Min(LensFadeSeconds, duration / 2);
+        LensOpacity = OperationAnimationPlan.Ease((float)(Math.Min(elapsedSeconds, duration - elapsedSeconds) /
+                                                          fadeDuration));
         if (elapsedSeconds >= duration)
         {
             completed = true;
@@ -534,6 +544,7 @@ public sealed class OperationAnimationTimeline
     {
         if (completed || commitAttempted || cancelled) return false;
         cancelled = true;
+        LensOpacity = 0;
         return true;
     }
 }
