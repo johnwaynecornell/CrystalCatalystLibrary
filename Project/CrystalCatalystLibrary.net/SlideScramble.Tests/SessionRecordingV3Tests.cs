@@ -24,7 +24,7 @@ public class SessionRecordingV3Tests
     }
 
     [Fact]
-    public void Version3RoundTripPreservesRuleSnapshotOperationIntentAndPrimitiveMoves()
+    public void CurrentVersionRoundTripPreservesRuleSnapshotOperationIntentAndPrimitiveMoves()
     {
         var registry = OperationRegistry.CreateDefault();
         var rules = new PuzzleRuleSet("Lens snapshot", new[] { PuzzleOperationIds.Slide },
@@ -39,7 +39,7 @@ public class SessionRecordingV3Tests
         string json = recording.ToJson();
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
-        Assert.Equal(3, root.GetProperty("version").GetInt32());
+        Assert.Equal(4, root.GetProperty("version").GetInt32());
         Assert.False(root.TryGetProperty("moves", out _));
         Assert.Equal("Lens snapshot", root.GetProperty("ruleSet").GetProperty("name").GetString());
         Assert.Equal(new[] { "Shuffle" }, root.GetProperty("ruleSet").GetProperty("solveAllowed").EnumerateArray().Select(x => x.GetString()));
