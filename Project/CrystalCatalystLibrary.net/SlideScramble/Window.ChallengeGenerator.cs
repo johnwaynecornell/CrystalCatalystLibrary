@@ -12,6 +12,7 @@ public partial class Window
     private List<RecordedMove>? generatedMoves;
     private Queue<OperationPlan>? pendingGeneratedOperations;
     private SessionRecording? generatedChallengeSolution;
+    private SessionRecording? verifiedBoardSolution;
     private int challengeScale = 1;
     private int SingleScrambleMoves => 2 * (MyGrid.Width + MyGrid.Height);
 
@@ -65,10 +66,10 @@ public partial class Window
             return;
         }
 
-        BeginRuleAwareChallenge(multiplier, true);
+        BeginRuleAwareChallenge(multiplier, preserveBoard: false);
     }
 
-    private void BeginRuleAwareChallenge(int multiplier, bool updateScale)
+    private void BeginRuleAwareChallenge(int multiplier, bool preserveBoard)
     {
         if (!CanChangeBoard)
         {
@@ -79,15 +80,24 @@ public partial class Window
         try
         {
             var rules = activeRules.WithUIEnabled(sessions.RuntimeUIEnabled);
-            var challenge = ShuffleChallengeFactory.GenerateRuleAware(MyGrid.Width, MyGrid.Height,
-                checked(SingleScrambleMoves * multiplier), rules, new OperationRuleEvaluator(rules.Registry), rand);
-            var grid = new Grid(MyGrid.Width, MyGrid.Height);
-            var controller = new SessionRecordingController(grid, rules);
-            if (updateScale) challengeScale = multiplier;
+            var evaluator = new OperationRuleEvaluator(rules.Registry);
+            int operationCount = checked(SingleScrambleMoves * multiplier);
+            int[,] start = CaptureBoardCells();
+            bool keepBoard = preserveBoard && ShuffleChallengeFactory.HasVerifiedStart(start, verifiedBoardSolution, rules);
+            var challenge = keepBoard
+                ? ShuffleChallengeFactory.GenerateRuleAware(start, verifiedBoardSolution, operationCount, rules,
+                    evaluator, rand)
+                : ShuffleChallengeFactory.GenerateRuleAware(MyGrid.Width, MyGrid.Height, operationCount, rules,
+                    evaluator, rand);
+
+            if (!preserveBoard) challengeScale = multiplier;
             ShowGridSetup = false;
-            MyGrid = grid;
-            sessions = controller;
-            savedSession = null;
+            if (!keepBoard)
+            {
+                MyGrid.Reset();
+                sessions = new SessionRecordingController(MyGrid, rules);
+                savedSession = null;
+            }
             goal = null;
             moveHighlight = null;
             generationStart = null;
@@ -99,14 +109,22 @@ public partial class Window
             animationTileOffset = 0;
             lensInteraction.Cancel();
             State.StartScrambling();
-            UpdateTileView();
-            sessionMessage = "Generating a verified challenge…";
+            sessionMessage = preserveBoard && !keepBoard
+                ? "Starting from identity because the previous board had no verified solution under these rules"
+                : "Generating a verified challenge…";
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or OverflowException)
         {
             showMedia = true;
             sessionMessage = ex.Message;
         }
+    }
+
+    private void TrackSolveMove(int[,] before, IOperationIntent intent)
+    {
+        var rules = activeRules.WithUIEnabled(sessions.RuntimeUIEnabled);
+        verifiedBoardSolution = ShuffleChallengeFactory.TrackSolveMove(before, CaptureBoardCells(), intent,
+            verifiedBoardSolution, rules);
     }
 
     private RecordedMove NextScrambleMove()
@@ -145,6 +163,7 @@ public partial class Window
                 return;
             }
 
+            verifiedBoardSolution = generatedSolution;
             sessions.LoadPlayback(generatedSolution);
             sessions.StopPlayback();
             savedSession = generatedSolution;

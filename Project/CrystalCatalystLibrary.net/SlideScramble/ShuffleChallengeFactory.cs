@@ -91,11 +91,23 @@ public static class ShuffleChallengeFactory
     public static ShuffleChallenge GenerateRuleAware(int width, int height, int operationCount, PuzzleRuleSet rules,
         OperationRuleEvaluator evaluator, Random random)
     {
+        if (width < 2) throw new ArgumentOutOfRangeException(nameof(width));
+        if (height < 2) throw new ArgumentOutOfRangeException(nameof(height));
+        return GenerateRuleAware(Solved(width, height), null, operationCount, rules, evaluator, random);
+    }
+
+    // previousSolution comes from this generator or from a verified extension after a player move.
+    internal static ShuffleChallenge GenerateRuleAware(int[,] start, SessionRecording? previousSolution,
+        int operationCount, PuzzleRuleSet rules, OperationRuleEvaluator evaluator, Random random)
+    {
         ArgumentNullException.ThrowIfNull(rules);
         ArgumentNullException.ThrowIfNull(evaluator);
         ArgumentNullException.ThrowIfNull(random);
-        if (width < 2) throw new ArgumentOutOfRangeException(nameof(width));
-        if (height < 2) throw new ArgumentOutOfRangeException(nameof(height));
+        if (!HasVerifiedStart(start, previousSolution, rules))
+            throw new InvalidOperationException("The current board has no verified solution under these rules.");
+
+        int width = start.GetLength(1);
+        int height = start.GetLength(0);
         if (operationCount < 1) throw new ArgumentOutOfRangeException(nameof(operationCount));
 
         var candidateGroups = CandidateIntents(width, height, rules)
@@ -103,7 +115,7 @@ public static class ShuffleChallengeFactory
             .Select(group => new CandidateGroup(group.Key, group.ToArray()))
             .ToArray();
         var rulesEvaluator = new OperationRuleEvaluator(rules.Registry);
-        var cells = Solved(width, height);
+        var cells = (int[,])start.Clone();
         var scramble = new List<RecordedOperation>(operationCount);
         var scramblePlans = new List<OperationPlan>(operationCount);
         var inverses = new List<IReadOnlyList<RecordedOperation>>(operationCount);
@@ -153,13 +165,38 @@ public static class ShuffleChallengeFactory
                 throw new InvalidOperationException("No safe compatible scramble and player-accessible inverse is available for these rules and board dimensions.");
         }
 
-        var solutionOperations = inverses.AsEnumerable().Reverse().SelectMany(operations => operations).ToArray();
+        var solutionOperations = inverses.AsEnumerable().Reverse().SelectMany(operations => operations)
+            .Concat(IsSolved(start) ? Array.Empty<RecordedOperation>() : previousSolution!.Operations).ToArray();
         var verified = (int[,])cells.Clone();
         Apply(verified, solutionOperations.SelectMany(operation => operation.PrimitiveMoves));
         if (!IsSolved(verified)) throw new InvalidOperationException("Generated inverses did not restore the solved board.");
         var solution = new SessionRecording(cells, solutionOperations, rules, rules.Registry);
         return new ShuffleChallenge(cells, scramble, scramblePlans,
             scramble.SelectMany(operation => operation.PrimitiveMoves), solution);
+    }
+
+    internal static bool HasVerifiedStart(int[,] start, SessionRecording? solution, PuzzleRuleSet rules) =>
+        IsSolved(start) || (solution != null &&
+                            ReferenceEquals(solution.RuleSet.Registry, rules.Registry) &&
+                            solution.RuleSet.HasSameMathematicalPermissions(rules) &&
+                            solution.Operations.All(operation => rules.UIEnabled.Contains(operation.OperationId)) &&
+                            RecordedOperationPlaybackStep.BoardsEqual(start, solution.InitialCells));
+
+    internal static SessionRecording? TrackSolveMove(int[,] before, int[,] after, IOperationIntent intent,
+        SessionRecording? previousSolution, PuzzleRuleSet rules)
+    {
+        if (IsSolved(after) || !HasVerifiedStart(before, previousSolution, rules)) return null;
+
+        var evaluator = new OperationRuleEvaluator(rules.Registry);
+        var plan = evaluator.EvaluateUiRequest(new OperationBoardSnapshot(before), intent, rules).Plan;
+        if (plan == null) return null;
+
+        var inverse = TryInverse(before, after, intent, plan, rules, evaluator, evaluator);
+        if (inverse == null) return null;
+
+        return new SessionRecording(after,
+            inverse.Concat(IsSolved(before) ? Array.Empty<RecordedOperation>() : previousSolution!.Operations),
+            rules, rules.Registry);
     }
 
     private static IEnumerable<IOperationIntent> CandidateIntents(int width, int height, PuzzleRuleSet rules)

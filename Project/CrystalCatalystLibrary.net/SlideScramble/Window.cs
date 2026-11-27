@@ -572,7 +572,7 @@ public partial class Window
         if (!CanChangeBoard) return;
         if (!HasClassicMathRules)
         {
-            BeginRuleAwareChallenge(1, false);
+            BeginRuleAwareChallenge(1, preserveBoard: true);
             return;
         }
         goal = null;
