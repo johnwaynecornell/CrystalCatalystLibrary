@@ -236,13 +236,13 @@ public partial class Window
     }
 
     private void DrawLensCells(SKCanvas canvas, (int X, int Y) anchor, float originX, float originY,
-        int width, int height, float tileW, float tileH, bool positioning, float opacity = 1)
+        int width, int height, float tileW, float tileH, bool positioning, bool fillCells = true, float opacity = 1)
     {
         if (opacity <= 0) return;
 
         SKColor Fade(SKColor color) => color.WithAlpha((byte)MathF.Round(color.Alpha * opacity));
 
-        lensCellFillPaint.Color = Fade(positioning ? new SKColor(14, 165, 233, 38) : new SKColor(234, 179, 8, 38));
+        lensCellFillPaint.Color = positioning ? new SKColor(14, 165, 233, 38) : new SKColor(234, 179, 8, 38);
         lensCellBorderPaint.Color = Fade(positioning ? new SKColor(125, 211, 252, 235) : new SKColor(253, 224, 71, 240));
         lensStarPaint.Color = lensSymbolPaint.Color = Fade(new SKColor(253, 230, 138));
 
@@ -253,7 +253,7 @@ public partial class Window
             float top = originY + y * tileH;
             var rect = new SKRect(left + 3, top + 3, left + tileW - 3, top + tileH - 3);
             using var rounded = new SKRoundRect(rect, 9, 9);
-            canvas.DrawRoundRect(rounded, lensCellFillPaint);
+            if (fillCells) canvas.DrawRoundRect(rounded, lensCellFillPaint);
             canvas.DrawRoundRect(rounded, lensCellBorderPaint);
 
             float centerX = rect.MidX;

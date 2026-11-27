@@ -268,7 +268,8 @@ public partial class Window
             {
                 if (activeOperationAnimation.Timeline.GetVisibleLensAnchor(showAnimatedLens) is { } anchor)
                     DrawLensCells(canvas, anchor, tileView.xx, tileView.yy, MyGrid.Width, MyGrid.Height,
-                        tileW, tileH, positioning: false, opacity: activeOperationAnimation.Timeline.LensOpacity);
+                        tileW, tileH, positioning: false, fillCells: false,
+                        opacity: activeOperationAnimation.Timeline.LensOpacity);
             }
             else if (State.Mode != GameMode.Scrambling)
             {
