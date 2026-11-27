@@ -423,16 +423,22 @@ public sealed class SessionRecording
 
     private void ValidateAccounting(RecordedOperation operation)
     {
+        bool isSlide = operation.OperationId == PuzzleOperationIds.Slide;
+        RecordedMoveAxis axis = operation.PrimitiveMoves[0].Axis;
         if (operation.Purpose == OperationPlanPurpose.Scramble)
         {
-            if (!ruleSet.AllowsScramble(operation.OperationId) ||
+            bool allowed = isSlide ? ruleSet.AllowsScrambleSlide(axis) : ruleSet.AllowsScramble(operation.OperationId);
+            if (!allowed ||
                 operation.Accounting != OperationMoveAccounting.None || operation.MoveCost != null)
                 throw new ArgumentException("Scramble operations must be allowed and have no solve move cost.",
                     nameof(operations));
             return;
         }
 
-        if (ruleSet.AllowsSolve(operation.OperationId))
+        if (isSlide && !ruleSet.AllowsSolveSlide(axis))
+            throw new ArgumentException("Recorded Slide uses a forbidden solve axis.", nameof(operations));
+
+        if (isSlide || ruleSet.AllowsSolve(operation.OperationId))
         {
             if (operation.Accounting != OperationMoveAccounting.LogicalOperation || operation.MoveCost != 1)
                 throw new ArgumentException("A directly permitted operation must cost one logical move.",
@@ -440,7 +446,7 @@ public sealed class SessionRecording
             return;
         }
 
-        if (!ruleSet.AllowsSolve(PuzzleOperationIds.Slide) ||
+        if (!operation.PrimitiveMoves.All(move => ruleSet.AllowsSolveSlide(move.Axis)) ||
             operation.Accounting != OperationMoveAccounting.PrimitiveMoves ||
             operation.MoveCost != operation.PrimitiveMoves.Count)
             throw new ArgumentException("Expanded operations must be authorized and cost their primitive move count.",

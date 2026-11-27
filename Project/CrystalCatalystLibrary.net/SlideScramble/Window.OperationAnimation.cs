@@ -221,7 +221,7 @@ public partial class Window
     private void CommitLensOperation(OperationPlan plan, JsonElement recordingParameters)
     {
         sessions.ApplyOperation(plan, recordingParameters);
-        if (!HasClassicMathRules) TrackSolveMove(plan.SourceBoard.Cells, plan.Intent);
+        if (!UseClassicScramble) TrackSolveMove(plan.SourceBoard.Cells, plan.Intent);
         State.TakeBackSolved(wnd.uptimeSeconds());
         for (int i = 0; i < (plan.MoveCost ?? 0); i++) State.RecordMove(wnd.uptimeSeconds());
         if (State.CheckSolved(MyGrid, wnd.uptimeSeconds())) Audio.PlayVictoryChime();

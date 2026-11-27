@@ -17,6 +17,8 @@ public static class SelectionPreviewRules
             PuzzleRuleSet.CreateSwapLogic(registry),
             PuzzleRuleSet.CreateTwoWide(registry),
             PuzzleRuleSet.CreateTwoTall(registry),
+            PuzzleRuleSet.CreateTwoWideSlide(registry),
+            PuzzleRuleSet.CreateTwoTallSlide(registry),
             PuzzleRuleSet.CreateHybrid(registry),
             PuzzleRuleSet.CreateZeroSlide(registry),
             PuzzleRuleSet.CreateFreeStyle(registry)

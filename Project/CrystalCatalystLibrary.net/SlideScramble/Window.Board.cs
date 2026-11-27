@@ -94,7 +94,14 @@ public partial class Window
                 moveHighlight = null;
                 if (delta != 0)
                 {
-                    int[,]? before = HasClassicMathRules ? null : CaptureBoardCells();
+                    var axis = horizontal ? RecordedMoveAxis.Column : RecordedMoveAxis.Row;
+                    if (sessions.GetSlideInputRejection(axis) is { } rejection)
+                    {
+                        ShowBlockedSlideMessage(rejection);
+                        return false;
+                    }
+
+                    int[,]? before = UseClassicScramble ? null : CaptureBoardCells();
                     bool committed;
                     if (!horizontal)
                     {
@@ -107,8 +114,7 @@ public partial class Window
                     if (committed)
                     {
                         if (before != null)
-                            TrackSolveMove(before, new SlideOperationIntent(
-                                horizontal ? RecordedMoveAxis.Column : RecordedMoveAxis.Row, ordinal, delta));
+                            TrackSolveMove(before, new SlideOperationIntent(axis, ordinal, delta));
                         State.RecordMove(wnd.uptimeSeconds());
                     }
                     if (committed && State.CheckSolved(MyGrid, wnd.uptimeSeconds()))

@@ -39,9 +39,12 @@ public partial class Window
         public int startY;
         public int cellX;
         public int cellY;
+        internal bool slideBlocked;
     }
     
     private Drag? drag = null;
+    private string blockedSlideMessage = "";
+    private long blockedSlideMessageUntil;
 
     public Queue<Animation> Animations = new Queue<Animation>();
 
@@ -563,14 +566,15 @@ public partial class Window
         drag == null && Animations.Count == 0 && activeOperationAnimation == null &&
         lensInteraction.Phase == PortableLensInteractionPhase.Inactive;
 
-    private bool HasClassicMathRules => activeRules.Name == "Classic" &&
+    private bool UseClassicScramble => activeRules.Name == "Classic" &&
         activeRules.ScrambleAllowed.SequenceEqual(new[] { PuzzleOperationIds.Slide }) &&
-        activeRules.SolveAllowed.SequenceEqual(new[] { PuzzleOperationIds.Slide });
+        activeRules.SolveAllowed.SequenceEqual(new[] { PuzzleOperationIds.Slide }) &&
+        sessions.RuntimeUIEnabled.Contains(PuzzleOperationIds.Slide);
 
     private void ScrambleBoard()
     {
         if (!CanChangeBoard) return;
-        if (!HasClassicMathRules)
+        if (!UseClassicScramble)
         {
             BeginRuleAwareChallenge(1, preserveBoard: true);
             return;

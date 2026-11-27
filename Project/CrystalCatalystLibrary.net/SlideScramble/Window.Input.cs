@@ -108,14 +108,27 @@ public partial class Window
             return;
         }
 
-        if (drag != null && tileView != null)
+        if (drag is { slideBlocked: false } && tileView != null)
         {
             int xd = x - drag.startX;
             int yd = y - drag.startY;
             
             if (animationLockHoriz == null)
             {
-                if (Math.Abs(xd) < Math.Abs(yd))
+                const int slideDragThreshold = 4;
+                if (Math.Max(Math.Abs(xd), Math.Abs(yd)) < slideDragThreshold) return;
+
+                bool column = Math.Abs(xd) < Math.Abs(yd);
+                var axis = column ? RecordedMoveAxis.Column : RecordedMoveAxis.Row;
+                if (sessions.GetSlideInputRejection(axis) is { } rejection)
+                {
+                    drag.slideBlocked = true;
+                    moveHighlight = null;
+                    ShowBlockedSlideMessage(rejection);
+                    return;
+                }
+
+                if (column)
                 {
                     // Vertical drag -> column move
                     animationLockHoriz = true;
@@ -143,6 +156,13 @@ public partial class Window
     }
 
 
+    private void ShowBlockedSlideMessage(string message)
+    {
+        blockedSlideMessage = message;
+        blockedSlideMessageUntil = Environment.TickCount64 + 2500;
+        wnd.QueueRedraw();
+    }
+
     private void OnMouseUp(CrystalWindow windowHandle, int button, int x, int y)
     {
         if (activeOperationAnimation != null) return;
@@ -157,7 +177,10 @@ public partial class Window
             popupHost.PointerUp(new System.Drawing.PointF(x, y), (CrystalMouseButton)button);
             return;
         }
-        if (button == (int)CrystalMouseButton.Left && TryHandleLensDoubleClick(windowHandle, x, y)) return;
+        if (button == (int)CrystalMouseButton.Left && drag is { slideBlocked: true })
+            lensDoubleClick.Reset();
+        else if (button == (int)CrystalMouseButton.Left && TryHandleLensDoubleClick(windowHandle, x, y))
+            return;
         if (button != (int)CrystalMouseButton.Left) lensDoubleClick.Reset();
         if (lensInteraction.Phase != PortableLensInteractionPhase.Inactive)
         {
@@ -353,9 +376,8 @@ public partial class Window
         }
 
         // Board dragging hit test
-        if (sessions.Mode != RecordingControllerMode.Playback && State.Mode != GameMode.Scrambling && tileView != null && Animations.Count == 0 && drag == null &&
-            sessions.RuntimeUIEnabled.Contains(PuzzleOperationIds.Slide) &&
-            sessions.RuleSet.AllowsSolve(PuzzleOperationIds.Slide))
+        if (sessions.Mode != RecordingControllerMode.Playback && State.Mode != GameMode.Scrambling &&
+            tileView != null && Animations.Count == 0 && drag == null)
         {
             // Check if mouse is inside the board bounds
             if (x >= tileView.xx && x < tileView.xx + tileView.width &&

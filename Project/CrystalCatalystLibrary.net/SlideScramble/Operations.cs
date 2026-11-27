@@ -5,6 +5,8 @@ namespace SlideScramble;
 public static class PuzzleOperationIds
 {
     public const string Slide = "Slide";
+    public const string RowSlide = "RowSlide";
+    public const string ColumnSlide = "ColumnSlide";
     public const string Shuffle = "Shuffle";
     public const string ColumnSwap = "ColumnSwap";
     public const string RowSwap = "RowSwap";
@@ -194,6 +196,9 @@ public sealed class OperationRegistry
             {
                 ArgumentNullException.ThrowIfNull(operation);
                 ArgumentException.ThrowIfNullOrWhiteSpace(operation.Id);
+                if (operation.Id is PuzzleOperationIds.RowSlide or PuzzleOperationIds.ColumnSlide)
+                    throw new ArgumentException($"'{operation.Id}' is a Slide permission, not an operation ID.",
+                        nameof(additionalOperations));
                 if (!registered.TryAdd(operation.Id, operation))
                     throw new ArgumentException($"Operation ID '{operation.Id}' is already registered.",
                         nameof(additionalOperations));

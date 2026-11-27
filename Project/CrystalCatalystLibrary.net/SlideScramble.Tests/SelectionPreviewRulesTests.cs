@@ -37,14 +37,15 @@ public class SelectionPreviewRulesTests
     }
 
     [Fact]
-    public void PresetPreviewCandidatesContainAllEightExpectedRuleSetsInMenuOrder()
+    public void PresetPreviewCandidatesContainAllExpectedRuleSetsInMenuOrder()
     {
         var activeRules = PuzzleRuleSet.CreateClassic();
         var candidates = SelectionPreviewRules.CreatePresets(activeRules.Registry);
 
         Assert.Equal(new[]
         {
-            "Classic", "ShuffleLogic", "SwapLogic", "TwoWide", "TwoTall", "Hybrid", "ZeroSlide", "FreeStyle"
+            "Classic", "ShuffleLogic", "SwapLogic", "TwoWide", "TwoTall", "TwoWideSlide", "TwoTallSlide",
+            "Hybrid", "ZeroSlide", "FreeStyle"
         }, candidates.Select(rules => rules.Name));
 
         var expected = new Dictionary<string, string[]>(StringComparer.Ordinal)
@@ -54,6 +55,8 @@ public class SelectionPreviewRulesTests
             ["SwapLogic"] = [PuzzleOperationIds.ColumnSwap, PuzzleOperationIds.RowSwap],
             ["TwoWide"] = [PuzzleOperationIds.ColumnSwap, PuzzleOperationIds.Slide],
             ["TwoTall"] = [PuzzleOperationIds.RowSwap, PuzzleOperationIds.Slide],
+            ["TwoWideSlide"] = [PuzzleOperationIds.ColumnSwap, PuzzleOperationIds.RowSlide],
+            ["TwoTallSlide"] = [PuzzleOperationIds.ColumnSlide, PuzzleOperationIds.RowSwap],
             ["Hybrid"] = [PuzzleOperationIds.Shuffle, PuzzleOperationIds.Slide],
             ["ZeroSlide"] = [PuzzleOperationIds.ColumnSwap, PuzzleOperationIds.RowSwap, PuzzleOperationIds.Shuffle],
             ["FreeStyle"] =
