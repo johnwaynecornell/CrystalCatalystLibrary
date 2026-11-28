@@ -4,9 +4,9 @@ Version 5 recordings use `format: "SlideScramble"` and contain the board dimensi
 
 ## Single authoritative history
 
-`operations` is the canonical execution history. Every operation record contains its stable `operationId`, operation-specific JSON-object `parameters`, `purpose` (`Solve` or `Scramble`), `accounting`, `moveCost`, `isInverse`, and its exact ordered `moves` expansion. There is deliberately no top-level v4 `moves` array. `SessionRecording.Moves` is a derived, flattened view for playback, never a second serialized history.
+`operations` is the canonical execution history. Every operation record contains its stable `operationId`, operation-specific JSON-object `parameters`, `purpose` (`Solve` or `Scramble`), `accounting`, `moveCost`, `isInverse`, and its exact ordered `moves` expansion. Unlike the legacy v1–v2 format, v3–v5 have no top-level `moves` array. `SessionRecording.Moves` is a derived, flattened view for playback, never a second serialized history.
 
-Each primitive move preserves the existing `axis`, one-based `index`, one-based `[column, row]` `dragStart`, and unchanged signed `delta`. `initialCells` and primitive move coordinates use the established one-based convention in versions 2 and later and remain unchanged by the v4 parameter converter; version 1 uses its historical zero-based convention. In logical operation parameters, `lensAnchor` is a structured `[column, row]` array and the `index` parameter for `Slide` are one-based in v4. Playback and goal verification advance by primitive moves; operation boundaries are derived from each record's expansion length.
+Each primitive move preserves its `axis` and signed `delta`. Primitive `index` and `[column, row]` `dragStart` coordinates use the established one-based convention in versions 2 and later; version 1 uses its historical zero-based convention. Operation-parameter conversion does not change these primitive coordinates. In logical operation parameters, `lensAnchor` is a structured `[column, row]` array, and the `index` parameter for `Slide` is zero-based in v3 and one-based in v4 and v5. Playback and goal verification advance by primitive moves; operation boundaries are derived from each record's expansion length.
 
 ## Accounting and replay
 
@@ -14,7 +14,7 @@ A solve operation authorized directly by `solveAllowed` has `LogicalOperation` a
 
 Saved primitive expansions are sufficient to replay a known operation identity even when its resolver is not installed. Loading never executes resolver or plugin code. Unknown operation IDs and invalid rule-set references are rejected. Operation-specific parameters remain data-only JSON objects; `lensAnchor` receives structural and board-bounds validation, while `startCell` and `targetCell` are symbolic cell names and are not coordinates. Slide `axis` and signed `delta` are unchanged; `index` is the only other positional parameter currently serialized. Counts, directions, variants, offsets, and symbolic values are not shifted. Resolver-specific semantic validation belongs to the operation layer when accepting new requests.
 
-Reversal stores the inverse primitive sequence in reverse order and marks the operation `isInverse`, while preserving its identity, parameters, purpose, and original accounting. Double reversal restores the original operation history. A verified goal index is a primitive playback position.
+Reversal stores the inverse primitive sequence in reverse order and marks the operation `isInverse`, while preserving its identity, parameters, purpose, and original accounting. If negating a primitive `int.MinValue` delta would overflow, reversal uses a mathematically equivalent representable delta. Double reversal restores the original board transformation, operation boundaries, and accounting. A verified goal index is a primitive playback position.
 
 ## Legacy and continuation behavior
 
