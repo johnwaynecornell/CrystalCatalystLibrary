@@ -95,7 +95,7 @@ public sealed class RecordedOperation
 public sealed class SessionRecording
 {
     public const string Format = "SlideScramble";
-    public const int Version = 4;
+    public const int Version = 5;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -500,7 +500,8 @@ public sealed class SessionRecording
         if (!registry.IsKnownOperation(data.OperationId))
             throw new JsonException($"Unknown operation ID '{data.OperationId}'.");
         var primitiveMoves = data.Moves.Select(move => ReadMove(move, width, height, 1)).ToArray();
-        var parameters = version == 4
+        // v4 introduced one-based operation parameters. Saved expansions remain authoritative in v5.
+        var parameters = version >= 4
             ? ConvertOperationParameters(data.Parameters, data.OperationId, width, height, toExternal: false)
             : data.Parameters;
         return new RecordedOperation(data.OperationId, parameters, primitiveMoves, data.Purpose,

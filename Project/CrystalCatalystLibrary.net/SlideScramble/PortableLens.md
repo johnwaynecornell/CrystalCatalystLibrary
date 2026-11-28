@@ -139,6 +139,8 @@ Read the top four shuffles as **clockwise** three-position rotations and the bot
 
 Every Shuffle Atlas entry cycles three positions while preserving the fourth. Applying the same operation three times restores the original arrangement.
 
+SlideScramble maps each [Shuffle gesture](ShuffleLogic.md) to the atlas cycle that carries the source tile to the adjacent target and fixes the source’s other neighbor. To undo the live gesture, drag from the opposite corner to the same target. Historical [session recordings](SessionRecording.md) carry their exact primitive rotations and may show a different stationary corner for the same gesture label.
+
 A shuffle therefore has a period of three, and applying it twice produces its inverse. The matching-blank entry in the atlas provides that inverse directly, without repeating the original operation. For example, `Lens.CircleSquare.A` is undone by `Lens.SquareCircle.A`, and `Lens.StarTriangle.B` is undone by `Lens.TriangleStar.B` (rebind the shapes to the current lens positions before applying the inverse).
 
 For example, `Lens.CircleSquare.A` rotates the three positions surrounding its fixed bottom-left cell. With shapes rebound by position before each application, three successive executions return the entire board to its starting state.

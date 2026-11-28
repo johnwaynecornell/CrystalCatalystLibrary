@@ -6,6 +6,87 @@ namespace SlideScramble.Tests;
 
 public class OperationPlaybackTests
 {
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ShufflePlaybackUsesTheSavedCycleAcrossExportAndReversal(bool historical)
+    {
+        var grid = new Grid(3, 3);
+        var initial = OperationBoardSnapshot.FromGrid(grid);
+        var rules = PuzzleRuleSet.CreateShuffleLogic();
+        var intent = new ShuffleOperationIntent(2, 2, PortableLensCell.Circle, PortableLensCell.Star);
+        // TriangleStar.A was the v4 expansion for Circle → Star at this wrapped anchor.
+        RecordedMove[] moves = historical
+            ? [
+                new(RecordedMoveAxis.Column, 2, 0, 1),
+                new(RecordedMoveAxis.Row, 0, 2, 1),
+                new(RecordedMoveAxis.Column, 2, 2, -1),
+                new(RecordedMoveAxis.Row, 1, 2, -1)
+            ]
+            : new ShuffleOperation().Resolve(initial, intent).Expansion.ToArray();
+        var operation = new RecordedOperation(PuzzleOperationIds.Shuffle, intent.ToRecordingParameters(),
+            moves, OperationPlanPurpose.Solve, OperationMoveAccounting.LogicalOperation, 1);
+        string json = new SessionRecording(initial.Cells, new[] { operation }, rules).ToJson();
+        if (historical)
+        {
+            var v4 = System.Text.Json.Nodes.JsonNode.Parse(json)!;
+            v4["version"] = 4;
+            json = v4.ToJsonString();
+        }
+
+        var loaded = SessionRecording.FromJson(json);
+        string exported = loaded.ToJson();
+        using var document = JsonDocument.Parse(exported);
+        Assert.Equal(5, document.RootElement.GetProperty("version").GetInt32());
+        var reloaded = SessionRecording.FromJson(exported);
+        Assert.Equal(exported, reloaded.ToJson());
+        Assert.Equal(moves, reloaded.Moves);
+        var saved = Assert.Single(reloaded.Operations);
+        Assert.Equal(operation.Parameters.GetRawText(), saved.Parameters.GetRawText());
+        Assert.Equal(OperationMoveAccounting.LogicalOperation, saved.Accounting);
+        Assert.Equal(1, saved.MoveCost);
+
+        var expected = initial.Cells;
+        expected[2, 2] = historical ? 2 : 0;
+        expected[2, 0] = 8;
+        expected[0, 2] = historical ? 6 : 2;
+        expected[0, 0] = historical ? 0 : 6;
+        int fixedX = historical ? 0 : 2;
+        int fixedTile = initial.TileAt(fixedX, 0);
+
+        var controller = new SessionRecordingController(grid);
+        foreach (var recording in new[] { loaded, reloaded })
+        {
+            controller.LoadPlayback(recording);
+            var forward = controller.GetPlaybackOperationStep(true)!;
+            var visual = forward.CreateAnimationPlan(initial);
+            Assert.True(visual.SupportsLogicalAnimation);
+            Assert.Equal(expected, visual.FinalCells);
+            Assert.Equal(expected, visual.PrimitiveEndCells(3));
+            Assert.DoesNotContain(visual.LogicalMotions, motion => motion.TileId == fixedTile);
+            Assert.Single(visual.LogicalMotions, motion => visual.GetLogicalPoses(motion.TileId, 0.5f).Count == 2);
+            controller.CommitPlaybackOperationStep(forward);
+            Assert.Equal(4, controller.Position);
+            Assert.Equal(1, controller.CompletedOperationCount);
+            Assert.Equal(expected, OperationBoardSnapshot.FromGrid(grid).Cells);
+
+            var backward = controller.GetPlaybackOperationStep(false)!;
+            var reverse = backward.CreateAnimationPlan(OperationBoardSnapshot.FromGrid(grid));
+            Assert.True(reverse.SupportsLogicalAnimation);
+            Assert.DoesNotContain(reverse.LogicalMotions, motion => motion.TileId == fixedTile);
+            Assert.Equal(initial.Cells, reverse.FinalCells);
+            controller.CommitPlaybackOperationStep(backward);
+            Assert.Equal(initial.Cells, OperationBoardSnapshot.FromGrid(grid).Cells);
+
+            controller.LoadPlayback(recording.Reverse());
+            while (controller.Step())
+            {
+            }
+
+            Assert.Equal(initial.Cells, OperationBoardSnapshot.FromGrid(grid).Cells);
+        }
+    }
+
     [Fact]
     public void WholeOperationsAdvanceAndReverseAtPrimitiveBoundaries()
     {

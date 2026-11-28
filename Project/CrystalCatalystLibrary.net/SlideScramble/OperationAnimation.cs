@@ -305,6 +305,7 @@ public sealed class OperationAnimationPlan
     {
         if (lensCells.Count != 4 || logicalMotions.Count != 3) return;
 
+        // Recorded gestures may use the historical convention. Route the actual saved three-cycle.
         var symbols = Enum.GetValues<PortableLensCell>();
         PortableLensCell[] fixedCells = symbols.Where((_, index) =>
         {

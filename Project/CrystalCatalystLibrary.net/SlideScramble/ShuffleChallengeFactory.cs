@@ -69,7 +69,7 @@ public static class ShuffleChallengeFactory
         for (int i = scramblePlans.Count - 1; i >= 0; i--)
         {
             var original = scramblePlans[i].Intent;
-            var inverse = original with { StartCell = original.TargetCell, TargetCell = original.StartCell };
+            var inverse = ShuffleOperation.InvertGesture(original);
             var evaluation = evaluator.EvaluateUiRequest(new OperationBoardSnapshot(cells), inverse, rules);
             if (!evaluation.IsAccepted)
                 throw new InvalidOperationException(evaluation.RejectionReason ?? "Shuffle inverse was rejected.");
@@ -260,7 +260,7 @@ public static class ShuffleChallengeFactory
         IOperationIntent inverse = intent switch
         {
             SlideOperationIntent slide => slide with { Delta = -slide.Delta },
-            ShuffleOperationIntent shuffle => shuffle with { StartCell = shuffle.TargetCell, TargetCell = shuffle.StartCell },
+            ShuffleOperationIntent shuffle => ShuffleOperation.InvertGesture(shuffle),
             PortableLensSwapIntent swap => swap,
             _ => throw new InvalidOperationException("Unsupported challenge operation.")
         };

@@ -1,6 +1,6 @@
-# SlideScramble Session Recording v4
+# SlideScramble Session Recording v5
 
-Version 4 recordings use `format: "SlideScramble"` and contain the board dimensions, a one-based `initialCells` arrangement, one immutable `ruleSet` snapshot, and an ordered `operations` array. The arrays in `ruleSet` (`scrambleAllowed`, `solveAllowed`, and `uiEnabled`) store stable operation IDs; they are snapshots, not references to mutable named presets. Board coordinates in JSON are one-based; the game and operation model remain zero-based.
+Version 5 recordings use `format: "SlideScramble"` and contain the board dimensions, a one-based `initialCells` arrangement, one immutable `ruleSet` snapshot, and an ordered `operations` array. The arrays in `ruleSet` (`scrambleAllowed`, `solveAllowed`, and `uiEnabled`) store stable operation IDs; they are snapshots, not references to mutable named presets. Board coordinates in JSON are one-based; the game and operation model remain zero-based.
 
 ## Single authoritative history
 
@@ -18,7 +18,9 @@ Reversal stores the inverse primitive sequence in reverse order and marks the op
 
 ## Legacy and continuation behavior
 
-Versions 1 and 2 continue to load as classic `Slide` operations under the classic `Slide` rule set. Version 1 uses zero-based tile and primitive move coordinates; versions 2 and 3 use one-based tile and primitive move coordinates. Version 3 logical operation `lensAnchor` and `Slide.index` values are zero-based, while version 4 uses one-based values for those fields. All imports normalize positions to the existing zero-based internal model, and signed deltas are preserved. Saving any loaded recording writes version 4.
+Versions 1 and 2 continue to load as classic `Slide` operations under the classic `Slide` rule set. Version 1 uses zero-based tile and primitive move coordinates; versions 2 and 3 use one-based tile and primitive move coordinates. Version 3 logical operation `lensAnchor` and `Slide.index` values are zero-based, while versions 4 and 5 use one-based values for those fields. All imports normalize positions to the existing zero-based internal model, and signed deltas are preserved. Saving any loaded recording writes version 5.
+
+Version 5 establishes the [corrected Shuffle gesture convention](ShuffleLogic.md) for new operations. An imported Shuffle keeps its original gesture metadata and primitive history, even when the metadata describes an earlier convention. Playback, animation, and reversal follow the stored primitives. Re-export preserves logical operation boundaries, rule snapshots, and move costs.
 
 Continue Recording is allowed only at an operation boundary. Cropping keeps complete operations before that boundary, along with the original initial board and rule snapshot; the source recording remains unchanged until the edited recording is saved. Zero-operation recordings retain their board and rule snapshot.
 
