@@ -5,14 +5,14 @@ namespace SlideScramble.Tests;
 public class ShuffleOperationTests
 {
     [Theory]
-    [InlineData(PortableLensCell.Circle, PortableLensCell.Star, 2, 0, 1, 3)]
+    [InlineData(PortableLensCell.Circle, PortableLensCell.Star, 3, 0, 2, 1)]
     [InlineData(PortableLensCell.Star, PortableLensCell.Circle, 1, 2, 0, 3)]
-    [InlineData(PortableLensCell.Star, PortableLensCell.Square, 3, 0, 2, 1)]
+    [InlineData(PortableLensCell.Star, PortableLensCell.Square, 0, 2, 3, 1)]
     [InlineData(PortableLensCell.Square, PortableLensCell.Star, 1, 3, 2, 0)]
     [InlineData(PortableLensCell.Circle, PortableLensCell.Triangle, 3, 1, 0, 2)]
-    [InlineData(PortableLensCell.Triangle, PortableLensCell.Circle, 2, 1, 3, 0)]
+    [InlineData(PortableLensCell.Triangle, PortableLensCell.Circle, 2, 0, 1, 3)]
     [InlineData(PortableLensCell.Triangle, PortableLensCell.Square, 0, 3, 1, 2)]
-    [InlineData(PortableLensCell.Square, PortableLensCell.Triangle, 0, 2, 3, 1)]
+    [InlineData(PortableLensCell.Square, PortableLensCell.Triangle, 2, 1, 3, 0)]
     public void DirectedGestureMatchesItsVerifiedAtlasTransformationAtEveryLensPlacement(
         PortableLensCell start, PortableLensCell target, int expectedCircle, int expectedStar,
         int expectedTriangle, int expectedSquare)
@@ -67,7 +67,7 @@ public class ShuffleOperationTests
     [InlineData(PortableLensCell.Triangle, PortableLensCell.Circle)]
     [InlineData(PortableLensCell.Triangle, PortableLensCell.Square)]
     [InlineData(PortableLensCell.Square, PortableLensCell.Triangle)]
-    public void ShuffleHasPeriodThreeAndReversedGestureIsItsInverse(PortableLensCell start,
+    public void ShuffleHasPeriodThreeAndMappedGestureIsItsInverse(PortableLensCell start,
         PortableLensCell target)
     {
         const int width = 5;
@@ -85,7 +85,12 @@ public class ShuffleOperationTests
 
         int[,] reversed = (int[,])original.Clone();
         Apply(reversed, Resolve(operation, reversed, anchorX, anchorY, start, target));
-        Apply(reversed, Resolve(operation, reversed, anchorX, anchorY, target, start));
+        var intent = new ShuffleOperationIntent(anchorX, anchorY, start, target);
+        var inverse = ShuffleOperation.InvertGesture(intent);
+        Assert.Equal(target, inverse.TargetCell);
+        Assert.Equal(intent, ShuffleOperation.InvertGesture(inverse));
+        Apply(reversed, Resolve(operation, reversed, inverse.AnchorX, inverse.AnchorY,
+            inverse.StartCell, inverse.TargetCell));
         Assert.Equal(original, reversed);
     }
 

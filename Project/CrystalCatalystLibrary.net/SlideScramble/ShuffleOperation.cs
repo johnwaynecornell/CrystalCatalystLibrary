@@ -105,34 +105,59 @@ public static class LensGestureOperationMapper
 /// <summary>Resolves each directed lens edge through its verified four-rotation Shuffle Atlas entry.</summary>
 public sealed class ShuffleOperation : IPuzzleOperation
 {
-    private static readonly IReadOnlyDictionary<(PortableLensCell Start, PortableLensCell Target), AtlasStep[]>
-        GestureFormulas = new Dictionary<(PortableLensCell, PortableLensCell), AtlasStep[]>
+    private static readonly IReadOnlyDictionary<(PortableLensCell Start, PortableLensCell Target), Gesture>
+        Gestures = new Dictionary<(PortableLensCell, PortableLensCell), Gesture>
         {
-            [(PortableLensCell.Circle, PortableLensCell.Star)] = Formula(
-                (PortableLensCell.Triangle, 'U'), (PortableLensCell.Star, 'L'),
-                (PortableLensCell.Star, 'D'), (PortableLensCell.Triangle, 'R')),
-            [(PortableLensCell.Star, PortableLensCell.Circle)] = Formula(
-                (PortableLensCell.Star, 'L'), (PortableLensCell.Triangle, 'U'),
-                (PortableLensCell.Triangle, 'R'), (PortableLensCell.Star, 'D')),
-            [(PortableLensCell.Star, PortableLensCell.Square)] = Formula(
-                (PortableLensCell.Circle, 'R'), (PortableLensCell.Square, 'U'),
-                (PortableLensCell.Square, 'L'), (PortableLensCell.Circle, 'D')),
-            [(PortableLensCell.Square, PortableLensCell.Star)] = Formula(
-                (PortableLensCell.Square, 'U'), (PortableLensCell.Circle, 'R'),
-                (PortableLensCell.Circle, 'D'), (PortableLensCell.Square, 'L')),
-            [(PortableLensCell.Circle, PortableLensCell.Triangle)] = Formula(
-                (PortableLensCell.Circle, 'D'), (PortableLensCell.Square, 'L'),
-                (PortableLensCell.Square, 'U'), (PortableLensCell.Circle, 'R')),
-            [(PortableLensCell.Triangle, PortableLensCell.Circle)] = Formula(
-                (PortableLensCell.Square, 'L'), (PortableLensCell.Circle, 'D'),
-                (PortableLensCell.Circle, 'R'), (PortableLensCell.Square, 'U')),
-            [(PortableLensCell.Triangle, PortableLensCell.Square)] = Formula(
-                (PortableLensCell.Triangle, 'R'), (PortableLensCell.Star, 'D'),
-                (PortableLensCell.Star, 'L'), (PortableLensCell.Triangle, 'U')),
-            [(PortableLensCell.Square, PortableLensCell.Triangle)] = Formula(
-                (PortableLensCell.Star, 'D'), (PortableLensCell.Triangle, 'R'),
-                (PortableLensCell.Triangle, 'U'), (PortableLensCell.Star, 'L'))
+            // CircleSquare.A
+            [(PortableLensCell.Circle, PortableLensCell.Star)] = new(PortableLensCell.Square,
+                Formula(
+                    (PortableLensCell.Circle, 'R'), (PortableLensCell.Square, 'U'),
+                    (PortableLensCell.Square, 'L'), (PortableLensCell.Circle, 'D'))),
+            // StarTriangle.A
+            [(PortableLensCell.Star, PortableLensCell.Circle)] = new(PortableLensCell.Triangle,
+                Formula(
+                    (PortableLensCell.Star, 'L'), (PortableLensCell.Triangle, 'U'),
+                    (PortableLensCell.Triangle, 'R'), (PortableLensCell.Star, 'D'))),
+            // StarTriangle.B
+            [(PortableLensCell.Star, PortableLensCell.Square)] = new(PortableLensCell.Triangle,
+                Formula(
+                    (PortableLensCell.Star, 'D'), (PortableLensCell.Triangle, 'R'),
+                    (PortableLensCell.Triangle, 'U'), (PortableLensCell.Star, 'L'))),
+            // SquareCircle.A
+            [(PortableLensCell.Square, PortableLensCell.Star)] = new(PortableLensCell.Circle,
+                Formula(
+                    (PortableLensCell.Square, 'U'), (PortableLensCell.Circle, 'R'),
+                    (PortableLensCell.Circle, 'D'), (PortableLensCell.Square, 'L'))),
+            // CircleSquare.B
+            [(PortableLensCell.Circle, PortableLensCell.Triangle)] = new(PortableLensCell.Square,
+                Formula(
+                    (PortableLensCell.Circle, 'D'), (PortableLensCell.Square, 'L'),
+                    (PortableLensCell.Square, 'U'), (PortableLensCell.Circle, 'R'))),
+            // TriangleStar.A
+            [(PortableLensCell.Triangle, PortableLensCell.Circle)] = new(PortableLensCell.Star,
+                Formula(
+                    (PortableLensCell.Triangle, 'U'), (PortableLensCell.Star, 'L'),
+                    (PortableLensCell.Star, 'D'), (PortableLensCell.Triangle, 'R'))),
+            // TriangleStar.B
+            [(PortableLensCell.Triangle, PortableLensCell.Square)] = new(PortableLensCell.Star,
+                Formula(
+                    (PortableLensCell.Triangle, 'R'), (PortableLensCell.Star, 'D'),
+                    (PortableLensCell.Star, 'L'), (PortableLensCell.Triangle, 'U'))),
+            // SquareCircle.B
+            [(PortableLensCell.Square, PortableLensCell.Triangle)] = new(PortableLensCell.Circle,
+                Formula(
+                    (PortableLensCell.Square, 'L'), (PortableLensCell.Circle, 'D'),
+                    (PortableLensCell.Circle, 'R'), (PortableLensCell.Square, 'U'))),
         };
+
+    /// <summary>Returns the opposite three-cycle at the same anchor for a live Shuffle gesture.</summary>
+    public static ShuffleOperationIntent InvertGesture(ShuffleOperationIntent shuffle)
+    {
+        if (!Gestures.TryGetValue((shuffle.StartCell, shuffle.TargetCell), out var gesture))
+            throw new ArgumentException("Shuffle gesture must connect neighboring lens cells.", nameof(shuffle));
+
+        return shuffle with { StartCell = gesture.InverseStart };
+    }
 
     public string Id => PuzzleOperationIds.Shuffle;
 
@@ -145,8 +170,7 @@ public sealed class ShuffleOperation : IPuzzleOperation
         if (shuffle.AnchorX < 0 || shuffle.AnchorX >= board.Width || shuffle.AnchorY < 0 ||
             shuffle.AnchorY >= board.Height)
             return OperationResolution.Rejected(Id, "Lens anchor is outside the board.");
-        if (!LensGestureOperationMapper.TrySelectFamily(shuffle.StartCell, shuffle.TargetCell, false, out _) ||
-            !GestureFormulas.TryGetValue((shuffle.StartCell, shuffle.TargetCell), out var formula))
+        if (!Gestures.TryGetValue((shuffle.StartCell, shuffle.TargetCell), out var gesture))
             return OperationResolution.Rejected(Id, "Shuffle gesture must connect neighboring lens cells.");
 
         int[,] cells = board.Cells;
@@ -159,8 +183,8 @@ public sealed class ShuffleOperation : IPuzzleOperation
             trackedTiles[(int)cell] = cells[y, x];
         }
 
-        var expansion = new List<RecordedMove>(formula.Length);
-        foreach (var step in formula)
+        var expansion = new List<RecordedMove>(gesture.Formula.Length);
+        foreach (var step in gesture.Formula)
         {
             (int x, int y) = FindTile(cells, trackedTiles[(int)step.Cell]);
             var move = ToRecordedMove(step.Direction, x, y);
@@ -193,6 +217,8 @@ public sealed class ShuffleOperation : IPuzzleOperation
         'D' => new RecordedMove(RecordedMoveAxis.Column, x, y, -1),
         _ => throw new ArgumentOutOfRangeException(nameof(direction))
     };
+
+    private sealed record Gesture(PortableLensCell InverseStart, AtlasStep[] Formula);
 
     private sealed record AtlasStep(PortableLensCell Cell, char Direction);
 }

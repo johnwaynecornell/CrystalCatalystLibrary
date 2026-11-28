@@ -36,7 +36,7 @@ public class SessionRecordingTests
         using var json = JsonDocument.Parse(recording.ToJson());
         var root = json.RootElement;
         Assert.Equal("SlideScramble", root.GetProperty("format").GetString());
-        Assert.Equal(4, root.GetProperty("version").GetInt32());
+        Assert.Equal(5, root.GetProperty("version").GetInt32());
         Assert.Equal(3, root.GetProperty("width").GetInt32());
         Assert.Equal(2, root.GetProperty("height").GetInt32());
         Assert.Equal(new[] { 3, 2 }, root.GetProperty("initialCells")[1][2].EnumerateArray().Select(e => e.GetInt32()));
@@ -50,7 +50,7 @@ public class SessionRecordingTests
     }
 
     [Fact]
-    public void LegacyRecordingLoadsAndResavesInVersion4()
+    public void LegacyRecordingLoadsAndResavesInVersion5()
     {
         const string legacy =
             "{\"format\":\"SlideScramble\",\"version\":1,\"width\":2,\"height\":2,\"initialCells\":[[[1,1],[0,0]],[[1,0],[0,1]]],\"moves\":[{\"axis\":\"Column\",\"index\":1,\"dragStart\":[1,0],\"delta\":-1}]}";
@@ -58,7 +58,7 @@ public class SessionRecordingTests
         Assert.Equal(3, recording.InitialCells[0, 0]);
         Assert.Equal(new RecordedMove(RecordedMoveAxis.Column, 1, 0, -1), recording.Moves[0]);
         using var json = JsonDocument.Parse(recording.ToJson());
-        Assert.Equal(4, json.RootElement.GetProperty("version").GetInt32());
+        Assert.Equal(5, json.RootElement.GetProperty("version").GetInt32());
         Assert.Equal(new[] { 2, 2 },
             json.RootElement.GetProperty("initialCells")[0][0].EnumerateArray().Select(e => e.GetInt32()));
         var move = json.RootElement.GetProperty("operations")[0].GetProperty("moves")[0];

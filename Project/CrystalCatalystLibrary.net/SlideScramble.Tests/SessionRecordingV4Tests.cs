@@ -52,7 +52,7 @@ public class SessionRecordingV4Tests
     });
 
     [Fact]
-    public void Version3OperationCoordinatesNormalizeAndExportAsVersion4()
+    public void Version3OperationCoordinatesNormalizeAndExportAsVersion5()
     {
         var recording = SessionRecording.FromJson(Version3);
 
@@ -64,7 +64,7 @@ public class SessionRecordingV4Tests
         string json = recording.ToJson();
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
-        Assert.Equal(4, root.GetProperty("version").GetInt32());
+        Assert.Equal(5, root.GetProperty("version").GetInt32());
         Assert.Equal(new[] { 3, 2 }, root.GetProperty("operations")[0].GetProperty("parameters")
             .GetProperty("lensAnchor").EnumerateArray().Select(value => value.GetInt32()));
         Assert.Equal("Circle", root.GetProperty("operations")[0].GetProperty("parameters")
@@ -134,7 +134,7 @@ public class SessionRecordingV4Tests
     }
 
     [Fact]
-    public void RejectsZeroBasedSlideParametersInVersion4WithoutChangingPrimitiveCoordinates()
+    public void RejectsZeroBasedSlideParametersInCurrentVersionWithoutChangingPrimitiveCoordinates()
     {
         string json = CreateSlideRecording(RecordedMoveAxis.Row, 1, 4, 3).ToJson();
 
@@ -145,7 +145,7 @@ public class SessionRecordingV4Tests
     }
 
     [Fact]
-    public void RejectsZeroBasedLensAnchorInVersion4()
+    public void RejectsZeroBasedLensAnchorInCurrentVersion()
     {
         string json = CreateLensRecording(1, 1).ToJson();
         var invalidAnchor = new JsonArray(JsonValue.Create(0), JsonValue.Create(0));
@@ -157,7 +157,7 @@ public class SessionRecordingV4Tests
     [InlineData(2, 4, 41, "TwoWideSlide")]
     [InlineData(3, 3, 92, "ShuffleLogic")]
     [InlineData(4, 3, 100, "Hybrid")]
-    public void SeededRuleAwareSimulationSurvivesVersion4RoundTrip(int width, int height, int seed,
+    public void SeededRuleAwareSimulationSurvivesVersion5RoundTrip(int width, int height, int seed,
         string ruleSetName)
     {
         var rules = ruleSetName switch
@@ -173,7 +173,7 @@ public class SessionRecordingV4Tests
 
         string json = expected.ToJson();
         using var document = JsonDocument.Parse(json);
-        Assert.Equal(4, document.RootElement.GetProperty("version").GetInt32());
+        Assert.Equal(5, document.RootElement.GetProperty("version").GetInt32());
         var restored = SessionRecording.FromJson(json);
         Assert.Equal(json, restored.ToJson());
         AssertEquivalent(expected, restored);

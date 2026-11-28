@@ -7,7 +7,7 @@ namespace SlideScramble.Tests;
 public class ChallengeMigrationTests
 {
     [Fact]
-    public void AllLegacyChallengesMigrateToVersion4WithoutChangingTheirSemantics()
+    public void BundledVersion4ChallengesPreserveLegacySemanticsAndRoundTripAsVersion5()
     {
         string baselineJson = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "TestData",
             "challenges-pre-v4-baseline.json"));
@@ -20,14 +20,24 @@ public class ChallengeMigrationTests
         string migratedJson = File.ReadAllText(FindCatalogPath());
         using var migratedDocument = JsonDocument.Parse(migratedJson);
         var migratedEntries = migratedDocument.RootElement.EnumerateObject().ToArray();
-        Assert.Equal(11, migratedEntries.Length);
+        Assert.All(originalEntries, entry => Assert.True(migratedDocument.RootElement.TryGetProperty(entry.Name, out _)));
         Assert.All(migratedEntries,
             entry => Assert.Equal(4, entry.Value.GetProperty("version").GetInt32()));
         var migrated = ChallengeCatalog.FromJson(migratedJson);
         Assert.Equal(11, baseline.Names.Count);
-        Assert.Equal(baseline.Names.Order(StringComparer.Ordinal), migrated.Names.Order(StringComparer.Ordinal));
         var bundled = ChallengeCatalog.LoadBundled();
         Assert.Equal(migrated.Names.Order(StringComparer.Ordinal), bundled.Names.Order(StringComparer.Ordinal));
+
+        foreach (string name in migrated.Names)
+        {
+            Assert.True(migrated.TryGet(name, out var current));
+            string exported = current!.ToJson();
+            using var currentJson = JsonDocument.Parse(exported);
+            Assert.Equal(5, currentJson.RootElement.GetProperty("version").GetInt32());
+            var reloaded = SessionRecording.FromJson(exported);
+            AssertEquivalent(current, reloaded);
+            AssertPlaybackAndReversal(current, reloaded);
+        }
 
         foreach (string name in baseline.Names)
         {
@@ -36,9 +46,7 @@ public class ChallengeMigrationTests
             Assert.NotNull(original);
             Assert.NotNull(current);
 
-            using var currentJson = JsonDocument.Parse(current!.ToJson());
-            Assert.Equal(4, currentJson.RootElement.GetProperty("version").GetInt32());
-            Assert.Equal(original!.ToJson(), current.ToJson());
+            Assert.Equal(original!.ToJson(), current!.ToJson());
             AssertEquivalent(original, current);
             AssertPlaybackAndReversal(original, current);
         }

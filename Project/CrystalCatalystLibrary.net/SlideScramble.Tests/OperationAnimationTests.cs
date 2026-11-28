@@ -14,7 +14,7 @@ public class OperationAnimationTests
         Assert.True(visual.SupportsLogicalAnimation);
         Assert.Equal(3, visual.LogicalMotions.Count);
         Assert.Equal(3, CountChangedCells(visual.StartingCells, visual.FinalCells));
-        Assert.Equal(visual.StartingCells[0, 0], visual.FinalCells[0, 0]);
+        Assert.Equal(visual.StartingCells[0, 4], visual.FinalCells[0, 4]);
         Assert.Equal(4, visual.PrimitiveCount);
         Assert.NotNull(visual.CenterBypassTileId);
     }
@@ -66,7 +66,7 @@ public class OperationAnimationTests
         var (grid, plan, _) = CreateOperation(PuzzleOperationIds.Shuffle);
         var visual = new OperationAnimationPlan(OperationBoardSnapshot.FromGrid(grid), plan);
         OperationTileMotion diagonal = visual.LogicalMotions.Single(motion => motion.SourceX == 0 &&
-            motion.SourceY == 2 && motion.DestinationX == 4 && motion.DestinationY == 0);
+            motion.SourceY == 0 && motion.DestinationX == 4 && motion.DestinationY == 2);
 
         IReadOnlyList<OperationTilePose> start = visual.GetLogicalPoses(diagonal.TileId, 0);
         IReadOnlyList<OperationTilePose> middle = visual.GetLogicalPoses(diagonal.TileId, 0.5f);
@@ -75,10 +75,10 @@ public class OperationAnimationTests
         Assert.Equal(2, start.Count);
         Assert.Equal(2, middle.Count);
         Assert.Equal(2, end.Count);
-        Assert.Equal(new OperationTilePose(5.5f, 2.5f, 1), start[0]);
-        Assert.Equal(new OperationTilePose(4.5f, 4.5f, 1), start[1]);
-        Assert.Equal(new OperationTilePose(6.5f, 2.5f, 1), end[0]);
-        Assert.Equal(new OperationTilePose(4.5f, 3.5f, 1), end[1]);
+        Assert.Equal(new OperationTilePose(5.5f, 3.5f, 1), start[0]);
+        Assert.Equal(new OperationTilePose(3.5f, 2.5f, 1), start[1]);
+        Assert.Equal(new OperationTilePose(5.5f, 4.5f, 1), end[0]);
+        Assert.Equal(new OperationTilePose(4.5f, 2.5f, 1), end[1]);
         Assert.Equal(new[] { (4, 2), (0, 2), (4, 0), (0, 0) }, visual.LensCells);
         Assert.NotEqual(diagonal.TileId, visual.CenterBypassTileId);
         Assert.All(middle, pose => Assert.Equal(1, pose.Scale, 4));
