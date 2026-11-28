@@ -24,6 +24,7 @@ This index organizes the project's documentation, game analyses, and emerging id
 - [ShuffleLogic — Game 1](ShuffleLogic_Game1.md) — A recorded exploration of ShuffleLogic gameplay.
 - [Lens Parity Analysis](lens_parity_article/LensParityAnalysis.md) — Parity-based reasoning for solving puzzles with local lens operations.
 - [TwoWideSlide — Eight-Operation AI Shortcut](TwoWideSlide%20-%208%20operation%20AI%20shortcut%20AI%20Analysis.md) — AI analysis of a 28-operation human solution and an eight-operation alternative.
+- [The Traveling Transposition](The%20Traveling%20Transposition.md) — How to work out the knot with two rows.
 
 
 ---
